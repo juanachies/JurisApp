@@ -4,7 +4,7 @@ using JurisApp.Application.Interfaces.AI;
 using JurisApp.Application.Interfaces.Files;
 using JurisApp.Application.Interfaces.Persistence;
 using JurisApp.Application.Mappings;
-using JurisApp.Application.Services.Interfaces;
+using JurisApp.Application.Interfaces.Services;
 using JurisApp.Domain.Entities;
 
 namespace JurisApp.Application.Services;

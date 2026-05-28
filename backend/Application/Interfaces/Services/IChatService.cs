@@ -1,7 +1,7 @@
 using JurisApp.Application.Common;
 using JurisApp.Application.DTOs.Chats;
 
-namespace JurisApp.Application.Services.Interfaces;
+namespace JurisApp.Application.Interfaces.Services;
 
 public interface IChatService
 {

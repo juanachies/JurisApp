@@ -2,7 +2,7 @@ using JurisApp.Application.Common;
 using JurisApp.Application.DTOs.CustomSkills;
 using JurisApp.Application.Interfaces.Persistence;
 using JurisApp.Application.Mappings;
-using JurisApp.Application.Services.Interfaces;
+using JurisApp.Application.Interfaces.Services;
 using JurisApp.Domain.Entities;
 
 namespace JurisApp.Application.Services;

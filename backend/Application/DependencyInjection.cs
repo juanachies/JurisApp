@@ -1,5 +1,5 @@
 using JurisApp.Application.Services;
-using JurisApp.Application.Services.Interfaces;
+using JurisApp.Application.Interfaces.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace JurisApp.Application;

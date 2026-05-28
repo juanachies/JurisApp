@@ -3,7 +3,7 @@ using JurisApp.Application.DTOs.Auth;
 using JurisApp.Application.Interfaces.Auth;
 using JurisApp.Application.Interfaces.Persistence;
 using JurisApp.Application.Mappings;
-using JurisApp.Application.Services.Interfaces;
+using JurisApp.Application.Interfaces.Services;
 using JurisApp.Domain.Entities;
 using JurisApp.Domain.Enums;
 
