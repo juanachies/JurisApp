@@ -13,6 +13,8 @@ public class UserRepository : IUserRepository
         _context = context;
     }
 
+    public async Task<IReadOnlyList<User>> GetAllAsync(CancellationToken cancellationToken = default)
+    => await _context.Users.ToListAsync(cancellationToken);
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => await _context.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 

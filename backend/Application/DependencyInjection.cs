@@ -15,6 +15,8 @@ public static class DependencyInjection
         services.AddScoped<ICustomSkillService, CustomSkillService>();
         services.AddScoped<IFolderService, FolderService>();
         services.AddScoped<IAITaskService, AITaskService>();
+        services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IPlanService, PlanService>();
 
         return services;
     }
