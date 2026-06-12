@@ -10,6 +10,7 @@ using JurisApp.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace JurisApp.Infrastructure;
 
@@ -17,10 +18,11 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         services
-            .AddDatabase(configuration)
+            .AddDatabase(configuration, environment)
             .AddRepositories()
             .AddAuthServices()
             .AddAIService(configuration)
@@ -29,24 +31,33 @@ public static class DependencyInjection
         return services;
     }
 
-    // Database
-
     private static IServiceCollection AddDatabase(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
 
+        var provider = configuration["Database:Provider"];
+
         services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(connectionString));
+        {
+            if (environment.IsDevelopment() &&
+                string.Equals(provider, "Sqlite", StringComparison.OrdinalIgnoreCase))
+            {
+                options.UseSqlite(connectionString);
+            }
+            else
+            {
+                options.UseNpgsql(connectionString);
+            }
+        });
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
     }
-
-    // Repositories
 
     private static IServiceCollection AddRepositories(this IServiceCollection services)
     {
@@ -65,8 +76,6 @@ public static class DependencyInjection
         return services;
     }
 
-    // Auth
-
     private static IServiceCollection AddAuthServices(this IServiceCollection services)
     {
         services.AddHttpContextAccessor();
@@ -77,33 +86,28 @@ public static class DependencyInjection
         return services;
     }
 
-    // AI
-
     private static IServiceCollection AddAIService(
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var apiKey = configuration["AI:Claude:ApiKey"]
-            ?? throw new InvalidOperationException("AI:Claude:ApiKey is not configured.");
+        var apiKey = configuration["AI:Claude:ApiKey"];
+        var useMock = configuration.GetValue<bool>("AI:UseMock");
 
-        var model = configuration["AI:Claude:Model"]
-            ?? throw new InvalidOperationException("AI:Claude:Model is not configured.");
-
-        // Expose model under the generic key that AIService reads
-        // so the service itself stays provider-agnostic
-        Environment.SetEnvironmentVariable("AI__Model", model);
+        if (useMock || string.IsNullOrWhiteSpace(apiKey))
+        {
+            services.AddScoped<IAIService, MockAIService>();
+            return services;
+        }
 
         services.AddHttpClient<IAIService, AIService>(client =>
         {
-            client.BaseAddress = new Uri("https://api.anthropic.com/v1/messages");
+            client.BaseAddress = new Uri("https://api.anthropic.com/v1/");
             client.DefaultRequestHeaders.Add("x-api-key", apiKey);
             client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
         });
 
         return services;
     }
-
-    // File storage
 
     private static IServiceCollection AddFileStorage(this IServiceCollection services)
     {

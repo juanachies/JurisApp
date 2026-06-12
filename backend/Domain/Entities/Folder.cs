@@ -21,4 +21,11 @@ public class Folder : BaseEntity
         Name = name;
         LegalContext = legalContext;
     }
+
+    public void Update(string name, string? legalContext = null)
+    {
+        Name = name;
+        LegalContext = legalContext;
+        Touch();
+    }
 }

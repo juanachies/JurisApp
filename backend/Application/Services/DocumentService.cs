@@ -142,6 +142,23 @@ public class DocumentService : IDocumentService
         return Result<DocumentAnalysisDto>.Success(analysis.ToDto());
     }
 
+    public async Task<Result<DocumentDto>> GetByIdAsync(Guid userId, Guid documentId, CancellationToken cancellationToken = default)
+    {
+        var document = await _documentRepository.GetByIdAsync(documentId, cancellationToken);
+        if (document is null)
+        {
+            return Result<DocumentDto>.Failure(Error.NotFound("Documento no encontrado."));
+        }
+
+        var chat = await _chatRepository.GetByIdAsync(document.ChatId, cancellationToken);
+        if (chat is null || chat.UserId != userId)
+        {
+            return Result<DocumentDto>.Failure(Error.Unauthorized("No tenés acceso a este documento."));
+        }
+
+        return Result<DocumentDto>.Success(document.ToDto());
+    }
+
     public async Task<Result<IReadOnlyList<DocumentDto>>> GetByChatIdAsync(Guid userId, Guid chatId, CancellationToken cancellationToken = default)
     {
         var chat = await _chatRepository.GetByIdAsync(chatId, cancellationToken);

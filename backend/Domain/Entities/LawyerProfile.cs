@@ -64,4 +64,17 @@ public class LawyerProfile : BaseEntity
         VerifiedAt = null;
         Touch();
     }
+
+    public void Update(
+        string licenseNumber,
+        string barAssociation,
+        string province,
+        string specialty)
+    {
+        LicenseNumber = licenseNumber;
+        BarAssociation = barAssociation;
+        Province = province;
+        Specialty = specialty;
+        Touch();
+    }
 }

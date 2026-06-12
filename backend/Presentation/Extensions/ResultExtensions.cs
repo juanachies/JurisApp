@@ -13,7 +13,7 @@ public static class ResultExtensions
         return result.Error.Code switch
         {
             "NotFound"     => new NotFoundObjectResult(new { result.Error.Code, result.Error.Message }),
-            "Unauthorized" => new ObjectResult(new { result.Error.Code, result.Error.Message }) { StatusCode = 403 },
+            "Unauthorized" => new UnauthorizedObjectResult(new { result.Error.Code, result.Error.Message }),
             "Conflict"     => new ConflictObjectResult(new { result.Error.Code, result.Error.Message }),
             _              => new BadRequestObjectResult(new { result.Error.Code, result.Error.Message })
         };
@@ -27,7 +27,7 @@ public static class ResultExtensions
         return result.Error.Code switch
         {
             "NotFound"     => new NotFoundObjectResult(new { result.Error.Code, result.Error.Message }),
-            "Unauthorized" => new ObjectResult(new { result.Error.Code, result.Error.Message }) { StatusCode = 403 },
+            "Unauthorized" => new UnauthorizedObjectResult(new { result.Error.Code, result.Error.Message }),
             "Conflict"     => new ConflictObjectResult(new { result.Error.Code, result.Error.Message }),
             _              => new BadRequestObjectResult(new { result.Error.Code, result.Error.Message })
         };
@@ -41,7 +41,7 @@ public static class ResultExtensions
         return result.Error.Code switch
         {
             "NotFound"     => new NotFoundObjectResult(new { result.Error.Code, result.Error.Message }),
-            "Unauthorized" => new ObjectResult(new { result.Error.Code, result.Error.Message }) { StatusCode = 403 },
+            "Unauthorized" => new UnauthorizedObjectResult(new { result.Error.Code, result.Error.Message }),
             "Conflict"     => new ConflictObjectResult(new { result.Error.Code, result.Error.Message }),
             _              => new BadRequestObjectResult(new { result.Error.Code, result.Error.Message })
         };

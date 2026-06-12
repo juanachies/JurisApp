@@ -22,7 +22,10 @@ public class AuthController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _authService.RegisterAsync(request, cancellationToken);
-        return result.ToCreatedResult("GetCurrentUser", new { });
+        if (!result.IsSuccess)
+            return result.ToActionResult();
+
+        return new ObjectResult(result.Value) { StatusCode = StatusCodes.Status201Created };
     }
 
     [HttpPost("login")]

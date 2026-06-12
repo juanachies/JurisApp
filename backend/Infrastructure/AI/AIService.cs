@@ -15,8 +15,9 @@ public class AIService : IAIService
     public AIService(HttpClient httpClient, IConfiguration configuration)
     {
         _httpClient = httpClient;
-        _model = configuration["AI:Model"]
-            ?? throw new InvalidOperationException("AI:Model is not configured.");
+        _model = configuration["AI:Claude:Model"]
+            ?? configuration["AI:Model"]
+            ?? throw new InvalidOperationException("AI:Claude:Model is not configured.");
     }
 
     public async Task<string> SendChatMessageAsync(
@@ -82,7 +83,7 @@ public class AIService : IAIService
             messages
         };
 
-        var response = await _httpClient.PostAsJsonAsync("", body, cancellationToken);
+        var response = await _httpClient.PostAsJsonAsync("messages", body, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync(cancellationToken);

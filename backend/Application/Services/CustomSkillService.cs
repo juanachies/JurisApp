@@ -133,6 +133,35 @@ public class CustomSkillService : ICustomSkillService
         return Result.Success();
     }
 
+    public async Task<Result<CustomSkillDto>> SetActiveAsync(
+        Guid userId,
+        Guid customSkillId,
+        bool isActive,
+        CancellationToken cancellationToken = default)
+    {
+        var skill = await _customSkillRepository.GetByIdAsync(customSkillId, cancellationToken);
+        if (skill is null)
+        {
+            return Result<CustomSkillDto>.Failure(Error.NotFound("Custom skill no encontrada."));
+        }
+
+        var ownershipError = await EnsureLawyerProfileOwnershipAsync(userId, skill.LawyerProfileId, cancellationToken);
+        if (ownershipError is not null)
+        {
+            return Result<CustomSkillDto>.Failure(ownershipError);
+        }
+
+        if (isActive)
+            skill.Activate();
+        else
+            skill.Deactivate();
+
+        _customSkillRepository.Update(skill);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<CustomSkillDto>.Success(skill.ToDto());
+    }
+
     private async Task<Error?> ApplyOrRemoveSkillAsync(
         Guid userId,
         ApplyCustomSkillToChatRequest request,

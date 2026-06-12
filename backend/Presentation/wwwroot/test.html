@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>JurisApp - Test</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; background: #fff; }
+    .layout { display: flex; min-height: 100vh; }
+    .panel-left { flex: 1; padding: 1.25rem 1.5rem; overflow-y: auto; max-width: 900px; }
+    .panel-right {
+      width: 42%;
+      min-width: 340px;
+      max-width: 520px;
+      border-left: 2px solid #ddd;
+      background: #fafafa;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+    .panel-right header { padding: 1rem 1rem 0.5rem; border-bottom: 1px solid #e0e0e0; }
+    .panel-right h2 { margin: 0 0 0.5rem; font-size: 1rem; }
+    #statusBar { font-size: 0.85rem; color: #444; }
+    #output {
+      flex: 1;
+      margin: 0;
+      padding: 1rem;
+      overflow: auto;
+      white-space: pre-wrap;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      border: none;
+      background: #f5f5f5;
+      min-height: 0;
+    }
+    #output.ok { background: #f1f8f4; }
+    #output.err { background: #fff5f5; }
+    #output.loading { background: #f3f8ff; }
+    input, textarea, select { display: block; margin: 0.5rem 0; width: 100%; max-width: 100%; }
+    button { margin: 0.5rem 0.5rem 0.5rem 0; }
+    section { margin-bottom: 1.75rem; border-bottom: 1px solid #eee; padding-bottom: 1rem; }
+    section h2 { font-size: 1.05rem; margin: 0 0 0.75rem; }
+    .chat-thread {
+      border: 1px solid #ddd;
+      background: #f9f9f9;
+      padding: 0.75rem;
+      max-height: 320px;
+      overflow-y: auto;
+      margin: 0.75rem 0;
+    }
+    .msg { margin-bottom: 0.75rem; padding: 0.5rem 0.65rem; border-radius: 6px; }
+    .msg-user { background: #e3f2fd; border-left: 3px solid #1976d2; }
+    .msg-assistant { background: #f3e5f5; border-left: 3px solid #7b1fa2; }
+    .msg-system { background: #eee; font-size: 0.9em; }
+    .msg strong { display: block; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.25rem; opacity: 0.7; }
+    .msg p { margin: 0; white-space: pre-wrap; }
+    .chat-hint { font-size: 0.85rem; color: #555; margin: 0.25rem 0; }
+    @media (max-width: 900px) {
+      .layout { flex-direction: column; }
+      .panel-right { width: 100%; max-width: none; height: 50vh; position: relative; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <main class="panel-left">
+      <h1>JurisApp API Test</h1>
+      <p>Token: <code id="tokenDisplay">(ninguno)</code></p>
+
+      <section>
+        <h2>1. Registro</h2>
+        <input id="regFirstName" placeholder="Nombre" value="Juan">
+        <input id="regLastName" placeholder="Apellido" value="Pérez">
+        <input id="regEmail" placeholder="Email (único)" value="">
+        <input id="regPassword" type="password" placeholder="Password" value="Test1234!">
+        <button type="button" onclick="suggestEmail()">Generar email único</button>
+        <button type="button" onclick="register()">Registrar</button>
+      </section>
+
+      <section>
+        <h2>2. Login</h2>
+        <input id="loginEmail" placeholder="Email" value="">
+        <input id="loginPassword" type="password" placeholder="Password" value="Test1234!">
+        <button type="button" onclick="login()">Login</button>
+      </section>
+
+      <section>
+        <h2>3. Usuario actual</h2>
+        <button type="button" onclick="getMe()">Get me</button>
+      </section>
+
+      <section>
+        <h2>4. Perfil abogado</h2>
+        <input id="licenseNumber" value="MAT-12345">
+        <input id="barAssociation" value="Colegio de Abogados de CABA">
+        <input id="province" value="Buenos Aires">
+        <input id="specialty" value="Civil">
+        <button type="button" onclick="createLawyerProfile()">Crear perfil abogado</button>
+        <button type="button" onclick="getLawyerProfile()">Get perfil</button>
+      </section>
+
+      <section>
+        <h2>5. Chats (consultas con Claude)</h2>
+        <p class="chat-hint">Creá un chat, escribí tu consulta y enviá. La respuesta viene de Claude vía la API.</p>
+        <input id="chatTitle" placeholder="Título del chat" value="Consulta laboral">
+        <button type="button" onclick="createChat()">Crear chat</button>
+        <button type="button" onclick="listChats()">Listar chats</button>
+        <input id="chatId" placeholder="Chat ID (se guarda al crear)">
+        <button type="button" onclick="loadChat()">Cargar conversación</button>
+
+        <div id="chatThread" class="chat-thread"><em>Sin mensajes. Creá un chat y enviá una consulta.</em></div>
+
+        <textarea id="chatMessage" rows="4" placeholder="Escribí tu consulta legal aquí..."></textarea>
+        <button type="button" onclick="sendChatMessage()">Enviar mensaje</button>
+        <button type="button" onclick="deleteChat()">Eliminar chat</button>
+      </section>
+
+      <section>
+        <h2>6. Carpetas</h2>
+        <input id="folderName" placeholder="Nombre" value="Expediente 2026">
+        <button type="button" onclick="createFolder()">Crear carpeta</button>
+        <button type="button" onclick="listFolders()">Listar carpetas</button>
+      </section>
+
+      <section>
+        <h2>7. Custom Skills</h2>
+        <input id="skillName" placeholder="Nombre" value="Revisión de contrato">
+        <textarea id="skillInstructions" rows="3">Revisar cláusulas de rescisión y penalidades.</textarea>
+        <button type="button" onclick="createSkill()">Crear skill</button>
+        <button type="button" onclick="listSkills()">Listar skills</button>
+      </section>
+
+      <section>
+        <h2>8. Documentos</h2>
+        <input type="file" id="docFile">
+        <button type="button" onclick="uploadDocument()">Subir documento</button>
+        <input id="documentId" placeholder="Document ID">
+        <button type="button" onclick="analyzeDocument()">Analizar documento</button>
+        <button type="button" onclick="listDocuments()">Listar documentos del chat</button>
+      </section>
+
+      <section>
+        <h2>9. Tareas IA</h2>
+        <input id="taskDescription" placeholder="Descripción" value="Preparar demanda por daños">
+        <button type="button" onclick="createTask()">Crear tarea</button>
+        <button type="button" onclick="listTasks()">Listar tareas</button>
+      </section>
+
+      <section>
+        <h2>10. Planes</h2>
+        <button type="button" onclick="listPlans()">Listar planes</button>
+      </section>
+    </main>
+
+    <aside class="panel-right">
+      <header>
+        <h2>Debug / Respuestas API</h2>
+        <div id="statusBar">Listo.</div>
+      </header>
+      <pre id="output">Todavía no hubo ninguna acción.</pre>
+    </aside>
+  </div>
+
+  <script>
+    const API_BASE = "";
+    const TOKEN_KEY = "jurisapp_token";
+    let lawyerProfileId = null;
+
+    function getToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
+
+    function pickToken(data) { return data && (data.token || data.Token || ""); }
+
+    function setToken(token) {
+      if (!token) return;
+      localStorage.setItem(TOKEN_KEY, token);
+      document.getElementById("tokenDisplay").textContent = token.substring(0, 40) + "...";
+    }
+
+    function setStatus(text) { document.getElementById("statusBar").textContent = text; }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function show(action, data, status, hint, isError) {
+      const pre = document.getElementById("output");
+      pre.className = isError ? "err" : "ok";
+      let body;
+      if (data === null || data === undefined || data === "") body = "(sin cuerpo)";
+      else if (typeof data === "string") body = data;
+      else body = JSON.stringify(data, null, 2);
+      const extra = hint ? "\n\n→ " + hint : "";
+      pre.textContent = `Acción: ${action}\nHTTP ${status}\nHora: ${new Date().toLocaleTimeString()}\n\n${body}${extra}`;
+      pre.scrollTop = pre.scrollHeight;
+    }
+
+    function showLoading(action) {
+      const pre = document.getElementById("output");
+      pre.className = "loading";
+      pre.textContent = `Acción: ${action}\n\nEnviando solicitud...`;
+      setStatus(`${action} — en progreso...`);
+    }
+
+    function showLocal(action, message, isError) {
+      show(action, message, "—", null, isError);
+      setStatus(`${action} — ${isError ? "error" : "ok"}`);
+    }
+
+    function suggestEmail(silent) {
+      const email = `user${Date.now()}@jurisapp.local`;
+      document.getElementById("regEmail").value = email;
+      document.getElementById("loginEmail").value = email;
+      if (!silent) showLocal("Generar email", { email, mensaje: "Email listo para register/login." }, false);
+    }
+
+    function requireToken(action) {
+      if (getToken()) return true;
+      showLocal(action, "No hay token. Hacé Login o Register primero.", true);
+      return false;
+    }
+
+    function getChatId() {
+      return document.getElementById("chatId").value.trim();
+    }
+
+    function renderChatMessages(messages) {
+      const el = document.getElementById("chatThread");
+      if (!messages || !messages.length) {
+        el.innerHTML = "<em>Sin mensajes todavía. Escribí una consulta y enviá.</em>";
+        return;
+      }
+      const sorted = [...messages].sort((a, b) => new Date(a.date) - new Date(b.date));
+      el.innerHTML = sorted.map(m => {
+        const role = (m.role || "").toLowerCase();
+        const label = role === "user" ? "Vos" : role === "assistant" ? "JurisApp (Claude)" : m.role;
+        return `<div class="msg msg-${role}"><strong>${escapeHtml(label)}</strong><p>${escapeHtml(m.content)}</p></div>`;
+      }).join("");
+      el.scrollTop = el.scrollHeight;
+    }
+
+    async function api(action, path, options = {}) {
+      showLoading(action);
+      try {
+        const headers = { ...(options.headers || {}) };
+        const token = getToken();
+        if (token) headers["Authorization"] = "Bearer " + token;
+        if (options.body && !(options.body instanceof FormData)) {
+          headers["Content-Type"] = "application/json";
+        }
+        const res = await fetch(API_BASE + path, { ...options, headers });
+        const ct = res.headers.get("content-type") || "";
+        const text = await res.text();
+        let data = null;
+        if (text) {
+          data = ct.includes("application/json") ? (() => { try { return JSON.parse(text); } catch { return text; } })() : text;
+        }
+        if (!res.ok) {
+          let hint = null;
+          if (res.status === 409) hint = "Conflicto (ej. email ya registrado).";
+          if (res.status === 401) hint = "No autorizado. Hacé Login.";
+          if (res.status === 403) hint = "Sin permiso para esta acción.";
+          if (res.status === 404) hint = "No encontrado.";
+          if (res.status === 500) hint = "Error del servidor. Revisá logs de dotnet run (ej. API key Claude).";
+          show(action, data, res.status, hint, true);
+          setStatus(`${action} — error ${res.status}`);
+          return { ok: false, status: res.status, data };
+        }
+        show(action, data, res.status, null, false);
+        setStatus(`${action} — OK (${res.status})`);
+        return { ok: true, status: res.status, data };
+      } catch (err) {
+        show(action, err.message, "red", "¿Está corriendo dotnet run?", true);
+        setStatus(`${action} — error de red`);
+        return { ok: false, status: 0, data: null };
+      }
+    }
+
+    async function register() {
+      const email = document.getElementById("regEmail").value.trim();
+      if (!email) { showLocal("Register", "Ingresá un email.", true); return; }
+      const result = await api("Register", "/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({
+          firstName: document.getElementById("regFirstName").value,
+          lastName: document.getElementById("regLastName").value,
+          email, password: document.getElementById("regPassword").value
+        })
+      });
+      const token = pickToken(result.data);
+      if (result.ok && token) { setToken(token); document.getElementById("loginEmail").value = email; }
+    }
+
+    async function login() {
+      const result = await api("Login", "/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          email: document.getElementById("loginEmail").value,
+          password: document.getElementById("loginPassword").value
+        })
+      });
+      const token = pickToken(result.data);
+      if (result.ok && token) setToken(token);
+    }
+
+    async function getMe() {
+      if (!requireToken("Get me")) return;
+      await api("Get me", "/api/users/me");
+    }
+
+    async function createLawyerProfile() {
+      if (!requireToken("Crear perfil abogado")) return;
+      const result = await api("Crear perfil abogado", "/api/lawyer-profiles", {
+        method: "POST",
+        body: JSON.stringify({
+          licenseNumber: document.getElementById("licenseNumber").value,
+          barAssociation: document.getElementById("barAssociation").value,
+          province: document.getElementById("province").value,
+          specialty: document.getElementById("specialty").value
+        })
+      });
+      if (result.ok && result.data?.id) lawyerProfileId = result.data.id;
+    }
+
+    async function getLawyerProfile() {
+      if (!requireToken("Get perfil abogado")) return { ok: false };
+      const result = await api("Get perfil abogado", "/api/lawyer-profiles/me");
+      if (result.ok && result.data?.id) lawyerProfileId = result.data.id;
+      return result;
+    }
+
+    async function createChat() {
+      if (!requireToken("Crear chat")) return;
+      const result = await api("Crear chat", "/api/chats", {
+        method: "POST",
+        body: JSON.stringify({ title: document.getElementById("chatTitle").value })
+      });
+      if (result.ok && result.data?.id) {
+        document.getElementById("chatId").value = result.data.id;
+        renderChatMessages(result.data.messages || []);
+      }
+    }
+
+    async function loadChat() {
+      if (!requireToken("Cargar chat")) return;
+      const chatId = getChatId();
+      if (!chatId) { showLocal("Cargar chat", "Ingresá o creá un Chat ID.", true); return; }
+      const result = await api("Cargar chat", "/api/chats/" + chatId);
+      if (result.ok) renderChatMessages(result.data.messages || []);
+    }
+
+    async function sendChatMessage() {
+      if (!requireToken("Enviar mensaje")) return;
+      const chatId = getChatId();
+      const content = document.getElementById("chatMessage").value.trim();
+      if (!chatId) { showLocal("Enviar mensaje", "Creá o cargá un chat primero.", true); return; }
+      if (!content) { showLocal("Enviar mensaje", "Escribí un mensaje.", true); return; }
+
+      const result = await api("Enviar mensaje (Claude)", "/api/chats/" + chatId + "/messages", {
+        method: "POST",
+        body: JSON.stringify({ content })
+      });
+
+      if (result.ok) {
+        document.getElementById("chatMessage").value = "";
+        await loadChat();
+      }
+    }
+
+    async function deleteChat() {
+      if (!requireToken("Eliminar chat")) return;
+      const chatId = getChatId();
+      if (!chatId) { showLocal("Eliminar chat", "Sin Chat ID.", true); return; }
+      const result = await api("Eliminar chat", "/api/chats/" + chatId, { method: "DELETE" });
+      if (result.ok) {
+        document.getElementById("chatId").value = "";
+        renderChatMessages([]);
+      }
+    }
+
+    async function listChats() {
+      if (!requireToken("Listar chats")) return;
+      await api("Listar chats", "/api/chats");
+    }
+
+    async function createFolder() {
+      if (!requireToken("Crear carpeta")) return;
+      await api("Crear carpeta", "/api/folders", {
+        method: "POST",
+        body: JSON.stringify({ name: document.getElementById("folderName").value, legalContext: "Contexto de prueba" })
+      });
+    }
+
+    async function listFolders() {
+      if (!requireToken("Listar carpetas")) return;
+      await api("Listar carpetas", "/api/folders");
+    }
+
+    async function createSkill() {
+      if (!requireToken("Crear skill")) return;
+      if (!lawyerProfileId) { const p = await getLawyerProfile(); if (!p.ok) return; }
+      if (!lawyerProfileId) { showLocal("Crear skill", "Creá perfil de abogado primero.", true); return; }
+      await api("Crear skill", "/api/custom-skills", {
+        method: "POST",
+        body: JSON.stringify({
+          lawyerProfileId, name: document.getElementById("skillName").value,
+          whenToUse: "Al revisar contratos", instructions: document.getElementById("skillInstructions").value,
+          examples: "Ejemplo", redFlags: "Penalidades", outputFormat: "Lista"
+        })
+      });
+    }
+
+    async function listSkills() {
+      if (!requireToken("Listar skills")) return;
+      await api("Listar skills", "/api/custom-skills/me");
+    }
+
+    async function uploadDocument() {
+      if (!requireToken("Subir documento")) return;
+      const chatId = getChatId();
+      if (!chatId) { showLocal("Subir documento", "Necesitás un Chat ID.", true); return; }
+      const fileInput = document.getElementById("docFile");
+      if (!fileInput.files.length) { showLocal("Subir documento", "Seleccioná un archivo.", true); return; }
+      const form = new FormData();
+      form.append("file", fileInput.files[0]);
+      form.append("chatId", chatId);
+      const result = await api("Subir documento", "/api/documents/upload", { method: "POST", body: form });
+      if (result.ok && result.data?.id) document.getElementById("documentId").value = result.data.id;
+    }
+
+    async function analyzeDocument() {
+      if (!requireToken("Analizar documento")) return;
+      const documentId = document.getElementById("documentId").value;
+      if (!documentId) { showLocal("Analizar documento", "Sin Document ID.", true); return; }
+      await api("Analizar documento", "/api/documents/analyze", {
+        method: "POST",
+        body: JSON.stringify({ documentId, type: "Summary", extractedText: "Texto simulado del documento." })
+      });
+    }
+
+    async function listDocuments() {
+      if (!requireToken("Listar documentos")) return;
+      const chatId = getChatId();
+      if (!chatId) { showLocal("Listar documentos", "Sin Chat ID.", true); return; }
+      await api("Listar documentos", "/api/documents/chat/" + chatId);
+    }
+
+    async function createTask() {
+      if (!requireToken("Crear tarea IA")) return;
+      const chatId = getChatId();
+      if (!chatId) { showLocal("Crear tarea IA", "Sin Chat ID.", true); return; }
+      await api("Crear tarea IA", "/api/ai-tasks", {
+        method: "POST",
+        body: JSON.stringify({ chatId, description: document.getElementById("taskDescription").value })
+      });
+    }
+
+    async function listTasks() {
+      if (!requireToken("Listar tareas IA")) return;
+      const chatId = getChatId();
+      if (!chatId) { showLocal("Listar tareas IA", "Sin Chat ID.", true); return; }
+      await api("Listar tareas IA", "/api/ai-tasks/chat/" + chatId);
+    }
+
+    async function listPlans() { await api("Listar planes", "/api/plans"); }
+
+    document.getElementById("chatMessage").addEventListener("keydown", e => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) sendChatMessage();
+    });
+
+    (function init() {
+      const token = getToken();
+      setStatus(token ? "Token cargado. Podés chatear con Claude." : "Sin token. Login o Register primero.");
+      if (token) document.getElementById("tokenDisplay").textContent = token.substring(0, 40) + "...";
+      suggestEmail(true);
+    })();
+  </script>
+</body>
+</html>

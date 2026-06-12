@@ -66,6 +66,37 @@ public class LawyerProfileService : ILawyerProfileService
         return Result<LawyerProfileDto>.Success(profile.ToDto());
     }
 
+    public async Task<Result<LawyerProfileDto>> UpdateAsync(
+        Guid userId,
+        UpdateLawyerProfileRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.LicenseNumber) ||
+            string.IsNullOrWhiteSpace(request.BarAssociation) ||
+            string.IsNullOrWhiteSpace(request.Province) ||
+            string.IsNullOrWhiteSpace(request.Specialty))
+        {
+            return Result<LawyerProfileDto>.Failure(Error.Validation("Todos los campos del perfil son obligatorios."));
+        }
+
+        var profile = await _lawyerProfileRepository.GetByUserIdAsync(userId, cancellationToken);
+        if (profile is null)
+        {
+            return Result<LawyerProfileDto>.Failure(Error.NotFound("Perfil de abogado no encontrado."));
+        }
+
+        profile.Update(
+            request.LicenseNumber,
+            request.BarAssociation,
+            request.Province,
+            request.Specialty);
+
+        _lawyerProfileRepository.Update(profile);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<LawyerProfileDto>.Success(profile.ToDto());
+    }
+
     public async Task<Result<LawyerProfileDto>> VerifyAsync(VerifyLawyerRequest request, CancellationToken cancellationToken = default)
     {
         if (request.LawyerProfileId == Guid.Empty || request.VerifiedById == Guid.Empty)
@@ -80,6 +111,28 @@ public class LawyerProfileService : ILawyerProfileService
         }
 
         profile.Verify(request.VerifiedById);
+        _lawyerProfileRepository.Update(profile);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<LawyerProfileDto>.Success(profile.ToDto());
+    }
+
+    public async Task<Result<LawyerProfileDto>> RejectAsync(
+        RejectLawyerRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request.LawyerProfileId == Guid.Empty)
+        {
+            return Result<LawyerProfileDto>.Failure(Error.Validation("Datos de rechazo inválidos."));
+        }
+
+        var profile = await _lawyerProfileRepository.GetByIdAsync(request.LawyerProfileId, cancellationToken);
+        if (profile is null)
+        {
+            return Result<LawyerProfileDto>.Failure(Error.NotFound("Perfil de abogado no encontrado."));
+        }
+
+        profile.RejectVerification();
         _lawyerProfileRepository.Update(profile);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

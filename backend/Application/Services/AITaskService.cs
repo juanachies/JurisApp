@@ -80,6 +80,44 @@ public class AITaskService : IAITaskService
         return Result<AITaskDto>.Success(task.ToDto());
     }
 
+    public async Task<Result<AITaskDto>> GetByIdAsync(Guid userId, Guid taskId, CancellationToken cancellationToken = default)
+    {
+        var task = await _aiTaskRepository.GetByIdAsync(taskId, cancellationToken);
+        if (task is null)
+        {
+            return Result<AITaskDto>.Failure(Error.NotFound("Tarea no encontrada."));
+        }
+
+        var chat = await _chatRepository.GetByIdAsync(task.ChatId, cancellationToken);
+        if (chat is null || chat.UserId != userId)
+        {
+            return Result<AITaskDto>.Failure(Error.Unauthorized("No tenés acceso a esta tarea."));
+        }
+
+        return Result<AITaskDto>.Success(task.ToDto());
+    }
+
+    public async Task<Result<AITaskDto>> CancelAsync(Guid userId, Guid taskId, CancellationToken cancellationToken = default)
+    {
+        var task = await _aiTaskRepository.GetByIdAsync(taskId, cancellationToken);
+        if (task is null)
+        {
+            return Result<AITaskDto>.Failure(Error.NotFound("Tarea no encontrada."));
+        }
+
+        var chat = await _chatRepository.GetByIdAsync(task.ChatId, cancellationToken);
+        if (chat is null || chat.UserId != userId)
+        {
+            return Result<AITaskDto>.Failure(Error.Unauthorized("No tenés acceso a esta tarea."));
+        }
+
+        task.Cancel();
+        _aiTaskRepository.Update(task);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<AITaskDto>.Success(task.ToDto());
+    }
+
     public async Task<Result<IReadOnlyList<AITaskDto>>> GetByChatIdAsync(Guid userId, Guid chatId, CancellationToken cancellationToken = default)
     {
         var chat = await _chatRepository.GetByIdAsync(chatId, cancellationToken);

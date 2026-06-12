@@ -43,6 +43,36 @@ public class FolderService : IFolderService
         return Result<FolderDto>.Success(folder.ToDto());
     }
 
+    public async Task<Result<FolderDto>> UpdateAsync(
+        Guid userId,
+        Guid folderId,
+        UpdateFolderRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return Result<FolderDto>.Failure(Error.Validation("El nombre de la carpeta es obligatorio."));
+        }
+
+        var folder = await _folderRepository.GetByIdAsync(folderId, cancellationToken);
+        if (folder is null)
+        {
+            return Result<FolderDto>.Failure(Error.NotFound("Carpeta no encontrada."));
+        }
+
+        var profile = await _lawyerProfileRepository.GetByUserIdAsync(userId, cancellationToken);
+        if (profile is null || folder.LawyerProfileId != profile.Id)
+        {
+            return Result<FolderDto>.Failure(Error.Unauthorized("No tenés acceso a esta carpeta."));
+        }
+
+        folder.Update(request.Name, request.LegalContext);
+        _folderRepository.Update(folder);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<FolderDto>.Success(folder.ToDto());
+    }
+
     public async Task<Result<IReadOnlyList<FolderDto>>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var profile = await _lawyerProfileRepository.GetByUserIdAsync(userId, cancellationToken);

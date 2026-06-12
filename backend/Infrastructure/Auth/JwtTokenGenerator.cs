@@ -25,11 +25,13 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+        var role = user.Role.ToString();
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role.ToString()),
+            new Claim(ClaimTypes.Role, role),
+            new Claim("role", role),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 

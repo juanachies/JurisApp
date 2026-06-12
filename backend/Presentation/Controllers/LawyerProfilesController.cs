@@ -41,6 +41,16 @@ public class LawyerProfilesController : ControllerBase
         return result.ToActionResult();
     }
 
+    [HttpPut("me")]
+    public async Task<IActionResult> UpdateMyProfile(
+        [FromBody] UpdateLawyerProfileRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService.UserId!.Value;
+        var result = await _lawyerProfileService.UpdateAsync(userId, request, cancellationToken);
+        return result.ToActionResult();
+    }
+
     [HttpPost("verify")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Verify(
@@ -48,6 +58,16 @@ public class LawyerProfilesController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _lawyerProfileService.VerifyAsync(request, cancellationToken);
+        return result.ToActionResult();
+    }
+
+    [HttpPost("reject")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Reject(
+        [FromBody] RejectLawyerRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _lawyerProfileService.RejectAsync(request, cancellationToken);
         return result.ToActionResult();
     }
 }

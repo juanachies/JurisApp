@@ -33,6 +33,17 @@ public class FoldersController : ControllerBase
         return result.ToActionResult();
     }
 
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(
+        Guid id,
+        [FromBody] UpdateFolderRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService.UserId!.Value;
+        var result = await _folderService.UpdateAsync(userId, id, request, cancellationToken);
+        return result.ToActionResult();
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
