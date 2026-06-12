@@ -42,6 +42,12 @@
     button { margin: 0.5rem 0.5rem 0.5rem 0; }
     section { margin-bottom: 1.75rem; border-bottom: 1px solid #eee; padding-bottom: 1rem; }
     section h2 { font-size: 1.05rem; margin: 0 0 0.75rem; }
+    section h3 { font-size: 0.95rem; margin: 1rem 0 0.5rem; color: #333; }
+    .auth-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; }
+    .hint { font-size: 0.85rem; color: #555; margin: 0.25rem 0 0.5rem; }
+    .row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    .row input, .row select { flex: 1; min-width: 120px; margin: 0.35rem 0; }
+    label.inline { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.9rem; margin-right: 0.75rem; }
     .chat-thread {
       border: 1px solid #ddd;
       background: #f9f9f9;
@@ -67,32 +73,95 @@
   <div class="layout">
     <main class="panel-left">
       <h1>JurisApp API Test</h1>
-      <p>Token: <code id="tokenDisplay">(ninguno)</code></p>
+      <p>Token: <code id="tokenDisplay">(ninguno)</code> · Usuario actual: <code id="currentUserDisplay">(sin sesión)</code></p>
+      <div class="row">
+        <button type="button" onclick="clearToken()">Cerrar sesión</button>
+        <button type="button" onclick="fillAdminCredentials()">Credenciales admin (dev)</button>
+      </div>
 
       <section>
-        <h2>1. Registro</h2>
-        <input id="regFirstName" placeholder="Nombre" value="Juan">
-        <input id="regLastName" placeholder="Apellido" value="Pérez">
-        <input id="regEmail" placeholder="Email (único)" value="">
-        <input id="regPassword" type="password" placeholder="Password" value="Test1234!">
-        <button type="button" onclick="suggestEmail()">Generar email único</button>
-        <button type="button" onclick="register()">Registrar</button>
+        <h2>Módulo de Autenticación</h2>
+
+        <div class="auth-block">
+          <h3>1. Registrarse</h3>
+          <p class="hint">Crea cuenta y queda autenticado (JWT en respuesta 201).</p>
+          <input id="regFirstName" placeholder="Nombre" value="Juan">
+          <input id="regLastName" placeholder="Apellido" value="Pérez">
+          <input id="regEmail" placeholder="Email (único)" value="">
+          <input id="regPassword" type="password" placeholder="Password (mín. 8)" value="Test1234!">
+          <button type="button" onclick="suggestEmail()">Generar email único</button>
+          <button type="button" onclick="register()">Registrar</button>
+        </div>
+
+        <div class="auth-block">
+          <h3>2. Iniciar sesión</h3>
+          <p class="hint">Valida credenciales. Usuario inactivo → 401 "Cuenta desactivada".</p>
+          <input id="loginEmail" placeholder="Email" value="">
+          <input id="loginPassword" type="password" placeholder="Password" value="Test1234!">
+          <button type="button" onclick="login()">Login</button>
+        </div>
+
+        <div class="auth-block">
+          <h3>3. Recuperar acceso</h3>
+          <p class="hint">Forgot: siempre 200 (no revela si el email existe). El enlace aparece en los logs del servidor (<code>dotnet run</code>).</p>
+          <input id="forgotEmail" placeholder="Email para recuperación" value="">
+          <button type="button" onclick="syncForgotEmail()">Usar email de login</button>
+          <button type="button" onclick="forgotPassword()">Solicitar recuperación</button>
+          <input id="resetToken" placeholder="Token (copiar del log del servidor)">
+          <input id="resetPassword" type="password" placeholder="Nueva contraseña" value="NuevaPass123!">
+          <button type="button" onclick="resetPassword()">Redefinir contraseña</button>
+          <button type="button" onclick="applyNewPasswordToLogin()">Aplicar nueva contraseña al login</button>
+        </div>
+
+        <div class="auth-block">
+          <h3>4. Visualizar perfil</h3>
+          <p class="hint">Requiere sesión activa (JWT).</p>
+          <button type="button" onclick="getMe()">GET /api/users/me</button>
+        </div>
+
+        <div class="auth-block">
+          <h3>5. Editar perfil</h3>
+          <p class="hint">Actualiza nombre, apellido y email del usuario autenticado.</p>
+          <input id="profileFirstName" placeholder="Nombre" value="Juan">
+          <input id="profileLastName" placeholder="Apellido" value="Pérez">
+          <input id="profileEmail" placeholder="Email" value="">
+          <button type="button" onclick="fillProfileFromSession()">Cargar datos actuales</button>
+          <button type="button" onclick="updateProfile()">PUT /api/users/me</button>
+        </div>
+
+        <div class="auth-block">
+          <h3>6. Visualizar usuarios (Admin)</h3>
+          <p class="hint">Requiere rol Admin. Admin dev: <code>admin@jurisapp.local</code> / <code>Admin123!</code></p>
+          <button type="button" onclick="listUsers()">GET /api/users (listado)</button>
+          <input id="targetUserId" placeholder="User ID (GUID)">
+          <button type="button" onclick="fillTargetUserFromMe()">Usar mi ID</button>
+          <button type="button" onclick="getUserById()">GET /api/users/{id}</button>
+        </div>
+
+        <div class="auth-block">
+          <h3>7. Gestionar usuarios (Admin)</h3>
+          <p class="hint">Editar datos, rol, activar/desactivar o eliminar. No podés desactivarte ni eliminarte a vos mismo.</p>
+          <input id="adminFirstName" placeholder="Nombre (opcional)">
+          <input id="adminLastName" placeholder="Apellido (opcional)">
+          <input id="adminEmail" placeholder="Email (opcional)">
+          <select id="adminRole">
+            <option value="">— Rol (sin cambiar) —</option>
+            <option value="User">User</option>
+            <option value="Lawyer">Lawyer</option>
+            <option value="Admin">Admin</option>
+          </select>
+          <select id="adminIsActive">
+            <option value="">— Estado (sin cambiar) —</option>
+            <option value="true">Activar</option>
+            <option value="false">Desactivar</option>
+          </select>
+          <button type="button" onclick="adminUpdateUser()">PUT /api/users/{id}</button>
+          <button type="button" onclick="adminDeleteUser()">DELETE /api/users/{id}</button>
+        </div>
       </section>
 
       <section>
-        <h2>2. Login</h2>
-        <input id="loginEmail" placeholder="Email" value="">
-        <input id="loginPassword" type="password" placeholder="Password" value="Test1234!">
-        <button type="button" onclick="login()">Login</button>
-      </section>
-
-      <section>
-        <h2>3. Usuario actual</h2>
-        <button type="button" onclick="getMe()">Get me</button>
-      </section>
-
-      <section>
-        <h2>4. Perfil abogado</h2>
+        <h2>Perfil abogado</h2>
         <input id="licenseNumber" value="MAT-12345">
         <input id="barAssociation" value="Colegio de Abogados de CABA">
         <input id="province" value="Buenos Aires">
@@ -102,7 +171,7 @@
       </section>
 
       <section>
-        <h2>5. Chats (consultas con Claude)</h2>
+        <h2>Chats (consultas con Claude)</h2>
         <p class="chat-hint">Creá un chat, escribí tu consulta y enviá. La respuesta viene de Claude vía la API.</p>
         <input id="chatTitle" placeholder="Título del chat" value="Consulta laboral">
         <button type="button" onclick="createChat()">Crear chat</button>
@@ -118,14 +187,14 @@
       </section>
 
       <section>
-        <h2>6. Carpetas</h2>
+        <h2>Carpetas</h2>
         <input id="folderName" placeholder="Nombre" value="Expediente 2026">
         <button type="button" onclick="createFolder()">Crear carpeta</button>
         <button type="button" onclick="listFolders()">Listar carpetas</button>
       </section>
 
       <section>
-        <h2>7. Custom Skills</h2>
+        <h2>Custom Skills</h2>
         <input id="skillName" placeholder="Nombre" value="Revisión de contrato">
         <textarea id="skillInstructions" rows="3">Revisar cláusulas de rescisión y penalidades.</textarea>
         <button type="button" onclick="createSkill()">Crear skill</button>
@@ -133,7 +202,7 @@
       </section>
 
       <section>
-        <h2>8. Documentos</h2>
+        <h2>Documentos</h2>
         <input type="file" id="docFile">
         <button type="button" onclick="uploadDocument()">Subir documento</button>
         <input id="documentId" placeholder="Document ID">
@@ -142,14 +211,14 @@
       </section>
 
       <section>
-        <h2>9. Tareas IA</h2>
+        <h2>Tareas IA</h2>
         <input id="taskDescription" placeholder="Descripción" value="Preparar demanda por daños">
         <button type="button" onclick="createTask()">Crear tarea</button>
         <button type="button" onclick="listTasks()">Listar tareas</button>
       </section>
 
       <section>
-        <h2>10. Planes</h2>
+        <h2>Planes</h2>
         <button type="button" onclick="listPlans()">Listar planes</button>
       </section>
     </main>
@@ -167,15 +236,82 @@
     const API_BASE = "";
     const TOKEN_KEY = "jurisapp_token";
     let lawyerProfileId = null;
+    let currentUser = null;
 
     function getToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
 
     function pickToken(data) { return data && (data.token || data.Token || ""); }
 
+    function pickUser(data) { return data && (data.user || data.User || data); }
+
     function setToken(token) {
       if (!token) return;
       localStorage.setItem(TOKEN_KEY, token);
       document.getElementById("tokenDisplay").textContent = token.substring(0, 40) + "...";
+    }
+
+    function clearToken() {
+      localStorage.removeItem(TOKEN_KEY);
+      currentUser = null;
+      document.getElementById("tokenDisplay").textContent = "(ninguno)";
+      document.getElementById("currentUserDisplay").textContent = "(sin sesión)";
+      showLocal("Cerrar sesión", "Token eliminado. Ya no hay sesión activa.", false);
+    }
+
+    function updateCurrentUserDisplay(user) {
+      if (!user) {
+        document.getElementById("currentUserDisplay").textContent = "(sin sesión)";
+        return;
+      }
+      const name = [user.firstName || user.FirstName, user.lastName || user.LastName].filter(Boolean).join(" ");
+      const email = user.email || user.Email || "";
+      const role = user.role || user.Role || "";
+      const active = user.isActive ?? user.IsActive;
+      const activeLabel = active === undefined ? "" : (active ? " · activo" : " · inactivo");
+      document.getElementById("currentUserDisplay").textContent = `${name || email} (${role}${activeLabel})`;
+    }
+
+    function rememberUser(user) {
+      if (!user || !(user.id || user.Id)) return;
+      currentUser = user;
+      const id = user.id || user.Id;
+      document.getElementById("targetUserId").value = id;
+      updateCurrentUserDisplay(user);
+    }
+
+    function fillAdminCredentials() {
+      document.getElementById("loginEmail").value = "admin@jurisapp.local";
+      document.getElementById("loginPassword").value = "Admin123!";
+      document.getElementById("forgotEmail").value = "admin@jurisapp.local";
+      showLocal("Credenciales admin", { email: "admin@jurisapp.local", password: "Admin123!" }, false);
+    }
+
+    function syncForgotEmail() {
+      const email = document.getElementById("loginEmail").value.trim();
+      document.getElementById("forgotEmail").value = email;
+      if (!email) showLocal("Sincronizar email", "Completá el email de login primero.", true);
+      else showLocal("Sincronizar email", { email }, false);
+    }
+
+    function applyNewPasswordToLogin() {
+      const pwd = document.getElementById("resetPassword").value;
+      document.getElementById("loginPassword").value = pwd;
+      document.getElementById("regPassword").value = pwd;
+      showLocal("Aplicar contraseña", "Nueva contraseña copiada al formulario de login.", false);
+    }
+
+    function fillProfileFromSession() {
+      if (!currentUser) { showLocal("Cargar perfil", "Hacé GET /me primero o registrate/login.", true); return; }
+      document.getElementById("profileFirstName").value = currentUser.firstName || currentUser.FirstName || "";
+      document.getElementById("profileLastName").value = currentUser.lastName || currentUser.LastName || "";
+      document.getElementById("profileEmail").value = currentUser.email || currentUser.Email || "";
+      showLocal("Cargar perfil", "Datos del usuario actual cargados en el formulario.", false);
+    }
+
+    function fillTargetUserFromMe() {
+      if (!currentUser) { showLocal("User ID", "Hacé GET /me primero.", true); return; }
+      document.getElementById("targetUserId").value = currentUser.id || currentUser.Id;
+      showLocal("User ID", { targetUserId: document.getElementById("targetUserId").value }, false);
     }
 
     function setStatus(text) { document.getElementById("statusBar").textContent = text; }
@@ -216,7 +352,9 @@
       const email = `user${Date.now()}@jurisapp.local`;
       document.getElementById("regEmail").value = email;
       document.getElementById("loginEmail").value = email;
-      if (!silent) showLocal("Generar email", { email, mensaje: "Email listo para register/login." }, false);
+      document.getElementById("forgotEmail").value = email;
+      document.getElementById("profileEmail").value = email;
+      if (!silent) showLocal("Generar email", { email, mensaje: "Email listo para register/login/recuperación." }, false);
     }
 
     function requireToken(action) {
@@ -293,7 +431,12 @@
         })
       });
       const token = pickToken(result.data);
-      if (result.ok && token) { setToken(token); document.getElementById("loginEmail").value = email; }
+      const user = pickUser(result.data);
+      if (result.ok && token) {
+        setToken(token);
+        document.getElementById("loginEmail").value = email;
+        if (user) rememberUser(user);
+      }
     }
 
     async function login() {
@@ -305,12 +448,117 @@
         })
       });
       const token = pickToken(result.data);
-      if (result.ok && token) setToken(token);
+      const user = pickUser(result.data);
+      if (result.ok && token) {
+        setToken(token);
+        if (user) rememberUser(user);
+      }
+    }
+
+    async function forgotPassword() {
+      const email = document.getElementById("forgotEmail").value.trim();
+      if (!email) { showLocal("Forgot password", "Ingresá un email.", true); return; }
+      const result = await api("Forgot password", "/api/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email })
+      });
+      if (result.ok) {
+        show("Forgot password", result.data, result.status,
+          "Revisá la consola del servidor (dotnet run) para copiar el token del enlace reset-password?token=...", false);
+        setStatus("Forgot password — OK. Revisá logs del servidor.");
+      }
+    }
+
+    async function resetPassword() {
+      const token = document.getElementById("resetToken").value.trim();
+      const newPassword = document.getElementById("resetPassword").value;
+      if (!token) { showLocal("Reset password", "Pegá el token del log del servidor.", true); return; }
+      if (!newPassword) { showLocal("Reset password", "Ingresá la nueva contraseña.", true); return; }
+      const result = await api("Reset password", "/api/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ token, newPassword })
+      });
+      if (result.ok) applyNewPasswordToLogin();
     }
 
     async function getMe() {
-      if (!requireToken("Get me")) return;
-      await api("Get me", "/api/users/me");
+      if (!requireToken("Visualizar perfil")) return;
+      const result = await api("Visualizar perfil", "/api/users/me");
+      if (result.ok && result.data) rememberUser(result.data);
+    }
+
+    async function updateProfile() {
+      if (!requireToken("Editar perfil")) return;
+      const result = await api("Editar perfil", "/api/users/me", {
+        method: "PUT",
+        body: JSON.stringify({
+          firstName: document.getElementById("profileFirstName").value,
+          lastName: document.getElementById("profileLastName").value,
+          email: document.getElementById("profileEmail").value
+        })
+      });
+      if (result.ok && result.data) {
+        rememberUser(result.data);
+        document.getElementById("loginEmail").value = result.data.email || result.data.Email || document.getElementById("loginEmail").value;
+      }
+    }
+
+    async function listUsers() {
+      if (!requireToken("Listar usuarios (Admin)")) return;
+      const result = await api("Listar usuarios (Admin)", "/api/users");
+      if (result.ok && Array.isArray(result.data) && result.data.length) {
+        const first = result.data[0];
+        if (!document.getElementById("targetUserId").value.trim()) {
+          document.getElementById("targetUserId").value = first.id || first.Id;
+        }
+      }
+    }
+
+    async function getUserById() {
+      if (!requireToken("Ver usuario (Admin)")) return;
+      const id = document.getElementById("targetUserId").value.trim();
+      if (!id) { showLocal("Ver usuario (Admin)", "Ingresá un User ID.", true); return; }
+      await api("Ver usuario (Admin)", "/api/users/" + id);
+    }
+
+    async function adminUpdateUser() {
+      if (!requireToken("Gestionar usuario (Admin)")) return;
+      const id = document.getElementById("targetUserId").value.trim();
+      if (!id) { showLocal("Gestionar usuario (Admin)", "Ingresá un User ID.", true); return; }
+
+      const body = {};
+      const firstName = document.getElementById("adminFirstName").value.trim();
+      const lastName = document.getElementById("adminLastName").value.trim();
+      const email = document.getElementById("adminEmail").value.trim();
+      const role = document.getElementById("adminRole").value;
+      const isActive = document.getElementById("adminIsActive").value;
+
+      if (firstName) body.firstName = firstName;
+      if (lastName) body.lastName = lastName;
+      if (email) body.email = email;
+      if (role) body.role = role;
+      if (isActive !== "") body.isActive = isActive === "true";
+
+      if (!Object.keys(body).length) {
+        showLocal("Gestionar usuario (Admin)", "Completá al menos un campo para actualizar.", true);
+        return;
+      }
+
+      const result = await api("Gestionar usuario (Admin)", "/api/users/" + id, {
+        method: "PUT",
+        body: JSON.stringify(body)
+      });
+      if (result.ok && result.data && currentUser && (currentUser.id || currentUser.Id) === (result.data.id || result.data.Id)) {
+        rememberUser(result.data);
+      }
+    }
+
+    async function adminDeleteUser() {
+      if (!requireToken("Eliminar usuario (Admin)")) return;
+      const id = document.getElementById("targetUserId").value.trim();
+      if (!id) { showLocal("Eliminar usuario (Admin)", "Ingresá un User ID.", true); return; }
+      if (!confirm("¿Eliminar usuario " + id + "?")) return;
+      await api("Eliminar usuario (Admin)", "/api/users/" + id, { method: "DELETE" });
     }
 
     async function createLawyerProfile() {
@@ -475,9 +723,10 @@
 
     (function init() {
       const token = getToken();
-      setStatus(token ? "Token cargado. Podés chatear con Claude." : "Sin token. Login o Register primero.");
+      setStatus(token ? "Token cargado. Probá el módulo de autenticación o chateá con Claude." : "Sin token. Registrate o hacé login primero.");
       if (token) document.getElementById("tokenDisplay").textContent = token.substring(0, 40) + "...";
       suggestEmail(true);
+      if (token) getMe();
     })();
   </script>
 </body>
