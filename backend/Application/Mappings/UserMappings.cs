@@ -11,7 +11,9 @@ public static class UserMappings
         FirstName = user.FirstName,
         LastName = user.LastName,
         Email = user.Email,
-        Role = user.Role
+        Role = user.Role,
+        IsActive = user.IsActive,
+        CreatedAt = user.CreatedAt
     };
 
     public static CurrentUserDto ToCurrentUserDto(this User user) => new()

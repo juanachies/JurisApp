@@ -24,6 +24,9 @@ public class UserRepository : IUserRepository
     public async Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken = default)
         => await _context.Users.AnyAsync(u => u.Email == email, cancellationToken);
 
+    public async Task<bool> EmailExistsAsync(string email, Guid excludeUserId, CancellationToken cancellationToken = default)
+        => await _context.Users.AnyAsync(u => u.Email == email && u.Id != excludeUserId, cancellationToken);
+
     public async Task AddAsync(User user, CancellationToken cancellationToken = default)
         => await _context.Users.AddAsync(user, cancellationToken);
 

@@ -10,6 +10,7 @@ public class User : BaseEntity
     public string Email { get; private set; } = string.Empty;
     public string PasswordHash { get; private set; } = string.Empty;
     public UserRole Role { get; private set; }
+    public bool IsActive { get; private set; } = true;
 
     public LawyerProfile? LawyerProfile { get; private set; }
     public ICollection<Chat> Chats { get; private set; } = new List<Chat>();
@@ -25,6 +26,33 @@ public class User : BaseEntity
         Email = email;
         PasswordHash = passwordHash;
         Role = role;
+        IsActive = true;
+    }
+
+    public void UpdateProfile(string firstName, string lastName, string email)
+    {
+        FirstName = firstName;
+        LastName = lastName;
+        Email = email;
+        Touch();
+    }
+
+    public void ChangePassword(string passwordHash)
+    {
+        PasswordHash = passwordHash;
+        Touch();
+    }
+
+    public void Activate()
+    {
+        IsActive = true;
+        Touch();
+    }
+
+    public void Deactivate()
+    {
+        IsActive = false;
+        Touch();
     }
 
     public void UpgradeToLawyer()
