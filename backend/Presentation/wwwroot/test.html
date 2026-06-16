@@ -62,7 +62,23 @@
     .msg-system { background: #eee; font-size: 0.9em; }
     .msg strong { display: block; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.25rem; opacity: 0.7; }
     .msg p { margin: 0; white-space: pre-wrap; }
+    .msg-debug {
+      font-size: 0.75rem;
+      color: #2e7d32;
+      margin-top: 0.35rem;
+      font-family: ui-monospace, monospace;
+    }
     .chat-hint { font-size: 0.85rem; color: #555; margin: 0.25rem 0; }
+    .skill-chip {
+      display: inline-block;
+      background: #e8f5e9;
+      border: 1px solid #a5d6a7;
+      padding: 0.2rem 0.5rem;
+      margin: 0.15rem 0.25rem 0.15rem 0;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    #chatAppliedSkills { margin: 0.5rem 0 0.75rem; min-height: 1.5rem; }
     @media (max-width: 900px) {
       .layout { flex-direction: column; }
       .panel-right { width: 100%; max-width: none; height: 50vh; position: relative; }
@@ -179,6 +195,18 @@
         <input id="chatId" placeholder="Chat ID (se guarda al crear)">
         <button type="button" onclick="loadChat()">Cargar conversación</button>
 
+        <h3>Custom Skills en este chat</h3>
+        <p class="chat-hint">Aplicá skills con el botón. Permanecen activas hasta que uses <strong>Quitar del chat</strong>.</p>
+        <select id="chatSkillSelect">
+          <option value="">— Cargá tus skills primero —</option>
+        </select>
+        <div class="row">
+          <button type="button" onclick="loadSkillsForChat()">Cargar skills</button>
+          <button type="button" onclick="applySkillToChat()">Aplicar al chat</button>
+          <button type="button" onclick="removeSkillFromChat()">Quitar del chat</button>
+        </div>
+        <div id="chatAppliedSkills"><em>Sin skills aplicadas en este chat.</em></div>
+
         <div id="chatThread" class="chat-thread"><em>Sin mensajes. Creá un chat y enviá una consulta.</em></div>
 
         <textarea id="chatMessage" rows="4" placeholder="Escribí tu consulta legal aquí..."></textarea>
@@ -237,6 +265,27 @@
     const TOKEN_KEY = "jurisapp_token";
     let lawyerProfileId = null;
     let currentUser = null;
+    let availableSkills = [];
+    let appliedSkillIds = new Set();
+    let messageSkillsDebug = {};
+
+    function skillsDebugStorageKey(chatId) {
+      return `jurisapp_msg_skills_${chatId}`;
+    }
+
+    function loadMessageSkillsDebug(chatId) {
+      if (!chatId) { messageSkillsDebug = {}; return; }
+      try {
+        messageSkillsDebug = JSON.parse(localStorage.getItem(skillsDebugStorageKey(chatId)) || "{}");
+      } catch {
+        messageSkillsDebug = {};
+      }
+    }
+
+    function saveMessageSkillsDebug(chatId) {
+      if (!chatId) return;
+      localStorage.setItem(skillsDebugStorageKey(chatId), JSON.stringify(messageSkillsDebug));
+    }
 
     function getToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
 
@@ -367,6 +416,104 @@
       return document.getElementById("chatId").value.trim();
     }
 
+    function getSelectedSkillId() {
+      return document.getElementById("chatSkillSelect").value.trim();
+    }
+
+    function resetChatSkillsState() {
+      appliedSkillIds.clear();
+      messageSkillsDebug = {};
+      const chatId = getChatId();
+      if (chatId) localStorage.removeItem(skillsDebugStorageKey(chatId));
+      renderAppliedSkills();
+    }
+
+    function syncAppliedSkillsFromChat(chat) {
+      const skills = chat?.appliedSkills || chat?.AppliedSkills || [];
+      appliedSkillIds.clear();
+      skills.forEach(s => appliedSkillIds.add(s.id || s.Id));
+      renderAppliedSkills();
+    }
+
+    function populateSkillSelect(skills) {
+      availableSkills = skills || [];
+      const select = document.getElementById("chatSkillSelect");
+      if (!availableSkills.length) {
+        select.innerHTML = '<option value="">(Sin skills — creá una abajo en Custom Skills)</option>';
+        return;
+      }
+      select.innerHTML = '<option value="">— Seleccioná una skill —</option>' +
+        availableSkills.map(s => {
+          const id = s.id || s.Id;
+          const name = s.name || s.Name;
+          const active = s.isActive ?? s.IsActive ?? true;
+          const label = active ? name : `${name} (inactiva)`;
+          return `<option value="${id}">${escapeHtml(label)}</option>`;
+        }).join("");
+    }
+
+    function renderAppliedSkills() {
+      const el = document.getElementById("chatAppliedSkills");
+      if (!appliedSkillIds.size) {
+        el.innerHTML = "<em>Sin skills aplicadas en este chat.</em>";
+        return;
+      }
+      const chips = [...appliedSkillIds].map(id => {
+        const skill = availableSkills.find(s => (s.id || s.Id) === id);
+        const name = skill ? (skill.name || skill.Name) : id;
+        return `<span class="skill-chip">${escapeHtml(name)}</span>`;
+      });
+      el.innerHTML = "Aplicadas: " + chips.join("");
+    }
+
+    async function loadSkillsForChat() {
+      if (!requireToken("Cargar skills")) return;
+      if (!lawyerProfileId) {
+        const p = await getLawyerProfile();
+        if (!p.ok) return;
+      }
+      if (!lawyerProfileId) {
+        showLocal("Cargar skills", "Necesitás perfil de abogado (rol Lawyer o Admin).", true);
+        return;
+      }
+      const result = await api("Cargar skills para chat", "/api/custom-skills/me");
+      if (result.ok && Array.isArray(result.data)) {
+        populateSkillSelect(result.data);
+      }
+    }
+
+    async function applySkillToChat() {
+      if (!requireToken("Aplicar skill")) return;
+      const chatId = getChatId();
+      const skillId = getSelectedSkillId();
+      if (!chatId) { showLocal("Aplicar skill", "Creá o cargá un chat primero.", true); return; }
+      if (!skillId) { showLocal("Aplicar skill", "Seleccioná una skill del listado.", true); return; }
+      const result = await api("Aplicar skill al chat", "/api/custom-skills/apply", {
+        method: "POST",
+        body: JSON.stringify({ chatId, customSkillId: skillId })
+      });
+      if (result.ok) {
+        appliedSkillIds.add(skillId);
+        renderAppliedSkills();
+      }
+    }
+
+    async function removeSkillFromChat() {
+      if (!requireToken("Quitar skill")) return;
+      const chatId = getChatId();
+      const skillId = getSelectedSkillId();
+      if (!chatId) { showLocal("Quitar skill", "Creá o cargá un chat primero.", true); return; }
+      if (!skillId) { showLocal("Quitar skill", "Seleccioná una skill del listado.", true); return; }
+      const result = await api("Quitar skill del chat", "/api/custom-skills/remove", {
+        method: "POST",
+        body: JSON.stringify({ chatId, customSkillId: skillId })
+      });
+      if (result.ok) {
+        appliedSkillIds.delete(skillId);
+        renderAppliedSkills();
+      }
+    }
+
     function renderChatMessages(messages) {
       const el = document.getElementById("chatThread");
       if (!messages || !messages.length) {
@@ -377,7 +524,12 @@
       el.innerHTML = sorted.map(m => {
         const role = (m.role || "").toLowerCase();
         const label = role === "user" ? "Vos" : role === "assistant" ? "JurisApp (Claude)" : m.role;
-        return `<div class="msg msg-${role}"><strong>${escapeHtml(label)}</strong><p>${escapeHtml(m.content)}</p></div>`;
+        const msgId = m.id || m.Id;
+        const skillsUsed = m.skillsUsed || m.SkillsUsed || messageSkillsDebug[msgId];
+        const debugHtml = skillsUsed?.length
+          ? `<div class="msg-debug">[debug] Skills usadas: ${skillsUsed.map(escapeHtml).join(", ")}</div>`
+          : "";
+        return `<div class="msg msg-${role}"><strong>${escapeHtml(label)}</strong><p>${escapeHtml(m.content)}</p>${debugHtml}</div>`;
       }).join("");
       el.scrollTop = el.scrollHeight;
     }
@@ -590,7 +742,11 @@
       });
       if (result.ok && result.data?.id) {
         document.getElementById("chatId").value = result.data.id;
+        resetChatSkillsState();
+        syncAppliedSkillsFromChat(result.data);
         renderChatMessages(result.data.messages || []);
+        loadMessageSkillsDebug(result.data.id);
+        await loadSkillsForChat();
       }
     }
 
@@ -599,7 +755,11 @@
       const chatId = getChatId();
       if (!chatId) { showLocal("Cargar chat", "Ingresá o creá un Chat ID.", true); return; }
       const result = await api("Cargar chat", "/api/chats/" + chatId);
-      if (result.ok) renderChatMessages(result.data.messages || []);
+      if (result.ok) {
+        loadMessageSkillsDebug(chatId);
+        syncAppliedSkillsFromChat(result.data);
+        renderChatMessages(result.data.messages || []);
+      }
     }
 
     async function sendChatMessage() {
@@ -616,6 +776,12 @@
 
       if (result.ok) {
         document.getElementById("chatMessage").value = "";
+        const msgId = result.data?.id || result.data?.Id;
+        const skillsUsed = result.data?.skillsUsed || result.data?.SkillsUsed;
+        if (msgId && skillsUsed?.length) {
+          messageSkillsDebug[msgId] = skillsUsed;
+          saveMessageSkillsDebug(chatId);
+        }
         await loadChat();
       }
     }
@@ -627,6 +793,7 @@
       const result = await api("Eliminar chat", "/api/chats/" + chatId, { method: "DELETE" });
       if (result.ok) {
         document.getElementById("chatId").value = "";
+        resetChatSkillsState();
         renderChatMessages([]);
       }
     }
@@ -653,7 +820,7 @@
       if (!requireToken("Crear skill")) return;
       if (!lawyerProfileId) { const p = await getLawyerProfile(); if (!p.ok) return; }
       if (!lawyerProfileId) { showLocal("Crear skill", "Creá perfil de abogado primero.", true); return; }
-      await api("Crear skill", "/api/custom-skills", {
+      const result = await api("Crear skill", "/api/custom-skills", {
         method: "POST",
         body: JSON.stringify({
           lawyerProfileId, name: document.getElementById("skillName").value,
@@ -661,11 +828,13 @@
           examples: "Ejemplo", redFlags: "Penalidades", outputFormat: "Lista"
         })
       });
+      if (result.ok) await loadSkillsForChat();
     }
 
     async function listSkills() {
       if (!requireToken("Listar skills")) return;
-      await api("Listar skills", "/api/custom-skills/me");
+      const result = await api("Listar skills", "/api/custom-skills/me");
+      if (result.ok && Array.isArray(result.data)) populateSkillSelect(result.data);
     }
 
     async function uploadDocument() {

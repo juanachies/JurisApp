@@ -134,7 +134,8 @@ public class ChatService : IChatService
         await _messageRepository.AddAsync(assistantMessage, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result<MessageDto>.Success(assistantMessage.ToDto());
+        var skillsUsed = activeSkills.Select(s => s.Name).ToList();
+        return Result<MessageDto>.Success(assistantMessage.ToDto(skillsUsed));
     }
 
     public async Task<Result<ChatDto>> GetByIdAsync(Guid userId, Guid chatId, CancellationToken cancellationToken = default)

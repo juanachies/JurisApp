@@ -173,7 +173,7 @@ public class CustomSkillService : ICustomSkillService
             return Error.Validation("Chat y skill son obligatorios.");
         }
 
-        var chat = await _chatRepository.GetByIdAsync(request.ChatId, cancellationToken);
+        var chat = await _chatRepository.GetByIdLightAsync(request.ChatId, cancellationToken);
         if (chat is null)
         {
             return Error.NotFound("Chat no encontrado.");
@@ -197,15 +197,10 @@ public class CustomSkillService : ICustomSkillService
         }
 
         if (apply)
-        {
-            chat.ApplySkill(request.CustomSkillId);
-        }
+            await _customSkillRepository.ApplyToChatAsync(request.ChatId, request.CustomSkillId, cancellationToken);
         else
-        {
-            chat.RemoveSkill(request.CustomSkillId);
-        }
+            await _customSkillRepository.RemoveFromChatAsync(request.ChatId, request.CustomSkillId, cancellationToken);
 
-        _chatRepository.Update(chat);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return null;

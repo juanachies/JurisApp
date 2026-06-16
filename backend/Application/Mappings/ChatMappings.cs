@@ -11,6 +11,13 @@ public static class ChatMappings
         UserId = chat.UserId,
         Title = chat.Title,
         FolderId = chat.FolderId,
+        AppliedSkills = chat.AppliedSkills
+            .Select(cs => new ChatAppliedSkillDto
+            {
+                Id = cs.CustomSkillId,
+                Name = cs.CustomSkill?.Name ?? string.Empty
+            })
+            .ToList(),
         Messages = messages.Select(m => m.ToDto()).ToList()
     };
 
@@ -22,12 +29,13 @@ public static class ChatMappings
         FolderId = chat.FolderId
     };
 
-    public static MessageDto ToDto(this Message message) => new()
+    public static MessageDto ToDto(this Message message, IReadOnlyList<string>? skillsUsed = null) => new()
     {
         Id = message.Id,
         ChatId = message.ChatId,
         Role = message.Role,
         Content = message.Content,
-        Date = message.Date
+        Date = message.Date,
+        SkillsUsed = skillsUsed ?? Array.Empty<string>()
     };
 }
