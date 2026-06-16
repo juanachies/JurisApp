@@ -110,11 +110,19 @@ public class ChatService : IChatService
         var previousMessages = await _messageRepository.GetByChatIdAsync(chatId, cancellationToken);
         var activeSkills = await _customSkillRepository.GetActiveByChatIdAsync(chatId, cancellationToken);
 
-        var aiReply = await _aiService.SendChatMessageAsync(
-            request.Content,
-            previousMessages,
-            activeSkills,
-            cancellationToken);
+        string aiReply;
+        try
+        {
+            aiReply = await _aiService.SendChatMessageAsync(
+                request.Content,
+                previousMessages,
+                activeSkills,
+                cancellationToken);
+        }
+        catch (AIServiceException ex)
+        {
+            return Result<MessageDto>.Failure(Error.ExternalService(ex.Message));
+        }
 
         var assistantMessage = new Message(
             Guid.NewGuid(),

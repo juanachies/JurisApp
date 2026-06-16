@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using System.IdentityModel.Tokens.Jwt;
 using JurisApp.Application;
 using JurisApp.Infrastructure;
+using JurisApp.Infrastructure.AI;
 using JurisApp.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -98,6 +99,28 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+var claudeOpts = builder.Configuration.GetSection(ClaudeOptions.SectionName).Get<ClaudeOptions>()
+    ?? new ClaudeOptions();
+if (builder.Configuration.GetValue<bool>("AI:UseMock"))
+    claudeOpts.Enabled = false;
+
+if (claudeOpts.Enabled && string.IsNullOrWhiteSpace(claudeOpts.ApiKey))
+{
+    app.Logger.LogWarning(
+        "AI:Claude:Enabled=true pero falta AI:Claude:ApiKey. Se usará respuesta simulada.");
+}
+else if (!claudeOpts.Enabled)
+{
+    app.Logger.LogInformation("Claude deshabilitado. Modo desarrollo activo en AIService.");
+}
+else
+{
+    app.Logger.LogInformation(
+        "Claude configurado → BaseUrl: {BaseUrl}, Model: {Model}",
+        string.IsNullOrWhiteSpace(claudeOpts.BaseUrl) ? "https://api.anthropic.com" : claudeOpts.BaseUrl,
+        string.IsNullOrWhiteSpace(claudeOpts.Model) ? "claude-3-5-sonnet-20241022" : claudeOpts.Model);
+}
 
 if (app.Environment.IsDevelopment())
 {

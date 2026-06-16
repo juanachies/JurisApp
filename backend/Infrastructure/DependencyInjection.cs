@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace JurisApp.Infrastructure;
 
@@ -92,19 +93,30 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var apiKey = configuration["AI:Claude:ApiKey"];
-        var useMock = configuration.GetValue<bool>("AI:UseMock");
+        services.AddOptions<ClaudeOptions>()
+            .Bind(configuration.GetSection(ClaudeOptions.SectionName))
+            .PostConfigure(options =>
+            {
+                if (configuration.GetValue<bool>("AI:UseMock"))
+                    options.Enabled = false;
 
-        if (useMock || string.IsNullOrWhiteSpace(apiKey))
-        {
-            services.AddScoped<IAIService, MockAIService>();
-            return services;
-        }
+                if (string.IsNullOrWhiteSpace(options.BaseUrl))
+                    options.BaseUrl = "https://api.anthropic.com";
 
-        services.AddHttpClient<IAIService, AIService>(client =>
+                if (string.IsNullOrWhiteSpace(options.Model))
+                    options.Model = configuration["AI:Model"] ?? "claude-sonnet-4-6";
+
+                options.ApiKey ??= configuration["AI:Claude:ApiKey"];
+            });
+
+        services.AddHttpClient<IAIService, AIService>((sp, client) =>
         {
-            client.BaseAddress = new Uri("https://api.anthropic.com/v1/");
-            client.DefaultRequestHeaders.Add("x-api-key", apiKey);
+            var options = sp.GetRequiredService<IOptions<ClaudeOptions>>().Value;
+            client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+
+            if (!string.IsNullOrWhiteSpace(options.ApiKey))
+                client.DefaultRequestHeaders.Add("x-api-key", options.ApiKey);
+
             client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
         });
 

@@ -20,4 +20,6 @@ public sealed class Error
     public static Error Unauthorized(string message) => new("Unauthorized", message);
 
     public static Error Conflict(string message) => new("Conflict", message);
+
+    public static Error ExternalService(string message) => new("ExternalService", message);
 }

@@ -14,8 +14,9 @@ public static class ResultExtensions
         {
             "NotFound"     => new NotFoundObjectResult(new { result.Error.Code, result.Error.Message }),
             "Unauthorized" => new UnauthorizedObjectResult(new { result.Error.Code, result.Error.Message }),
-            "Conflict"     => new ConflictObjectResult(new { result.Error.Code, result.Error.Message }),
-            _              => new BadRequestObjectResult(new { result.Error.Code, result.Error.Message })
+            "Conflict"        => new ConflictObjectResult(new { result.Error.Code, result.Error.Message }),
+            "ExternalService" => new ObjectResult(new { result.Error.Code, result.Error.Message }) { StatusCode = 502 },
+            _                 => new BadRequestObjectResult(new { result.Error.Code, result.Error.Message })
         };
     }
 
@@ -28,8 +29,9 @@ public static class ResultExtensions
         {
             "NotFound"     => new NotFoundObjectResult(new { result.Error.Code, result.Error.Message }),
             "Unauthorized" => new UnauthorizedObjectResult(new { result.Error.Code, result.Error.Message }),
-            "Conflict"     => new ConflictObjectResult(new { result.Error.Code, result.Error.Message }),
-            _              => new BadRequestObjectResult(new { result.Error.Code, result.Error.Message })
+            "Conflict"        => new ConflictObjectResult(new { result.Error.Code, result.Error.Message }),
+            "ExternalService" => new ObjectResult(new { result.Error.Code, result.Error.Message }) { StatusCode = 502 },
+            _                 => new BadRequestObjectResult(new { result.Error.Code, result.Error.Message })
         };
     }
 
@@ -42,8 +44,9 @@ public static class ResultExtensions
         {
             "NotFound"     => new NotFoundObjectResult(new { result.Error.Code, result.Error.Message }),
             "Unauthorized" => new UnauthorizedObjectResult(new { result.Error.Code, result.Error.Message }),
-            "Conflict"     => new ConflictObjectResult(new { result.Error.Code, result.Error.Message }),
-            _              => new BadRequestObjectResult(new { result.Error.Code, result.Error.Message })
+            "Conflict"        => new ConflictObjectResult(new { result.Error.Code, result.Error.Message }),
+            "ExternalService" => new ObjectResult(new { result.Error.Code, result.Error.Message }) { StatusCode = 502 },
+            _                 => new BadRequestObjectResult(new { result.Error.Code, result.Error.Message })
         };
     }
 }

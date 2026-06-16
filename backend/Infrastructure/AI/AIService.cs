@@ -1,23 +1,30 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using JurisApp.Application.Common;
 using JurisApp.Application.Interfaces.AI;
 using JurisApp.Domain.Entities;
 using JurisApp.Domain.Enums;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace JurisApp.Infrastructure.AI;
 
 public class AIService : IAIService
 {
-    private readonly HttpClient _httpClient;
-    private readonly string _model;
+    private const string DevFallbackReply = "Respuesta simulada de IA en modo desarrollo.";
 
-    public AIService(HttpClient httpClient, IConfiguration configuration)
+    private readonly HttpClient _httpClient;
+    private readonly ClaudeOptions _options;
+    private readonly ILogger<AIService> _logger;
+
+    public AIService(
+        HttpClient httpClient,
+        IOptions<ClaudeOptions> options,
+        ILogger<AIService> logger)
     {
         _httpClient = httpClient;
-        _model = configuration["AI:Claude:Model"]
-            ?? configuration["AI:Model"]
-            ?? throw new InvalidOperationException("AI:Claude:Model is not configured.");
+        _options = options.Value;
+        _logger = logger;
     }
 
     public async Task<string> SendChatMessageAsync(
@@ -26,6 +33,9 @@ public class AIService : IAIService
         IReadOnlyList<CustomSkill> activeSkills,
         CancellationToken cancellationToken = default)
     {
+        if (!IsLiveMode())
+            return DevFallbackReply;
+
         var systemPrompt = BuildChatSystemPrompt(activeSkills);
         var messages = BuildMessageHistory(previousMessages, userMessage);
         return await SendRequestAsync(systemPrompt, messages, cancellationToken);
@@ -37,6 +47,17 @@ public class AIService : IAIService
         IReadOnlyList<CustomSkill> activeSkills,
         CancellationToken cancellationToken = default)
     {
+        if (!IsLiveMode())
+        {
+            return new DocumentAnalysisResult
+            {
+                Summary = DevFallbackReply,
+                Risks = string.Empty,
+                Recommendations = string.Empty,
+                References = string.Empty
+            };
+        }
+
         var systemPrompt = BuildAnalysisSystemPrompt(analysisType, activeSkills);
         var messages = new[]
         {
@@ -51,6 +72,9 @@ public class AIService : IAIService
         string description,
         CancellationToken cancellationToken = default)
     {
+        if (!IsLiveMode())
+            return DevFallbackReply;
+
         var systemPrompt =
             "You are a legal task planner. Given a task description, " +
             "produce a clear, step-by-step action plan in plain text.";
@@ -63,37 +87,68 @@ public class AIService : IAIService
         return await SendRequestAsync(systemPrompt, messages, cancellationToken);
     }
 
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
+    private bool IsLiveMode() =>
+        _options.Enabled && !string.IsNullOrWhiteSpace(_options.ApiKey);
 
-    // NOTE: This method builds the request body using the Anthropic messages API
-    // shape. If the provider changes, only this method and the HttpClient
-    // base address / headers in DependencyInjection need to be updated.
     private async Task<string> SendRequestAsync(
         string systemPrompt,
         object messages,
         CancellationToken cancellationToken)
     {
+        var requestUrl = $"{_options.BaseUrl.TrimEnd('/')}/v1/messages";
+
         var body = new
         {
-            model = _model,
-            max_tokens = 2048,
+            model = _options.Model,
+            max_tokens = _options.MaxTokens,
             system = systemPrompt,
             messages
         };
 
-        var response = await _httpClient.PostAsJsonAsync("messages", body, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        _logger.LogInformation(
+            "Claude request → URL: {Url}, Model: {Model}",
+            requestUrl,
+            _options.Model);
 
-        var json = await response.Content.ReadAsStringAsync(cancellationToken);
-        using var doc = JsonDocument.Parse(json);
+        HttpResponseMessage response;
+        try
+        {
+            response = await _httpClient.PostAsJsonAsync("/v1/messages", body, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not AIServiceException)
+        {
+            _logger.LogError(ex, "Error de red al llamar a Claude en {Url}", requestUrl);
+            throw new AIServiceException("No se pudo conectar con el servicio de IA.", ex);
+        }
 
-        // Anthropic response shape: { content: [ { type: "text", text: "..." } ] }
-        return doc.RootElement
-            .GetProperty("content")[0]
-            .GetProperty("text")
-            .GetString() ?? string.Empty;
+        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError(
+                "Claude error → Status: {StatusCode}, URL: {Url}, Model: {Model}, Body: {Body}",
+                (int)response.StatusCode,
+                requestUrl,
+                _options.Model,
+                responseBody);
+
+            throw new AIServiceException(
+                $"El servicio de IA respondió con error {(int)response.StatusCode}.");
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(responseBody);
+            return doc.RootElement
+                .GetProperty("content")[0]
+                .GetProperty("text")
+                .GetString() ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Respuesta inesperada de Claude: {Body}", responseBody);
+            throw new AIServiceException("La respuesta del servicio de IA no tiene el formato esperado.", ex);
+        }
     }
 
     private static string BuildChatSystemPrompt(IReadOnlyList<CustomSkill> activeSkills)
