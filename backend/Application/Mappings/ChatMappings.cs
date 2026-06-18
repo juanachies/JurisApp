@@ -29,13 +29,13 @@ public static class ChatMappings
         FolderId = chat.FolderId
     };
 
-    public static MessageDto ToDto(this Message message, IReadOnlyList<string>? skillsUsed = null) => new()
+    public static MessageDto ToDto(this Message message) => new()
     {
         Id = message.Id,
         ChatId = message.ChatId,
         Role = message.Role,
         Content = message.Content,
         Date = message.Date,
-        SkillsUsed = skillsUsed ?? Array.Empty<string>()
+        SkillsUsed = message.GetSkillsUsed()
     };
 }

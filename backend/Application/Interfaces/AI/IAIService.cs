@@ -1,6 +1,5 @@
 using JurisApp.Domain.Entities;
 using JurisApp.Domain.Enums;
-
 namespace JurisApp.Application.Interfaces.AI;
 
 public interface IAIService
@@ -9,6 +8,7 @@ public interface IAIService
         string userMessage,
         IReadOnlyList<Message> previousMessages,
         IReadOnlyList<CustomSkill> activeSkills,
+        IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
         CancellationToken cancellationToken = default);
 
     Task<DocumentAnalysisResult> AnalyzeDocumentAsync(

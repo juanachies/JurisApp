@@ -11,6 +11,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ILawyerProfileService, LawyerProfileService>();
         services.AddScoped<IChatService, ChatService>();
+        services.AddScoped<IChatDocumentContextService, ChatDocumentContextService>();
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<ICustomSkillService, CustomSkillService>();
         services.AddScoped<IFolderService, FolderService>();

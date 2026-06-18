@@ -79,6 +79,54 @@
       font-size: 0.85rem;
     }
     #chatAppliedSkills { margin: 0.5rem 0 0.75rem; min-height: 1.5rem; }
+    .chat-documents {
+      margin: 0.5rem 0 0.75rem;
+      padding: 0.5rem 0.65rem;
+      background: #fff;
+      border: 1px dashed #ccc;
+      border-radius: 6px;
+      min-height: 2rem;
+    }
+    .chat-documents h4 {
+      margin: 0 0 0.35rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .doc-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      padding: 0.2rem 0.45rem;
+      margin: 0.15rem 0.35rem 0.15rem 0;
+      border-radius: 4px;
+      font-size: 0.82rem;
+    }
+    .doc-chip button {
+      margin: 0;
+      padding: 0.1rem 0.35rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .chat-compose { margin-top: 0.75rem; }
+    .chat-compose-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 0.5rem;
+    }
+    .chat-compose-actions button { margin: 0; }
+    .btn-attach {
+      background: #fff;
+      border: 1px solid #bbb;
+    }
+    .btn-attach:hover { background: #f5f5f5; }
+    #docFile { display: none; }
     @media (max-width: 900px) {
       .layout { flex-direction: column; }
       .panel-right { width: 100%; max-width: none; height: 50vh; position: relative; }
@@ -207,11 +255,23 @@
         </div>
         <div id="chatAppliedSkills"><em>Sin skills aplicadas en este chat.</em></div>
 
+        <div class="chat-documents" id="chatDocuments">
+          <h4>Documentos del chat</h4>
+          <em>Sin documentos. Usá «Adjuntar documento» abajo.</em>
+        </div>
+
         <div id="chatThread" class="chat-thread"><em>Sin mensajes. Creá un chat y enviá una consulta.</em></div>
 
-        <textarea id="chatMessage" rows="4" placeholder="Escribí tu consulta legal aquí..."></textarea>
-        <button type="button" onclick="sendChatMessage()">Enviar mensaje</button>
-        <button type="button" onclick="deleteChat()">Eliminar chat</button>
+        <div class="chat-compose">
+          <textarea id="chatMessage" rows="4" placeholder="Escribí tu consulta legal aquí..."></textarea>
+          <div class="chat-compose-actions">
+            <input type="file" id="docFile" accept=".pdf,.doc,.docx,.txt,.rtf,.odt" onchange="uploadDocument()">
+            <button type="button" class="btn-attach" onclick="document.getElementById('docFile').click()">Adjuntar documento</button>
+            <button type="button" onclick="sendChatMessage()">Enviar mensaje</button>
+            <button type="button" onclick="deleteChat()">Eliminar chat</button>
+          </div>
+          <p class="chat-hint">Ctrl+Enter para enviar. Los documentos se asocian al chat activo.</p>
+        </div>
       </section>
 
       <section>
@@ -230,15 +290,6 @@
       </section>
 
       <section>
-        <h2>Documentos</h2>
-        <input type="file" id="docFile">
-        <button type="button" onclick="uploadDocument()">Subir documento</button>
-        <input id="documentId" placeholder="Document ID">
-        <button type="button" onclick="analyzeDocument()">Analizar documento</button>
-        <button type="button" onclick="listDocuments()">Listar documentos del chat</button>
-      </section>
-
-      <section>
         <h2>Tareas IA</h2>
         <input id="taskDescription" placeholder="Descripción" value="Preparar demanda por daños">
         <button type="button" onclick="createTask()">Crear tarea</button>
@@ -247,7 +298,13 @@
 
       <section>
         <h2>Planes</h2>
+        <p style="font-size:0.85rem;color:#666;margin:0 0 0.5rem;">Listá planes, elegí Pro o Max. Con <code>Stripe:UseMock=true</code> usá simular compra.</p>
+        <input id="planId" placeholder="Plan ID (GUID de Pro o Max)">
         <button type="button" onclick="listPlans()">Listar planes</button>
+        <button type="button" onclick="simulatePurchase()">Simular compra (sin Stripe)</button>
+        <button type="button" onclick="createCheckoutSession()">Crear checkout Stripe</button>
+        <button type="button" onclick="openLastCheckoutUrl()">Abrir checkout</button>
+        <button type="button" onclick="getCurrentPlan()">Ver mi plan actual</button>
       </section>
     </main>
 
@@ -265,7 +322,8 @@
     const TOKEN_KEY = "jurisapp_token";
     let lawyerProfileId = null;
     let currentUser = null;
-    let availableSkills = [];
+    let cachedPlans = [];
+    let lastCheckoutUrl = null;
     let appliedSkillIds = new Set();
     let messageSkillsDebug = {};
 
@@ -466,6 +524,62 @@
       el.innerHTML = "Aplicadas: " + chips.join("");
     }
 
+    function renderChatDocuments(documents) {
+      const el = document.getElementById("chatDocuments");
+      const heading = "<h4>Documentos del chat</h4>";
+      if (!documents || !documents.length) {
+        el.innerHTML = heading + "<em>Sin documentos. Usá «Adjuntar documento» abajo.</em>";
+        return;
+      }
+      const chips = documents.map(d => {
+        const id = d.id || d.Id;
+        const title = d.title || d.Title || "Sin título";
+        return `<span class="doc-chip">${escapeHtml(title)} <button type="button" onclick="analyzeDocument('${id}')">Analizar</button></span>`;
+      });
+      el.innerHTML = heading + chips.join("");
+    }
+
+    async function loadChatDocuments(silent) {
+      const chatId = getChatId();
+      if (!chatId) {
+        renderChatDocuments([]);
+        return { ok: false };
+      }
+      if (!requireToken("Listar documentos")) return { ok: false };
+      if (!silent) showLoading("Listar documentos del chat");
+      try {
+        const headers = {};
+        const token = getToken();
+        if (token) headers["Authorization"] = "Bearer " + token;
+        const res = await fetch(API_BASE + "/api/documents/chat/" + chatId, { headers });
+        const ct = res.headers.get("content-type") || "";
+        const text = await res.text();
+        let data = null;
+        if (text) {
+          data = ct.includes("application/json") ? (() => { try { return JSON.parse(text); } catch { return text; } })() : text;
+        }
+        if (!res.ok) {
+          if (!silent) {
+            show("Listar documentos del chat", data, res.status, "No se pudieron cargar los documentos.", true);
+            setStatus("Listar documentos — error " + res.status);
+          }
+          return { ok: false, data };
+        }
+        if (!silent) {
+          show("Listar documentos del chat", data, res.status, null, false);
+          setStatus("Listar documentos — OK (" + res.status + ")");
+        }
+        if (Array.isArray(data)) renderChatDocuments(data);
+        return { ok: true, data };
+      } catch (err) {
+        if (!silent) {
+          show("Listar documentos del chat", err.message, "red", "¿Está corriendo dotnet run?", true);
+          setStatus("Listar documentos — error de red");
+        }
+        return { ok: false, data: null };
+      }
+    }
+
     async function loadSkillsForChat() {
       if (!requireToken("Cargar skills")) return;
       if (!lawyerProfileId) {
@@ -555,7 +669,7 @@
           if (res.status === 409) hint = "Conflicto (ej. email ya registrado).";
           if (res.status === 401) hint = "No autorizado. Hacé Login.";
           if (res.status === 403) hint = "Sin permiso para esta acción.";
-          if (res.status === 404) hint = "No encontrado.";
+          if (res.status === 404) hint = "No encontrado. ¿Reiniciaste dotnet run después de los cambios?";
           if (res.status === 500) hint = "Error del servidor. Revisá logs de dotnet run (ej. API key Claude).";
           show(action, data, res.status, hint, true);
           setStatus(`${action} — error ${res.status}`);
@@ -747,6 +861,7 @@
         renderChatMessages(result.data.messages || []);
         loadMessageSkillsDebug(result.data.id);
         await loadSkillsForChat();
+        await loadChatDocuments(true);
       }
     }
 
@@ -759,6 +874,7 @@
         loadMessageSkillsDebug(chatId);
         syncAppliedSkillsFromChat(result.data);
         renderChatMessages(result.data.messages || []);
+        await loadChatDocuments(true);
       }
     }
 
@@ -795,6 +911,7 @@
         document.getElementById("chatId").value = "";
         resetChatSkillsState();
         renderChatMessages([]);
+        renderChatDocuments([]);
       }
     }
 
@@ -839,32 +956,33 @@
 
     async function uploadDocument() {
       if (!requireToken("Subir documento")) return;
-      const chatId = getChatId();
-      if (!chatId) { showLocal("Subir documento", "Necesitás un Chat ID.", true); return; }
       const fileInput = document.getElementById("docFile");
-      if (!fileInput.files.length) { showLocal("Subir documento", "Seleccioná un archivo.", true); return; }
+      const chatId = getChatId();
+      if (!chatId) {
+        showLocal("Subir documento", "Creá o cargá un chat primero.", true);
+        fileInput.value = "";
+        return;
+      }
+      if (!fileInput.files.length) return;
       const form = new FormData();
       form.append("file", fileInput.files[0]);
       form.append("chatId", chatId);
       const result = await api("Subir documento", "/api/documents/upload", { method: "POST", body: form });
-      if (result.ok && result.data?.id) document.getElementById("documentId").value = result.data.id;
+      fileInput.value = "";
+      if (result.ok) await loadChatDocuments(true);
     }
 
-    async function analyzeDocument() {
+    async function analyzeDocument(documentId) {
       if (!requireToken("Analizar documento")) return;
-      const documentId = document.getElementById("documentId").value;
       if (!documentId) { showLocal("Analizar documento", "Sin Document ID.", true); return; }
       await api("Analizar documento", "/api/documents/analyze", {
         method: "POST",
-        body: JSON.stringify({ documentId, type: "Summary", extractedText: "Texto simulado del documento." })
+        body: JSON.stringify({ documentId, type: "Summary" })
       });
     }
 
     async function listDocuments() {
-      if (!requireToken("Listar documentos")) return;
-      const chatId = getChatId();
-      if (!chatId) { showLocal("Listar documentos", "Sin Chat ID.", true); return; }
-      await api("Listar documentos", "/api/documents/chat/" + chatId);
+      await loadChatDocuments(false);
     }
 
     async function createTask() {
@@ -884,7 +1002,75 @@
       await api("Listar tareas IA", "/api/ai-tasks/chat/" + chatId);
     }
 
-    async function listPlans() { await api("Listar planes", "/api/plans"); }
+    async function listPlans() {
+      const result = await api("Listar planes", "/api/plans");
+      if (result.ok && Array.isArray(result.data)) {
+        cachedPlans = result.data;
+        const paid = cachedPlans.filter(p => (p.price ?? p.Price) > 0);
+        if (paid.length && !document.getElementById("planId").value.trim()) {
+          const first = paid[0];
+          document.getElementById("planId").value = first.id ?? first.Id ?? "";
+        }
+        showLocal("Planes cargados", paid.map(p => ({
+          id: p.id ?? p.Id,
+          name: p.name ?? p.Name,
+          price: p.price ?? p.Price
+        })), false);
+      }
+    }
+
+    async function simulatePurchase() {
+      if (!requireToken("Simular compra")) return;
+      const planId = document.getElementById("planId").value.trim();
+      if (!planId) { showLocal("Simular compra", "Ingresá un Plan ID (Pro o Max).", true); return; }
+      const result = await api("Simular compra", "/api/billing/simulate-purchase", {
+        method: "POST",
+        body: JSON.stringify({ planId })
+      });
+      if (result.ok) showLocal("Compra simulada", "Suscripción activada. Tocá «Ver mi plan actual».", false);
+    }
+
+    async function getCurrentPlan() {
+      if (!requireToken("Ver mi plan actual")) return;
+      const result = await api("Ver mi plan actual", "/api/plans/current");
+      if (!result.ok || !result.data) return;
+      const d = result.data;
+      const name = d.planName ?? d.PlanName ?? "?";
+      const type = d.planType ?? d.PlanType ?? "?";
+      const price = d.price ?? d.Price ?? 0;
+      const active = d.hasActiveSubscription ?? d.HasActiveSubscription;
+      const limits = d.limitsJson ?? d.LimitsJson ?? "{}";
+      const status = d.subscriptionStatus ?? d.SubscriptionStatus;
+      showLocal("Plan actual", {
+        plan: name,
+        type,
+        price,
+        suscripcionActiva: active,
+        estado: status ?? (active ? "Active" : "Free (sin suscripción paga)"),
+        limites: limits
+      }, false);
+    }
+
+    async function createCheckoutSession() {
+      if (!requireToken("Crear checkout Stripe")) return;
+      const planId = document.getElementById("planId").value.trim();
+      if (!planId) { showLocal("Crear checkout Stripe", "Ingresá un Plan ID (Pro o Max).", true); return; }
+      const result = await api("Crear checkout Stripe", "/api/billing/create-checkout-session", {
+        method: "POST",
+        body: JSON.stringify({ planId })
+      });
+      const url = result.data?.url ?? result.data?.Url;
+      if (result.ok && url) {
+        lastCheckoutUrl = url;
+        showLocal("Checkout URL", url, false);
+      }
+    }
+
+    function openLastCheckoutUrl() {
+      if (!lastCheckoutUrl) { showLocal("Abrir checkout", "Creá un checkout primero.", true); return; }
+      window.open(lastCheckoutUrl, "_blank");
+      showLocal("Abrir checkout", lastCheckoutUrl, false);
+    }
 
     document.getElementById("chatMessage").addEventListener("keydown", e => {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) sendChatMessage();
@@ -896,6 +1082,7 @@
       if (token) document.getElementById("tokenDisplay").textContent = token.substring(0, 40) + "...";
       suggestEmail(true);
       if (token) getMe();
+      if (token && getChatId()) loadChatDocuments(true);
     })();
   </script>
 </body>

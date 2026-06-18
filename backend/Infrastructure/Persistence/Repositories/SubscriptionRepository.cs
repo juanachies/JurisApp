@@ -22,6 +22,13 @@ public class SubscriptionRepository : ISubscriptionRepository
             s => s.UserId == userId && s.Status == SubscriptionStatus.Active,
             cancellationToken);
 
+    public async Task<Subscription?> GetByStripeSubscriptionIdAsync(
+        string stripeSubscriptionId,
+        CancellationToken cancellationToken = default)
+        => await _context.Subscriptions.FirstOrDefaultAsync(
+            s => s.StripeSubscriptionId == stripeSubscriptionId,
+            cancellationToken);
+
     public async Task<IReadOnlyList<Subscription>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
         => await _context.Subscriptions
             .Where(s => s.UserId == userId)

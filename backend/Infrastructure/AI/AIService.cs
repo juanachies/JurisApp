@@ -31,12 +31,13 @@ public class AIService : IAIService
         string userMessage,
         IReadOnlyList<Message> previousMessages,
         IReadOnlyList<CustomSkill> activeSkills,
+        IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
         CancellationToken cancellationToken = default)
     {
         if (!IsLiveMode())
             return DevFallbackReply;
 
-        var systemPrompt = BuildChatSystemPrompt(activeSkills);
+        var systemPrompt = BuildChatSystemPrompt(activeSkills, chatDocuments);
         var messages = BuildMessageHistory(previousMessages, userMessage);
         return await SendRequestAsync(systemPrompt, messages, cancellationToken);
     }
@@ -151,12 +152,25 @@ public class AIService : IAIService
         }
     }
 
-    private static string BuildChatSystemPrompt(IReadOnlyList<CustomSkill> activeSkills)
+    private static string BuildChatSystemPrompt(
+        IReadOnlyList<CustomSkill> activeSkills,
+        IReadOnlyList<ChatDocumentContext>? chatDocuments = null)
     {
         var basePrompt =
             "You are JurisApp, an AI legal assistant. " +
             "Provide accurate, professional legal guidance. " +
             "Always clarify that your responses are informational and not formal legal advice.";
+
+        if (chatDocuments is { Count: > 0 })
+        {
+            var documentBlocks = chatDocuments.Select(d =>
+                $"### {d.Title}\n{d.Content}");
+
+            basePrompt +=
+                "\n\nThe following documents are attached to this chat. " +
+                "You MUST take their content into account when answering:\n\n" +
+                string.Join("\n\n", documentBlocks);
+        }
 
         if (!activeSkills.Any())
             return basePrompt;
@@ -171,7 +185,10 @@ public class AIService : IAIService
                 $"Red flags: {s.RedFlags}\n" +
                 $"Output format: {s.OutputFormat}");
 
-        return basePrompt + "\n\n" + string.Join("\n\n", skillInstructions);
+        return basePrompt +
+               "\n\nThe following custom skills are ACTIVE for this chat. " +
+               "You MUST follow their instructions in your response:\n\n" +
+               string.Join("\n\n", skillInstructions);
     }
 
     private static string BuildAnalysisSystemPrompt(
@@ -196,6 +213,7 @@ public class AIService : IAIService
             $"{typeInstruction} " +
             "Respond ONLY with a JSON object with these exact keys: " +
             "\"summary\", \"risks\", \"recommendations\", \"references\". " +
+            "Each value must be a plain string (use bullet points with newlines if needed). " +
             "Do not include any text outside the JSON object.";
 
         if (!activeSkills.Any())
@@ -229,17 +247,19 @@ public class AIService : IAIService
 
     private static DocumentAnalysisResult ParseAnalysisResult(string raw)
     {
+        var json = StripMarkdownJson(raw);
+
         try
         {
-            using var doc = JsonDocument.Parse(raw.Trim());
+            using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
             return new DocumentAnalysisResult
             {
-                Summary         = root.GetProperty("summary").GetString()         ?? string.Empty,
-                Risks           = root.GetProperty("risks").GetString()            ?? string.Empty,
-                Recommendations = root.GetProperty("recommendations").GetString()  ?? string.Empty,
-                References      = root.GetProperty("references").GetString()       ?? string.Empty
+                Summary         = ReadJsonField(root, "summary"),
+                Risks           = ReadJsonField(root, "risks"),
+                Recommendations = ReadJsonField(root, "recommendations"),
+                References      = ReadJsonField(root, "references")
             };
         }
         catch
@@ -252,5 +272,44 @@ public class AIService : IAIService
                 References      = string.Empty
             };
         }
+    }
+
+    private static string StripMarkdownJson(string raw)
+    {
+        var trimmed = raw.Trim();
+
+        if (!trimmed.StartsWith("```", StringComparison.Ordinal))
+            return trimmed;
+
+        var firstNewline = trimmed.IndexOf('\n');
+        if (firstNewline < 0)
+            return trimmed;
+
+        trimmed = trimmed[(firstNewline + 1)..];
+
+        if (trimmed.EndsWith("```", StringComparison.Ordinal))
+            trimmed = trimmed[..^3];
+
+        return trimmed.Trim();
+    }
+
+    private static string ReadJsonField(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var element))
+            return string.Empty;
+
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString() ?? string.Empty,
+            JsonValueKind.Array => string.Join(
+                "\n",
+                element.EnumerateArray().Select(item => item.ValueKind switch
+                {
+                    JsonValueKind.String => "- " + item.GetString(),
+                    _ => "- " + item.ToString()
+                })),
+            JsonValueKind.Null => string.Empty,
+            _ => element.ToString()
+        };
     }
 }

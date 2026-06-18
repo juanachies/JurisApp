@@ -20,6 +20,7 @@ public class DocumentRepository : IDocumentRepository
 
     public async Task<IReadOnlyList<Document>> GetByChatIdAsync(Guid chatId, CancellationToken cancellationToken = default)
         => await _context.Documents
+            .Include(d => d.Analysis)
             .Where(d => d.ChatId == chatId)
             .ToListAsync(cancellationToken);
 

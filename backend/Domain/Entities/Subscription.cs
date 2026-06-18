@@ -10,6 +10,8 @@ public class Subscription : BaseEntity
     public DateTime StartDate { get; private set; }
     public DateTime? EndDate { get; private set; }
     public SubscriptionStatus Status { get; private set; }
+    public string? StripeCustomerId { get; private set; }
+    public string? StripeSubscriptionId { get; private set; }
 
     public User User { get; private set; } = null!;
     public Plan Plan { get; private set; } = null!;
@@ -42,4 +44,15 @@ public class Subscription : BaseEntity
     public bool IsActive() =>
         Status == SubscriptionStatus.Active &&
         (EndDate == null || EndDate > DateTime.UtcNow);
+
+    public void ActivateFromPayment(Guid planId, string customerId, string subscriptionId)
+    {
+        PlanId = planId;
+        StripeCustomerId = customerId;
+        StripeSubscriptionId = subscriptionId;
+        Status = SubscriptionStatus.Active;
+        StartDate = DateTime.UtcNow;
+        EndDate = null;
+        Touch();
+    }
 }

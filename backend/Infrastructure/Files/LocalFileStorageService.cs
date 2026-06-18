@@ -30,6 +30,17 @@ public class LocalFileStorageService : IFileStorageService
         return uniqueName;
     }
 
+    public Task<Stream> OpenReadAsync(string fileUrl, CancellationToken cancellationToken = default)
+    {
+        var fullPath = Path.Combine(_basePath, fileUrl);
+
+        if (!File.Exists(fullPath))
+            throw new FileNotFoundException("Archivo no encontrado.", fullPath);
+
+        Stream stream = File.OpenRead(fullPath);
+        return Task.FromResult(stream);
+    }
+
     public Task DeleteFileAsync(string fileUrl, CancellationToken cancellationToken = default)
     {
         var fullPath = Path.Combine(_basePath, fileUrl);

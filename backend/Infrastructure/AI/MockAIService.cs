@@ -10,14 +10,19 @@ public class MockAIService : IAIService
         string userMessage,
         IReadOnlyList<Message> previousMessages,
         IReadOnlyList<CustomSkill> activeSkills,
+        IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
         CancellationToken cancellationToken = default)
     {
         var skillNote = activeSkills.Any(s => s.IsActive)
             ? $" (con {activeSkills.Count(s => s.IsActive)} skill(s) activa(s))"
             : string.Empty;
 
+        var docNote = chatDocuments is { Count: > 0 }
+            ? $" Se tienen en cuenta {chatDocuments.Count} documento(s) adjunto(s)."
+            : string.Empty;
+
         var reply =
-            $"[Respuesta simulada{skillNote}] Recibí tu mensaje: \"{userMessage}\". " +
+            $"[Respuesta simulada{skillNote}]{docNote} Recibí tu mensaje: \"{userMessage}\". " +
             "Esta es una respuesta de desarrollo. Configurá AI:UseMock=false y una API key real para usar Claude.";
 
         return Task.FromResult(reply);
