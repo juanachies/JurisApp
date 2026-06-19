@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using JurisApp.Application.Common;
+using JurisApp.Application.DTOs.AITasks;
 using JurisApp.Application.Interfaces.AI;
 using JurisApp.Domain.Entities;
 using JurisApp.Domain.Enums;
@@ -69,23 +70,90 @@ public class AIService : IAIService
         return ParseAnalysisResult(raw);
     }
 
-    public async Task<string> CreateTaskPlanAsync(
+    public async Task<StructuredTaskPlan> CreateStructuredTaskPlanAsync(
         string description,
+        IReadOnlyList<Message> previousMessages,
+        IReadOnlyList<CustomSkill> activeSkills,
+        IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
         CancellationToken cancellationToken = default)
     {
         if (!IsLiveMode())
-            return DevFallbackReply;
+            return TaskPlanParser.BuildMockPlan(description);
 
         var systemPrompt =
-            "You are a legal task planner. Given a task description, " +
-            "produce a clear, step-by-step action plan in plain text.";
+            "Sos JurisApp, asistente legal para abogados en Argentina. " +
+            "Dado un encargo del usuario, generá un plan de trabajo legal estructurado. " +
+            "Respondé ÚNICAMENTE con un JSON válido con esta forma exacta: " +
+            "{\"objective\":\"...\",\"summary\":\"...\",\"steps\":[{\"order\":1,\"title\":\"...\",\"description\":\"...\"}]}. " +
+            "Incluí entre 5 y 8 pasos concretos adaptados al caso (hechos relevantes, documentación, riesgos, teoría del caso, esquema de demanda, intimación, próximos pasos). " +
+            "Todo en español. Sin texto fuera del JSON.";
 
-        var messages = new[]
+        var contextBlock = BuildTaskContextBlock(chatDocuments, activeSkills);
+        var userContent =
+            $"{contextBlock}\n\nEncargo del abogado:\n{description}";
+
+        var messages = new[] { new { role = "user", content = userContent } };
+        var raw = await SendRequestAsync(systemPrompt, messages, cancellationToken);
+        return TaskPlanParser.Parse(raw, description);
+    }
+
+    public async Task<string> ExecuteTaskStepAsync(
+        string taskDescription,
+        TaskStepDto step,
+        IReadOnlyList<TaskStepDto> completedSteps,
+        IReadOnlyList<Message> previousMessages,
+        IReadOnlyList<CustomSkill> activeSkills,
+        IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsLiveMode())
         {
-            new { role = "user", content = $"Create an action plan for: {description}" }
-        };
+            return $"[Paso {step.Order} simulado: {step.Title}]\n\n" +
+                   $"Resultado de desarrollo para: {step.Description}\n\n" +
+                   "Configurá AI:UseMock=false y una API key real para ejecutar con Claude.";
+        }
 
+        var systemPrompt =
+            "Sos JurisApp, asistente legal para abogados en Argentina. " +
+            "Estás ejecutando UN paso de un plan de trabajo legal. " +
+            "Entregá un resultado profesional, concreto y accionable en español. " +
+            "No repitas el encargo completo; enfocate solo en este paso.";
+
+        var completedSummary = completedSteps.Count == 0
+            ? "Ninguno."
+            : string.Join("\n", completedSteps.Select(s => $"- Paso {s.Order} ({s.Title}): completado"));
+
+        var contextBlock = BuildTaskContextBlock(chatDocuments, activeSkills);
+        var userContent =
+            $"{contextBlock}\n\nEncargo general:\n{taskDescription}\n\n" +
+            $"Pasos ya completados:\n{completedSummary}\n\n" +
+            $"Paso actual ({step.Order}): {step.Title}\n" +
+            $"Instrucción del paso: {step.Description}";
+
+        var messages = new[] { new { role = "user", content = userContent } };
         return await SendRequestAsync(systemPrompt, messages, cancellationToken);
+    }
+
+    private static string BuildTaskContextBlock(
+        IReadOnlyList<ChatDocumentContext>? chatDocuments,
+        IReadOnlyList<CustomSkill> activeSkills)
+    {
+        var parts = new List<string>();
+
+        if (chatDocuments is { Count: > 0 })
+        {
+            parts.Add("Documentos del chat:\n" + string.Join("\n\n",
+                chatDocuments.Select(d => $"### {d.Title}\n{d.Content}")));
+        }
+
+        var skills = activeSkills.Where(s => s.IsActive).ToList();
+        if (skills.Count > 0)
+        {
+            parts.Add("Skills activas:\n" + string.Join("\n",
+                skills.Select(s => $"- {s.Name}: {s.Instructions}")));
+        }
+
+        return parts.Count == 0 ? string.Empty : string.Join("\n\n", parts);
     }
 
     private bool IsLiveMode() =>

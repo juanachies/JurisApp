@@ -1,3 +1,4 @@
+using JurisApp.Application.DTOs.AITasks;
 using JurisApp.Application.Interfaces.AI;
 using JurisApp.Domain.Entities;
 using JurisApp.Domain.Enums;
@@ -47,18 +48,31 @@ public class MockAIService : IAIService
         });
     }
 
-    public Task<string> CreateTaskPlanAsync(
+    public Task<StructuredTaskPlan> CreateStructuredTaskPlanAsync(
         string description,
+        IReadOnlyList<Message> previousMessages,
+        IReadOnlyList<CustomSkill> activeSkills,
+        IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(TaskPlanParser.BuildMockPlan(description));
+
+    public Task<string> ExecuteTaskStepAsync(
+        string taskDescription,
+        TaskStepDto step,
+        IReadOnlyList<TaskStepDto> completedSteps,
+        IReadOnlyList<Message> previousMessages,
+        IReadOnlyList<CustomSkill> activeSkills,
+        IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
         CancellationToken cancellationToken = default)
     {
-        var plan =
-            $"[Plan simulado para: {description}]\n\n" +
-            "1. Revisar la documentación relevante\n" +
-            "2. Identificar partes involucradas y plazos\n" +
-            "3. Elaborar borrador de acciones\n" +
-            "4. Consultar con el cliente\n" +
-            "5. Ejecutar y dar seguimiento";
+        var result =
+            $"[Paso {step.Order} simulado: {step.Title}]\n\n" +
+            $"Desarrollo para el encargo: {taskDescription[..Math.Min(taskDescription.Length, 200)]}...\n\n" +
+            $"Entregable simulado:\n- {step.Description}\n\n" +
+            (completedSteps.Count > 0
+                ? $"Pasos previos completados: {string.Join(", ", completedSteps.Select(s => s.Order))}."
+                : "Primer paso del plan.");
 
-        return Task.FromResult(plan);
+        return Task.FromResult(result);
     }
 }

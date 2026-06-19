@@ -2,7 +2,7 @@ using JurisApp.Domain.Enums;
 
 namespace JurisApp.Application.DTOs.AITasks;
 
-public class AITaskDto
+public class AITaskDetailDto
 {
     public Guid Id { get; set; }
     public Guid ChatId { get; set; }
@@ -12,4 +12,5 @@ public class AITaskDto
     public string? Result { get; set; }
     public int CurrentStepIndex { get; set; }
     public bool IsPaused { get; set; }
+    public IReadOnlyList<TaskStepDto> Steps { get; set; } = Array.Empty<TaskStepDto>();
 }

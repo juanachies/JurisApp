@@ -1,11 +1,10 @@
 namespace JurisApp.Domain.Enums;
 
-public enum AITaskStatus
+public enum AITaskStepStatus
 {
     Pending,
-    AwaitingApproval,
     InProgress,
     Completed,
     Failed,
-    Cancelled
+    Skipped
 }

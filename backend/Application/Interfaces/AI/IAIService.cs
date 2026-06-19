@@ -1,5 +1,7 @@
+using JurisApp.Application.DTOs.AITasks;
 using JurisApp.Domain.Entities;
 using JurisApp.Domain.Enums;
+
 namespace JurisApp.Application.Interfaces.AI;
 
 public interface IAIService
@@ -17,7 +19,19 @@ public interface IAIService
         IReadOnlyList<CustomSkill> activeSkills,
         CancellationToken cancellationToken = default);
 
-    Task<string> CreateTaskPlanAsync(
+    Task<StructuredTaskPlan> CreateStructuredTaskPlanAsync(
         string description,
+        IReadOnlyList<Message> previousMessages,
+        IReadOnlyList<CustomSkill> activeSkills,
+        IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
+        CancellationToken cancellationToken = default);
+
+    Task<string> ExecuteTaskStepAsync(
+        string taskDescription,
+        TaskStepDto step,
+        IReadOnlyList<TaskStepDto> completedSteps,
+        IReadOnlyList<Message> previousMessages,
+        IReadOnlyList<CustomSkill> activeSkills,
+        IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
         CancellationToken cancellationToken = default);
 }

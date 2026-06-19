@@ -13,7 +13,13 @@ public class AITaskConfiguration : IEntityTypeConfiguration<AITask>
 
         builder.Property(t => t.Description)
             .IsRequired()
-            .HasMaxLength(1000);
+            .HasMaxLength(8000);
+
+        builder.Property(t => t.CurrentStepIndex)
+            .IsRequired();
+
+        builder.Property(t => t.IsPaused)
+            .IsRequired();
 
         builder.Property(t => t.Plan)
             .IsRequired();
