@@ -1,0 +1,35 @@
+export const jurisAppTokens = {
+  colors: {
+    background: '#F6F5F2',
+    backgroundAlt: '#FFFFFF',
+    foreground: '#1F2937',
+    muted: '#E5E2DC',
+    mutedForeground: '#71717A',
+    accent: '#B08D57',
+    accentSecondary: '#274C77',
+    accentForeground: '#111827',
+    border: '#E5E2DC',
+    success: '#166534',
+    warning: '#B45309',
+    danger: '#991B1B',
+    info: '#274C77',
+    ai: '#7C3AED',
+  },
+  fonts: {
+    heading: "'Libre Baskerville', 'Georgia', serif",
+    body: "'Inter', system-ui, sans-serif",
+    display: "'IBM Plex Sans', 'Inter', sans-serif",
+  },
+  radius: {
+    small: '6px',
+    default: '10px',
+    large: '16px',
+    full: '9999px',
+  },
+  transitions: {
+    fast: '150ms',
+    base: '250ms',
+    slow: '350ms',
+    ai: '500ms',
+  },
+} as const
