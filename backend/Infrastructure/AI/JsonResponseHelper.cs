@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -22,6 +23,52 @@ internal static class JsonResponseHelper
             trimmed = trimmed[..^3];
 
         return trimmed.Trim();
+    }
+
+    public static JsonDocument ParseJsonDocument(string raw)
+    {
+        var json = StripMarkdownJson(raw);
+
+        try
+        {
+            return JsonDocument.Parse(json);
+        }
+        catch (JsonException)
+        {
+            return JsonDocument.Parse(SalvageTruncatedJson(json));
+        }
+    }
+
+    private static string SalvageTruncatedJson(string json)
+    {
+        var suggestedActionsIndex = json.LastIndexOf("\"suggestedActions\"", StringComparison.Ordinal);
+        if (suggestedActionsIndex > 0)
+        {
+            var withoutActions = json[..suggestedActionsIndex].TrimEnd().TrimEnd(',');
+            try
+            {
+                using var _ = JsonDocument.Parse(withoutActions + "\n}");
+                return withoutActions + "\n}";
+            }
+            catch (JsonException)
+            {
+                // Continue with bracket balancing below.
+            }
+        }
+
+        var builder = new StringBuilder(json.TrimEnd());
+        var openBraces = json.Count(c => c == '{');
+        var closeBraces = json.Count(c => c == '}');
+        var openBrackets = json.Count(c => c == '[');
+        var closeBrackets = json.Count(c => c == ']');
+
+        for (var i = 0; i < openBrackets - closeBrackets; i++)
+            builder.Append(']');
+
+        for (var i = 0; i < openBraces - closeBraces; i++)
+            builder.Append('}');
+
+        return builder.ToString();
     }
 
     public static string ReadString(JsonElement element, string propertyName)

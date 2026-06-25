@@ -52,6 +52,21 @@ public sealed class ClaudeSegmentedDocumentAnalysisService : ISegmentedDocumentA
             _options.SegmentedAnalysisMaxTokens,
             cancellationToken);
 
+        try
+        {
+            await ClaudeDebugResponseWriter.SaveSegmentedAnalysisResponseAsync(
+                raw,
+                classification.CategoryKey,
+                cancellationToken);
+            _logger.LogInformation(
+                "Respuesta cruda de Claude guardada en debug/claude-responses (categoría: {CategoryKey})",
+                classification.CategoryKey);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo guardar la respuesta de Claude para debug.");
+        }
+
         return SegmentedAnalysisParser.Parse(raw, classification, categoryDefinition);
     }
 

@@ -13,8 +13,7 @@ internal static class SegmentedAnalysisParser
     {
         try
         {
-            var json = JsonResponseHelper.StripMarkdownJson(raw);
-            using var doc = JsonDocument.Parse(json);
+            using var doc = JsonResponseHelper.ParseJsonDocument(raw);
             var root = doc.RootElement;
 
             var result = new SegmentedDocumentAnalysisResult
@@ -165,13 +164,7 @@ internal static class SegmentedAnalysisParser
         {
             foreach (var itemElement in itemsElement.EnumerateArray())
             {
-                items.Add(new DocumentAnalysisSegmentItemResult
-                {
-                    Title = JsonResponseHelper.ReadString(itemElement, "title"),
-                    Description = JsonResponseHelper.ReadString(itemElement, "description"),
-                    Severity = JsonResponseHelper.NormalizeSeverity(JsonResponseHelper.ReadString(itemElement, "severity")),
-                    Recommendation = JsonResponseHelper.ReadString(itemElement, "recommendation")
-                });
+                items.Add(SegmentItemNormalizer.FromJson(itemElement));
             }
         }
 

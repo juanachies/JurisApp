@@ -30,7 +30,22 @@ function reorderSegments(
   order: string[],
 ): DocumentAnalysisSegmentDto[] {
   const byKey = new Map(segments.map((s) => [s.key, s]))
-  return order.map((key) => byKey.get(key)).filter(Boolean) as DocumentAnalysisSegmentDto[]
+  const seen = new Set<string>()
+  const ordered: DocumentAnalysisSegmentDto[] = []
+
+  for (const key of order) {
+    const segment = byKey.get(key)
+    if (segment) {
+      ordered.push(segment)
+      seen.add(key)
+    }
+  }
+
+  for (const segment of segments) {
+    if (!seen.has(segment.key)) ordered.push(segment)
+  }
+
+  return ordered
 }
 
 export function SegmentedAnalysisPanel({
@@ -264,28 +279,49 @@ function AnalysisSegmentCard({
 
           {segment.items.length > 0 && (
             <ul className="space-y-3">
-              {segment.items.map((item, index) => (
-                <li
-                  key={`${segment.key}-${index}`}
-                  className={`rounded-[10px] border border-border bg-background px-3 py-3 border-l-[3px] ${severityToBorderClass(item.severity)}`}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-foreground">{item.title}</p>
-                    <Badge variant={severityToBadgeVariant(item.severity)} className="text-[10px]">
-                      {severityLabels[item.severity]}
-                    </Badge>
-                  </div>
-                  {item.description && (
-                    <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
-                  )}
-                  {item.recommendation && (
-                    <p className="mt-2 text-xs text-foreground">
-                      <span className="font-semibold text-accent-secondary">Recomendación: </span>
-                      {item.recommendation}
-                    </p>
-                  )}
-                </li>
-              ))}
+              {segment.items.map((item, index) => {
+                const hasContent =
+                  Boolean(item.title || item.description || item.recommendation)
+                if (!hasContent) return null
+
+                return (
+                  <li
+                    key={`${segment.key}-${index}`}
+                    className={`rounded-[10px] border border-border bg-background px-3 py-3 border-l-[3px] ${severityToBorderClass(item.severity)}`}
+                  >
+                    {(item.title || item.severity !== 'neutral') && (
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        {item.title && (
+                          <p className="text-sm font-medium text-foreground">{item.title}</p>
+                        )}
+                        {item.severity !== 'neutral' && (
+                          <Badge
+                            variant={severityToBadgeVariant(item.severity)}
+                            className="text-[10px]"
+                          >
+                            {severityLabels[item.severity]}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                    {item.description && (
+                      <p
+                        className={`text-sm text-muted-foreground ${item.title ? 'mt-1' : ''}`}
+                      >
+                        {item.description}
+                      </p>
+                    )}
+                    {item.recommendation && (
+                      <p className="mt-2 text-xs text-foreground">
+                        <span className="font-semibold text-accent-secondary">
+                          Recomendación:{' '}
+                        </span>
+                        {item.recommendation}
+                      </p>
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           )}
 
