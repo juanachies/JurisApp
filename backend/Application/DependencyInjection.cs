@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<IChatService, ChatService>();
         services.AddScoped<IChatDocumentContextService, ChatDocumentContextService>();
         services.AddScoped<IDocumentService, DocumentService>();
+        services.AddScoped<ISegmentedAnalysisService, SegmentedAnalysisService>();
         services.AddScoped<ICustomSkillService, CustomSkillService>();
         services.AddScoped<IFolderService, FolderService>();
         services.AddScoped<IAITaskService, AITaskService>();

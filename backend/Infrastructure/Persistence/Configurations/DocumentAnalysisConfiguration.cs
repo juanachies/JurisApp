@@ -19,6 +19,17 @@ public class DocumentAnalysisConfiguration : IEntityTypeConfiguration<DocumentAn
             .IsRequired()
             .HasConversion<string>();
 
+        builder.Property(da => da.IsSegmented)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(da => da.CategoryKey).HasMaxLength(100);
+        builder.Property(da => da.CategoryDisplayName).HasMaxLength(200);
+        builder.Property(da => da.Confidence).HasPrecision(5, 4);
+        builder.Property(da => da.MainFieldsJson);
+        builder.Property(da => da.SegmentsJson);
+        builder.Property(da => da.SuggestedActionsJson);
+
         builder.HasOne(da => da.Document)
             .WithOne(d => d.Analysis)
             .HasForeignKey<DocumentAnalysis>(da => da.DocumentId)

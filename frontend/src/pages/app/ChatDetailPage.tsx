@@ -1,18 +1,21 @@
-import { useState, useRef, useEffect, type KeyboardEvent } from 'react'
+import { useState, useRef, useEffect, useMemo, type KeyboardEvent } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Paperclip, Send, Trash2, Sparkles } from 'lucide-react'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Paperclip, Send, Trash2, Sparkles, ScanSearch } from 'lucide-react'
 import {
   chatsApi,
   documentsApi,
+  analysisApi,
   skillsApi,
   aiTasksApi,
-  type DocumentAnalysisDto,
+  type DocumentAnalysisSegmentDto,
+  type SegmentedDocumentAnalysisDto,
+  type ApiError,
 } from '@/lib/api'
 import { ChatMessage } from '@/components/domain/ChatMessage'
 import { DocumentCard } from '@/components/domain/DocumentCard'
 import { AITaskPanel } from '@/components/domain/AITaskPanel'
-import { RiskSummaryCard } from '@/components/domain/RiskSummaryCard'
+import { SegmentedAnalysisPanel } from '@/components/domain/SegmentedAnalysisPanel'
 import { SkillChip } from '@/components/domain/SkillChip'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
@@ -23,8 +26,26 @@ import { ConfirmDialog } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Loading'
 import { LegalDisclaimer } from '@/components/ui/LegalDisclaimer'
 import { useAuth } from '@/lib/auth/AuthContext'
+import {
+  getAnalysisMaxSeverity,
+  severityToDocumentRiskLevel,
+} from '@/lib/utils/severity'
 
 type ChatMode = 'normal' | 'task'
+
+function buildSegmentQuestion(segment: DocumentAnalysisSegmentDto): string {
+  const itemsSummary =
+    segment.items.length > 0
+      ? `\n\nÍtems detectados:\n${segment.items
+          .map(
+            (item) =>
+              `- ${item.title}: ${item.description}${item.recommendation ? ` (Recomendación: ${item.recommendation})` : ''}`,
+          )
+          .join('\n')}`
+      : ''
+
+  return `Explicame en detalle el segmento "${segment.title}" del análisis.\n\nContenido del segmento:\n${segment.content}${itemsSummary}`
+}
 
 export function ChatDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -37,7 +58,13 @@ export function ChatDetailPage() {
   const [message, setMessage] = useState('')
   const [mode, setMode] = useState<ChatMode>('normal')
   const [selectedSkillId, setSelectedSkillId] = useState('')
-  const [analysis, setAnalysis] = useState<DocumentAnalysisDto | null>(null)
+  const [analysesOverride, setAnalysesOverride] = useState<
+    Record<string, SegmentedDocumentAnalysisDto>
+  >({})
+  const [freeTextAnalysis, setFreeTextAnalysis] =
+    useState<SegmentedDocumentAnalysisDto | null>(null)
+  const [consultaInput, setConsultaInput] = useState('')
+  const [activeAnalysisDocId, setActiveAnalysisDocId] = useState<string | null>(null)
   const [analyzingDocId, setAnalyzingDocId] = useState<string | null>(null)
   const [showDelete, setShowDelete] = useState(false)
   const [mobileTab, setMobileTab] = useState('chat')
@@ -53,6 +80,24 @@ export function ChatDetailPage() {
     queryFn: () => documentsApi.listByChat(id!),
     enabled: !!id,
   })
+
+  const savedAnalysisQueries = useQueries({
+    queries: (documents ?? []).map((doc) => ({
+      queryKey: ['analysis', 'document', doc.id],
+      queryFn: () => analysisApi.getByDocument(doc.id),
+      enabled: !!doc.id,
+      staleTime: 60_000,
+    })),
+  })
+
+  const analysesByDocId = useMemo(() => {
+    const map: Record<string, SegmentedDocumentAnalysisDto> = { ...analysesOverride }
+    documents?.forEach((doc, index) => {
+      const data = savedAnalysisQueries[index]?.data
+      if (data) map[doc.id] = data
+    })
+    return map
+  }, [analysesOverride, documents, savedAnalysisQueries])
 
   const { data: skills } = useQuery({
     queryKey: ['skills', 'me'],
@@ -83,6 +128,13 @@ export function ChatDetailPage() {
     enabled: !!activeTask?.id,
   })
 
+  const activeAnalysis = useMemo(() => {
+    if (activeAnalysisDocId && analysesByDocId[activeAnalysisDocId]) {
+      return analysesByDocId[activeAnalysisDocId]
+    }
+    return freeTextAnalysis
+  }, [activeAnalysisDocId, analysesByDocId, freeTextAnalysis])
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chat?.messages])
@@ -112,16 +164,29 @@ export function ChatDetailPage() {
     },
   })
 
-  const analyzeMutation = useMutation({
+  const analyzeDocumentMutation = useMutation({
     mutationFn: (documentId: string) => {
       setAnalyzingDocId(documentId)
-      return documentsApi.analyze({ documentId, type: 'Summary' })
+      return analysisApi.analyzeSegmented({ chatId: id!, documentId })
     },
-    onSuccess: (data) => {
-      setAnalysis(data)
+    onSuccess: (data, documentId) => {
+      setAnalysesOverride((prev) => ({ ...prev, [documentId]: data }))
+      setActiveAnalysisDocId(documentId)
+      setFreeTextAnalysis(null)
+      queryClient.setQueryData(['analysis', 'document', documentId], data)
       setMobileTab('insights')
     },
     onSettled: () => setAnalyzingDocId(null),
+  })
+
+  const analyzeConsultaMutation = useMutation({
+    mutationFn: (input: string) =>
+      analysisApi.analyzeSegmented({ chatId: id!, input }),
+    onSuccess: (data) => {
+      setFreeTextAnalysis(data)
+      setActiveAnalysisDocId(null)
+      setMobileTab('insights')
+    },
   })
 
   const applySkillMutation = useMutation({
@@ -197,6 +262,46 @@ export function ChatDetailPage() {
       handleSend()
     }
   }
+
+  const handleAskFromAnalysis = (prompt: string) => {
+    setMessage(prompt)
+    setMode('normal')
+    setMobileTab('chat')
+  }
+
+  const handleAskAboutSegment = (segment: DocumentAnalysisSegmentDto) => {
+    handleAskFromAnalysis(buildSegmentQuestion(segment))
+  }
+
+  const getDocumentRiskLevel = (docId: string) => {
+    const analysis = analysesByDocId[docId]
+    if (!analysis) return undefined
+    return severityToDocumentRiskLevel(getAnalysisMaxSeverity(analysis))
+  }
+
+  const analysisPanel = activeAnalysis ? (
+    <SegmentedAnalysisPanel
+      analysis={activeAnalysis}
+      onAskAbout={handleAskFromAnalysis}
+      onAskAboutSegment={handleAskAboutSegment}
+    />
+  ) : (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Analizá un documento adjunto o pegá una consulta/caso para obtener un análisis
+        segmentado por categoría jurídica.
+      </p>
+      <CardConsultaAnalyzer
+        value={consultaInput}
+        onChange={setConsultaInput}
+        onAnalyze={() => {
+          const text = consultaInput.trim()
+          if (text) analyzeConsultaMutation.mutate(text)
+        }}
+        isLoading={analyzeConsultaMutation.isPending}
+      />
+    </div>
+  )
 
   if (isLoading) {
     return (
@@ -276,8 +381,19 @@ export function ChatDetailPage() {
               <DocumentCard
                 key={doc.id}
                 document={doc}
-                onAnalyze={() => analyzeMutation.mutate(doc.id)}
+                onAnalyze={() => analyzeDocumentMutation.mutate(doc.id)}
                 isAnalyzing={analyzingDocId === doc.id}
+                riskLevel={getDocumentRiskLevel(doc.id)}
+                isActive={activeAnalysisDocId === doc.id}
+                onSelect={
+                  analysesByDocId[doc.id]
+                    ? () => {
+                        setActiveAnalysisDocId(doc.id)
+                        setFreeTextAnalysis(null)
+                        setMobileTab('insights')
+                      }
+                    : undefined
+                }
               />
             ))}
           </div>
@@ -304,7 +420,7 @@ export function ChatDetailPage() {
         />
       )}
 
-      {analysis && <RiskSummaryCard analysis={analysis} />}
+      {analysisPanel}
     </div>
   )
 
@@ -411,13 +527,21 @@ export function ChatDetailPage() {
         <h2 className="font-heading text-xl text-foreground">{chat.title}</h2>
       </div>
 
-      {/* Desktop layout */}
-      <div className="hidden lg:grid lg:grid-cols-[1fr_340px] gap-6">
+      {(analyzeDocumentMutation.isError || analyzeConsultaMutation.isError) && (
+        <Alert variant="error" className="mb-4">
+          {(analyzeDocumentMutation.error as ApiError | undefined)?.message ??
+            (analyzeConsultaMutation.error as ApiError | undefined)?.message ??
+            'No se pudo completar el análisis.'}
+        </Alert>
+      )}
+
+      <div className="hidden lg:grid lg:grid-cols-[1fr_380px] gap-6">
         {chatThread}
-        <aside className="space-y-4">{contextPanel}</aside>
+        <aside className="space-y-4 max-h-[calc(100vh-140px)] overflow-y-auto chat-scrollbar pr-1">
+          {contextPanel}
+        </aside>
       </div>
 
-      {/* Mobile layout */}
       <div className="lg:hidden">
         <Tabs
           tabs={[
@@ -433,12 +557,44 @@ export function ChatDetailPage() {
           {chatThread}
         </TabPanel>
         <TabPanel id="docs" activeTab={mobileTab}>
-          {contextPanel}
+          <div className="space-y-6">
+            <section>
+              <h3
+                className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-accent-secondary"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                Documentos
+              </h3>
+              {documents?.length ? (
+                <div className="space-y-3">
+                  {documents.map((doc) => (
+                    <DocumentCard
+                      key={doc.id}
+                      document={doc}
+                      onAnalyze={() => analyzeDocumentMutation.mutate(doc.id)}
+                      isAnalyzing={analyzingDocId === doc.id}
+                      riskLevel={getDocumentRiskLevel(doc.id)}
+                      isActive={activeAnalysisDocId === doc.id}
+                      onSelect={
+                        analysesByDocId[doc.id]
+                          ? () => {
+                              setActiveAnalysisDocId(doc.id)
+                              setFreeTextAnalysis(null)
+                              setMobileTab('insights')
+                            }
+                          : undefined
+                      }
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Sin documentos adjuntos</p>
+              )}
+            </section>
+          </div>
         </TabPanel>
         <TabPanel id="insights" activeTab={mobileTab}>
-          {analysis ? <RiskSummaryCard analysis={analysis} /> : (
-            <p className="text-sm text-muted-foreground">Sin análisis todavía.</p>
-          )}
+          {analysisPanel}
         </TabPanel>
         <TabPanel id="task" activeTab={mobileTab}>
           {taskDetail ? (
@@ -467,6 +623,44 @@ export function ChatDetailPage() {
         variant="danger"
         isLoading={deleteMutation.isPending}
       />
+    </div>
+  )
+}
+
+function CardConsultaAnalyzer({
+  value,
+  onChange,
+  onAnalyze,
+  isLoading,
+}: {
+  value: string
+  onChange: (value: string) => void
+  onAnalyze: () => void
+  isLoading?: boolean
+}) {
+  return (
+    <div className="rounded-[16px] border border-border bg-background-alt p-4 space-y-3">
+      <h4
+        className="text-xs font-semibold uppercase tracking-[0.14em] text-accent-secondary"
+        style={{ fontFamily: 'var(--font-display)' }}
+      >
+        Consulta o caso sin documento
+      </h4>
+      <Textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Pegá el texto del caso, una consulta jurídica o una pregunta..."
+        rows={5}
+      />
+      <Button
+        size="sm"
+        onClick={onAnalyze}
+        disabled={!value.trim()}
+        isLoading={isLoading}
+      >
+        <ScanSearch className="h-3.5 w-3.5" aria-hidden="true" />
+        Analizar consulta
+      </Button>
     </div>
   )
 }

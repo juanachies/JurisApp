@@ -8,15 +8,15 @@ internal static class TaskPlanParser
 {
     public static StructuredTaskPlan Parse(string raw, string description)
     {
-        var json = StripMarkdownJson(raw);
+        var json = JsonResponseHelper.StripMarkdownJson(raw);
 
         try
         {
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
-            var objective = ReadString(root, "objective");
-            var summary = ReadString(root, "summary");
+            var objective = JsonResponseHelper.ReadString(root, "objective");
+            var summary = JsonResponseHelper.ReadString(root, "summary");
             var steps = new List<StructuredTaskStep>();
 
             if (root.TryGetProperty("steps", out var stepsElement) &&
@@ -28,8 +28,8 @@ internal static class TaskPlanParser
                     steps.Add(new StructuredTaskStep
                     {
                         Order = step.TryGetProperty("order", out var o) && o.TryGetInt32(out var n) ? n : order,
-                        Title = ReadString(step, "title"),
-                        Description = ReadString(step, "description")
+                        Title = JsonResponseHelper.ReadString(step, "title"),
+                        Description = JsonResponseHelper.ReadString(step, "description")
                     });
                     order++;
                 }
@@ -110,32 +110,5 @@ internal static class TaskPlanParser
             new() { Order = 6, Title = "Redactar intimación previa", Description = "Preparar carta documento o intimación extrajudicial previa si corresponde." },
             new() { Order = 7, Title = "Sugerir próximos pasos procesales", Description = "Indicar vía judicial, medidas cautelares, conciliación y cronograma recomendado." }
         ];
-    }
-
-    private static string StripMarkdownJson(string raw)
-    {
-        var trimmed = raw.Trim();
-        if (!trimmed.StartsWith("```", StringComparison.Ordinal))
-            return trimmed;
-
-        var firstNewline = trimmed.IndexOf('\n');
-        if (firstNewline < 0)
-            return trimmed;
-
-        trimmed = trimmed[(firstNewline + 1)..];
-        if (trimmed.EndsWith("```", StringComparison.Ordinal))
-            trimmed = trimmed[..^3];
-
-        return trimmed.Trim();
-    }
-
-    private static string ReadString(JsonElement element, string propertyName)
-    {
-        if (!element.TryGetProperty(propertyName, out var value))
-            return string.Empty;
-
-        return value.ValueKind == JsonValueKind.String
-            ? value.GetString() ?? string.Empty
-            : value.ToString();
     }
 }

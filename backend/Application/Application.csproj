@@ -16,4 +16,8 @@
     <RootNamespace>JurisApp.Application</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\document-segmentations.json" />
+  </ItemGroup>
+
 </Project>

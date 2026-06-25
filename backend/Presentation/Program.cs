@@ -122,6 +122,28 @@ else
         string.IsNullOrWhiteSpace(claudeOpts.Model) ? "claude-3-5-sonnet-20241022" : claudeOpts.Model);
 }
 
+var openAiOpts = builder.Configuration.GetSection(OpenAIOptions.SectionName).Get<OpenAIOptions>()
+    ?? new OpenAIOptions();
+if (builder.Configuration.GetValue<bool>("AI:UseMock"))
+    openAiOpts.Enabled = false;
+
+if (openAiOpts.Enabled && string.IsNullOrWhiteSpace(openAiOpts.ApiKey))
+{
+    app.Logger.LogWarning(
+        "AI:OpenAI:Enabled=true pero falta AI:OpenAI:ApiKey. Se usará clasificación heurística.");
+}
+else if (!openAiOpts.Enabled)
+{
+    app.Logger.LogInformation("OpenAI deshabilitado. Se usará clasificación heurística.");
+}
+else
+{
+    app.Logger.LogInformation(
+        "OpenAI configurado → BaseUrl: {BaseUrl}, Model: {Model}",
+        string.IsNullOrWhiteSpace(openAiOpts.BaseUrl) ? "https://api.openai.com/v1" : openAiOpts.BaseUrl,
+        string.IsNullOrWhiteSpace(openAiOpts.Model) ? "gpt-4o-mini" : openAiOpts.Model);
+}
+
 if (builder.Configuration.GetValue<bool>("Stripe:UseMock"))
     app.Logger.LogInformation("Stripe mock mode enabled. Use POST /api/billing/simulate-purchase to test subscriptions.");
 

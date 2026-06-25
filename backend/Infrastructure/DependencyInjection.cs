@@ -3,12 +3,14 @@ using JurisApp.Application.Interfaces.Auth;
 using JurisApp.Application.Interfaces.Files;
 using JurisApp.Application.Interfaces.Payments;
 using JurisApp.Application.Interfaces.Persistence;
+using JurisApp.Application.Interfaces.Segmentation;
 using JurisApp.Infrastructure.AI;
 using JurisApp.Infrastructure.Auth;
 using JurisApp.Infrastructure.Files;
 using JurisApp.Infrastructure.Payments;
 using JurisApp.Infrastructure.Persistence;
 using JurisApp.Infrastructure.Persistence.Repositories;
+using JurisApp.Infrastructure.Segmentation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,7 +30,7 @@ public static class DependencyInjection
             .AddDatabase(configuration, environment)
             .AddRepositories()
             .AddAuthServices()
-            .AddAIService(configuration)
+            .AddAIServices(configuration)
             .AddFileStorage()
             .AddStripePayments(configuration, environment);
 
@@ -92,10 +94,12 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddAIService(
+    private static IServiceCollection AddAIServices(
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.AddSingleton<IDocumentSegmentationCatalog, JsonDocumentSegmentationCatalog>();
+
         services.AddOptions<ClaudeOptions>()
             .Bind(configuration.GetSection(ClaudeOptions.SectionName))
             .PostConfigure(options =>
@@ -112,15 +116,43 @@ public static class DependencyInjection
                 options.ApiKey ??= configuration["AI:Claude:ApiKey"];
             });
 
-        services.AddHttpClient<IAIService, AIService>((sp, client) =>
+        services.AddOptions<OpenAIOptions>()
+            .Bind(configuration.GetSection(OpenAIOptions.SectionName))
+            .PostConfigure(options =>
+            {
+                if (configuration.GetValue<bool>("AI:UseMock"))
+                    options.Enabled = false;
+
+                if (string.IsNullOrWhiteSpace(options.BaseUrl))
+                    options.BaseUrl = "https://api.openai.com/v1";
+
+                options.ApiKey ??= configuration["AI:OpenAI:ApiKey"];
+            });
+
+        services.AddHttpClient<AnthropicMessageClient>((sp, client) =>
         {
             var options = sp.GetRequiredService<IOptions<ClaudeOptions>>().Value;
             client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(Math.Max(30, options.HttpTimeoutSeconds));
 
             if (!string.IsNullOrWhiteSpace(options.ApiKey))
                 client.DefaultRequestHeaders.Add("x-api-key", options.ApiKey);
 
             client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+        });
+
+        services.AddScoped<IAIService, AIService>();
+        services.AddScoped<ISegmentedDocumentAnalysisService, ClaudeSegmentedDocumentAnalysisService>();
+
+        services.AddHttpClient<IDocumentClassificationService, OpenAIDocumentClassificationService>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<IOptions<OpenAIOptions>>().Value;
+            client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(Math.Max(30, options.HttpTimeoutSeconds));
+
+            if (!string.IsNullOrWhiteSpace(options.ApiKey))
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", options.ApiKey);
         });
 
         return services;

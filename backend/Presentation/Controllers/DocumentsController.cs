@@ -13,13 +13,16 @@ namespace JurisApp.Presentation.Controllers;
 public class DocumentsController : ControllerBase
 {
     private readonly IDocumentService _documentService;
+    private readonly ISegmentedAnalysisService _segmentedAnalysisService;
     private readonly ICurrentUserService _currentUserService;
 
     public DocumentsController(
         IDocumentService documentService,
+        ISegmentedAnalysisService segmentedAnalysisService,
         ICurrentUserService currentUserService)
     {
         _documentService = documentService;
+        _segmentedAnalysisService = segmentedAnalysisService;
         _currentUserService = currentUserService;
     }
 
@@ -69,6 +72,14 @@ public class DocumentsController : ControllerBase
     {
         var userId = _currentUserService.UserId!.Value;
         var result = await _documentService.AnalyzeAsync(userId, request, cancellationToken);
+        return result.ToActionResult();
+    }
+
+    [HttpGet("{id:guid}/analysis")]
+    public async Task<IActionResult> GetAnalysis(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService.UserId!.Value;
+        var result = await _segmentedAnalysisService.GetByDocumentIdAsync(userId, id, cancellationToken);
         return result.ToActionResult();
     }
 }

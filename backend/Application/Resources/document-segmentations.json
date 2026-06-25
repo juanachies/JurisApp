@@ -1,0 +1,1332 @@
+{
+    "documentSegmentations": {
+      "contrato_servicios": {
+        "displayName": "Contrato de servicios",
+        "segments": [
+          {
+            "key": "resumen",
+            "title": "Resumen",
+            "description": "Síntesis general del contrato, su finalidad y contexto.",
+            "countable": false
+          },
+          {
+            "key": "objeto",
+            "title": "Objeto del contrato",
+            "description": "Descripción del servicio contratado y alcance de la prestación.",
+            "countable": false
+          },
+          {
+            "key": "obligaciones_partes",
+            "title": "Obligaciones de las partes",
+            "description": "Obligaciones principales y secundarias de cada parte.",
+            "countable": true
+          },
+          {
+            "key": "precio_contraprestacion",
+            "title": "Precio / contraprestación",
+            "description": "Montos, forma de pago, moneda, actualización, facturación y condiciones económicas.",
+            "countable": true
+          },
+          {
+            "key": "plazos",
+            "title": "Plazos",
+            "description": "Duración, fechas relevantes, vencimientos, renovaciones y tiempos de cumplimiento.",
+            "countable": true
+          },
+          {
+            "key": "mora_incumplimiento",
+            "title": "Mora e incumplimiento",
+            "description": "Condiciones de mora, incumplimientos previstos y consecuencias.",
+            "countable": true
+          },
+          {
+            "key": "penalidades",
+            "title": "Penalidades",
+            "description": "Multas, cláusulas penales, intereses o sanciones por incumplimiento.",
+            "countable": true
+          },
+          {
+            "key": "rescisión",
+            "title": "Causales de rescisión",
+            "description": "Supuestos en los que el contrato puede finalizarse anticipadamente.",
+            "countable": true
+          },
+          {
+            "key": "confidencialidad",
+            "title": "Confidencialidad",
+            "description": "Obligaciones de reserva, tratamiento de información sensible y límites de divulgación.",
+            "countable": true
+          },
+          {
+            "key": "propiedad_intelectual",
+            "title": "Propiedad intelectual",
+            "description": "Titularidad de entregables, licencias, uso de materiales y derechos sobre desarrollos.",
+            "countable": true
+          },
+          {
+            "key": "jurisdiccion_competencia",
+            "title": "Jurisdicción y competencia",
+            "description": "Tribunales, ley aplicable y mecanismo de resolución de conflictos.",
+            "countable": false
+          },
+          {
+            "key": "firmas_formalidades",
+            "title": "Firmas y formalidades",
+            "description": "Firmas, representación, anexos, certificaciones y formalidades necesarias.",
+            "countable": true
+          },
+          {
+            "key": "riesgos",
+            "title": "Riesgos detectados",
+            "description": "Riesgos jurídicos, comerciales o probatorios identificados en el contrato.",
+            "countable": true
+          },
+          {
+            "key": "documentacion_faltante",
+            "title": "Documentación faltante",
+            "description": "Datos, documentos, anexos o comprobantes necesarios para completar o reforzar el contrato.",
+            "countable": true
+          },
+          {
+            "key": "recomendaciones",
+            "title": "Recomendaciones",
+            "description": "Correcciones, mejoras o medidas sugeridas antes de avanzar.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Acciones concretas recomendadas para continuar el trabajo legal.",
+            "countable": true
+          }
+        ]
+      },
+      "contrato_laboral": {
+        "displayName": "Contrato laboral",
+        "segments": [
+          {
+            "key": "resumen",
+            "title": "Resumen",
+            "description": "Síntesis del vínculo laboral y finalidad del documento.",
+            "countable": false
+          },
+          {
+            "key": "puesto_funciones",
+            "title": "Puesto y funciones",
+            "description": "Cargo, tareas asignadas, responsabilidades y alcance del trabajo.",
+            "countable": true
+          },
+          {
+            "key": "jornada_lugar_trabajo",
+            "title": "Jornada y lugar de trabajo",
+            "description": "Horarios, modalidad, presencialidad, remoto, descansos y lugar de prestación.",
+            "countable": true
+          },
+          {
+            "key": "remuneracion",
+            "title": "Remuneración",
+            "description": "Sueldo, adicionales, beneficios, comisiones y forma de pago.",
+            "countable": true
+          },
+          {
+            "key": "periodo_prueba",
+            "title": "Período de prueba",
+            "description": "Condiciones iniciales del vínculo y previsiones relacionadas al período de prueba.",
+            "countable": false
+          },
+          {
+            "key": "obligaciones_empleador",
+            "title": "Obligaciones del empleador",
+            "description": "Deberes principales del empleador según el documento.",
+            "countable": true
+          },
+          {
+            "key": "obligaciones_trabajador",
+            "title": "Obligaciones del trabajador",
+            "description": "Deberes, conducta esperada, confidencialidad, exclusividad y cumplimiento laboral.",
+            "countable": true
+          },
+          {
+            "key": "confidencialidad_no_competencia",
+            "title": "Confidencialidad / no competencia",
+            "description": "Cláusulas de reserva, restricciones posteriores o limitaciones de actividad.",
+            "countable": true
+          },
+          {
+            "key": "licencias_vacaciones",
+            "title": "Licencias y vacaciones",
+            "description": "Vacaciones, licencias, ausencias y régimen aplicable.",
+            "countable": true
+          },
+          {
+            "key": "extincion_vinculo",
+            "title": "Extinción del vínculo",
+            "description": "Condiciones de finalización, preaviso, renuncia, despido o rescisión.",
+            "countable": true
+          },
+          {
+            "key": "riesgos_laborales",
+            "title": "Riesgos laborales",
+            "description": "Riesgos legales vinculados a registración, jornada, salario, modalidad o cláusulas abusivas.",
+            "countable": true
+          },
+          {
+            "key": "documentacion_faltante",
+            "title": "Documentación faltante",
+            "description": "Datos, altas, constancias, recibos, anexos o documentación necesaria.",
+            "countable": true
+          },
+          {
+            "key": "recomendaciones",
+            "title": "Recomendaciones",
+            "description": "Correcciones o medidas sugeridas antes de firmar o utilizar el contrato.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Acciones concretas para avanzar con el caso o documento.",
+            "countable": true
+          }
+        ]
+      },
+      "contrato_alquiler": {
+        "displayName": "Contrato de alquiler",
+        "segments": [
+          {
+            "key": "resumen",
+            "title": "Resumen",
+            "description": "Síntesis del contrato de alquiler y condiciones principales.",
+            "countable": false
+          },
+          {
+            "key": "inmueble",
+            "title": "Inmueble",
+            "description": "Identificación del inmueble, domicilio, destino y características relevantes.",
+            "countable": false
+          },
+          {
+            "key": "destino_uso",
+            "title": "Destino y uso",
+            "description": "Uso permitido del inmueble, restricciones y finalidad del alquiler.",
+            "countable": true
+          },
+          {
+            "key": "canon_alquiler",
+            "title": "Canon locativo",
+            "description": "Monto del alquiler, forma de pago, moneda, vencimiento y actualización.",
+            "countable": true
+          },
+          {
+            "key": "deposito_garantias",
+            "title": "Depósito y garantías",
+            "description": "Depósito, garantía propietaria, fiadores, seguros u otras garantías.",
+            "countable": true
+          },
+          {
+            "key": "plazos",
+            "title": "Plazos",
+            "description": "Duración del contrato, inicio, finalización, prórrogas y vencimientos.",
+            "countable": true
+          },
+          {
+            "key": "servicios_expensas_impuestos",
+            "title": "Servicios, expensas e impuestos",
+            "description": "Distribución de gastos, servicios, expensas, tasas e impuestos.",
+            "countable": true
+          },
+          {
+            "key": "obligaciones_partes",
+            "title": "Obligaciones de las partes",
+            "description": "Obligaciones del locador, locatario, garantes o fiadores.",
+            "countable": true
+          },
+          {
+            "key": "mantenimiento_reparaciones",
+            "title": "Mantenimiento y reparaciones",
+            "description": "Responsabilidad por conservación, arreglos, daños y mantenimiento.",
+            "countable": true
+          },
+          {
+            "key": "rescisión",
+            "title": "Causales de rescisión",
+            "description": "Supuestos de rescisión anticipada, incumplimiento o finalización.",
+            "countable": true
+          },
+          {
+            "key": "penalidades",
+            "title": "Penalidades",
+            "description": "Multas, intereses, cargos por mora o sanciones contractuales.",
+            "countable": true
+          },
+          {
+            "key": "entrega_restitucion",
+            "title": "Entrega y restitución",
+            "description": "Condiciones de entrega, inventario, estado del inmueble y devolución.",
+            "countable": true
+          },
+          {
+            "key": "riesgos",
+            "title": "Riesgos detectados",
+            "description": "Riesgos legales o prácticos del contrato.",
+            "countable": true
+          },
+          {
+            "key": "documentacion_faltante",
+            "title": "Documentación faltante",
+            "description": "Título, poderes, garantías, inventario, certificaciones o anexos necesarios.",
+            "countable": true
+          },
+          {
+            "key": "recomendaciones",
+            "title": "Recomendaciones",
+            "description": "Correcciones o mejoras sugeridas.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Acciones recomendadas para avanzar.",
+            "countable": true
+          }
+        ]
+      },
+      "carta_documento": {
+        "displayName": "Carta documento",
+        "segments": [
+          {
+            "key": "resumen",
+            "title": "Resumen",
+            "description": "Síntesis del contenido, finalidad y conflicto planteado.",
+            "countable": false
+          },
+          {
+            "key": "hechos_invocados",
+            "title": "Hechos invocados",
+            "description": "Hechos mencionados en la carta documento y su claridad.",
+            "countable": true
+          },
+          {
+            "key": "intimacion",
+            "title": "Intimación",
+            "description": "Pedido concreto realizado al destinatario.",
+            "countable": false
+          },
+          {
+            "key": "plazo_otorgado",
+            "title": "Plazo otorgado",
+            "description": "Plazo indicado para cumplir, responder o cesar una conducta.",
+            "countable": true
+          },
+          {
+            "key": "consecuencia_juridica",
+            "title": "Consecuencia jurídica",
+            "description": "Advertencias, apercibimientos o consecuencias previstas ante incumplimiento.",
+            "countable": true
+          },
+          {
+            "key": "tono_redaccion",
+            "title": "Tono y redacción",
+            "description": "Nivel de firmeza, claridad, precisión y posibles excesos de redacción.",
+            "countable": false
+          },
+          {
+            "key": "riesgos_reconocimiento",
+            "title": "Riesgos de reconocimiento",
+            "description": "Frases que podrían implicar reconocimiento innecesario de hechos, deudas o responsabilidades.",
+            "countable": true
+          },
+          {
+            "key": "riesgos_formales",
+            "title": "Riesgos formales",
+            "description": "Problemas de identificación, domicilio, fechas, legitimación o falta de precisión.",
+            "countable": true
+          },
+          {
+            "key": "prueba_relacionada",
+            "title": "Prueba relacionada",
+            "description": "Documentos, comunicaciones o antecedentes que deberían respaldar la carta.",
+            "countable": true
+          },
+          {
+            "key": "posible_respuesta",
+            "title": "Posible respuesta",
+            "description": "Líneas posibles para contestar o preparar una respuesta.",
+            "countable": true
+          },
+          {
+            "key": "recomendaciones",
+            "title": "Recomendaciones",
+            "description": "Ajustes sugeridos antes de enviar o responder.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Acciones recomendadas posteriores al envío, recepción o análisis.",
+            "countable": true
+          }
+        ]
+      },
+      "demanda": {
+        "displayName": "Demanda",
+        "segments": [
+          {
+            "key": "resumen",
+            "title": "Resumen",
+            "description": "Síntesis de la demanda, conflicto y pretensión principal.",
+            "countable": false
+          },
+          {
+            "key": "hechos",
+            "title": "Hechos",
+            "description": "Relato de hechos, cronología, claridad y consistencia.",
+            "countable": true
+          },
+          {
+            "key": "pretension",
+            "title": "Pretensión",
+            "description": "Objeto del reclamo y resultado jurídico buscado.",
+            "countable": false
+          },
+          {
+            "key": "rubros_reclamados",
+            "title": "Rubros reclamados",
+            "description": "Conceptos reclamados, montos, liquidaciones o indemnizaciones.",
+            "countable": true
+          },
+          {
+            "key": "fundamentos_juridicos",
+            "title": "Fundamentos jurídicos",
+            "description": "Normas, principios, doctrina o argumentos utilizados.",
+            "countable": true
+          },
+          {
+            "key": "prueba_ofrecida",
+            "title": "Prueba ofrecida",
+            "description": "Documental, testimonial, pericial, informativa u otros medios de prueba.",
+            "countable": true
+          },
+          {
+            "key": "competencia",
+            "title": "Competencia",
+            "description": "Fuero, jurisdicción y tribunal competente según el planteo.",
+            "countable": false
+          },
+          {
+            "key": "legitimacion",
+            "title": "Legitimación",
+            "description": "Relación entre las partes y capacidad para reclamar o ser demandado.",
+            "countable": true
+          },
+          {
+            "key": "petitorio",
+            "title": "Petitorio",
+            "description": "Pedidos concretos realizados al tribunal.",
+            "countable": true
+          },
+          {
+            "key": "puntos_fuertes",
+            "title": "Puntos fuertes",
+            "description": "Aspectos favorables del caso o de la presentación.",
+            "countable": true
+          },
+          {
+            "key": "puntos_debiles",
+            "title": "Puntos débiles",
+            "description": "Aspectos vulnerables, poco probados o discutibles.",
+            "countable": true
+          },
+          {
+            "key": "riesgos_procesales",
+            "title": "Riesgos procesales",
+            "description": "Riesgos de admisibilidad, competencia, prescripción, prueba o estrategia.",
+            "countable": true
+          },
+          {
+            "key": "documentacion_faltante",
+            "title": "Documentación faltante",
+            "description": "Elementos necesarios para reforzar la presentación.",
+            "countable": true
+          },
+          {
+            "key": "recomendaciones",
+            "title": "Recomendaciones",
+            "description": "Mejoras o ajustes sugeridos.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Acciones procesales o preparatorias recomendadas.",
+            "countable": true
+          }
+        ]
+      },
+      "contestacion_demanda": {
+        "displayName": "Contestación de demanda",
+        "segments": [
+          {
+            "key": "resumen",
+            "title": "Resumen",
+            "description": "Síntesis de la contestación y estrategia defensiva.",
+            "countable": false
+          },
+          {
+            "key": "hechos_reconocidos_negados",
+            "title": "Hechos reconocidos y negados",
+            "description": "Hechos admitidos, negados o controvertidos en la contestación.",
+            "countable": true
+          },
+          {
+            "key": "defensas_excepciones",
+            "title": "Defensas y excepciones",
+            "description": "Defensas sustanciales, procesales o excepciones planteadas.",
+            "countable": true
+          },
+          {
+            "key": "impugnacion_rubros",
+            "title": "Impugnación de rubros",
+            "description": "Cuestionamiento de montos, conceptos, liquidaciones o indemnizaciones.",
+            "countable": true
+          },
+          {
+            "key": "fundamentos_juridicos",
+            "title": "Fundamentos jurídicos",
+            "description": "Normas, argumentos y criterios jurídicos invocados.",
+            "countable": true
+          },
+          {
+            "key": "prueba_ofrecida",
+            "title": "Prueba ofrecida",
+            "description": "Prueba documental, testimonial, pericial, informativa u otros medios.",
+            "countable": true
+          },
+          {
+            "key": "puntos_fuertes_defensa",
+            "title": "Puntos fuertes de la defensa",
+            "description": "Argumentos o pruebas favorables para la parte demandada.",
+            "countable": true
+          },
+          {
+            "key": "puntos_debiles_defensa",
+            "title": "Puntos débiles de la defensa",
+            "description": "Aspectos vulnerables, insuficientes o riesgosos de la contestación.",
+            "countable": true
+          },
+          {
+            "key": "riesgos_procesales",
+            "title": "Riesgos procesales",
+            "description": "Riesgos vinculados a plazos, admisibilidad, prueba, omisiones o estrategia.",
+            "countable": true
+          },
+          {
+            "key": "petitorio",
+            "title": "Petitorio",
+            "description": "Pedidos concretos formulados al tribunal.",
+            "countable": true
+          },
+          {
+            "key": "documentacion_faltante",
+            "title": "Documentación faltante",
+            "description": "Prueba o información necesaria para reforzar la defensa.",
+            "countable": true
+          },
+          {
+            "key": "recomendaciones",
+            "title": "Recomendaciones",
+            "description": "Mejoras sugeridas para fortalecer la contestación.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Acciones procesales o estratégicas recomendadas.",
+            "countable": true
+          }
+        ]
+      },
+      "convenio_pago": {
+        "displayName": "Convenio de pago",
+        "segments": [
+          {
+            "key": "resumen",
+            "title": "Resumen",
+            "description": "Síntesis del acuerdo de pago y finalidad.",
+            "countable": false
+          },
+          {
+            "key": "deuda_reconocida",
+            "title": "Deuda reconocida",
+            "description": "Monto, origen, concepto y reconocimiento de la deuda.",
+            "countable": false
+          },
+          {
+            "key": "plan_pago",
+            "title": "Plan de pago",
+            "description": "Cuotas, vencimientos, forma de pago y condiciones de cumplimiento.",
+            "countable": true
+          },
+          {
+            "key": "intereses_actualizaciones",
+            "title": "Intereses y actualizaciones",
+            "description": "Intereses compensatorios, punitorios, actualización o mecanismos de ajuste.",
+            "countable": true
+          },
+          {
+            "key": "mora_incumplimiento",
+            "title": "Mora e incumplimiento",
+            "description": "Consecuencias por falta de pago, caducidad de plazos y reclamo total.",
+            "countable": true
+          },
+          {
+            "key": "garantias",
+            "title": "Garantías",
+            "description": "Fiadores, avales, prendas, garantías personales o reales.",
+            "countable": true
+          },
+          {
+            "key": "quita_espera",
+            "title": "Quita / espera",
+            "description": "Reducciones, esperas, condonaciones o beneficios condicionados al cumplimiento.",
+            "countable": true
+          },
+          {
+            "key": "jurisdiccion_competencia",
+            "title": "Jurisdicción y competencia",
+            "description": "Tribunales, ley aplicable o mecanismo de resolución de conflictos.",
+            "countable": false
+          },
+          {
+            "key": "riesgos",
+            "title": "Riesgos detectados",
+            "description": "Riesgos de redacción, ejecución, cobro o prueba.",
+            "countable": true
+          },
+          {
+            "key": "documentacion_faltante",
+            "title": "Documentación faltante",
+            "description": "Comprobantes, facturas, reconocimientos, poderes o garantías faltantes.",
+            "countable": true
+          },
+          {
+            "key": "recomendaciones",
+            "title": "Recomendaciones",
+            "description": "Mejoras sugeridas para reforzar el convenio.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Acciones recomendadas para instrumentar, firmar o ejecutar el acuerdo.",
+            "countable": true
+          }
+        ]
+      },
+      "reclamo_deuda": {
+        "displayName": "Reclamo de deuda",
+        "segments": [
+          {
+            "key": "resumen",
+            "title": "Resumen",
+            "description": "Síntesis del reclamo, origen de la deuda y estado actual.",
+            "countable": false
+          },
+          {
+            "key": "origen_deuda",
+            "title": "Origen de la deuda",
+            "description": "Causa, contrato, factura, servicio, préstamo u operación que generó la deuda.",
+            "countable": false
+          },
+          {
+            "key": "monto_reclamado",
+            "title": "Monto reclamado",
+            "description": "Capital, intereses, actualizaciones, gastos o conceptos reclamados.",
+            "countable": true
+          },
+          {
+            "key": "prueba_disponible",
+            "title": "Prueba disponible",
+            "description": "Facturas, chats, mails, comprobantes, contratos, recibos u otra evidencia.",
+            "countable": true
+          },
+          {
+            "key": "comunicaciones_previas",
+            "title": "Comunicaciones previas",
+            "description": "Reclamos, intimaciones, respuestas, negociaciones o reconocimientos previos.",
+            "countable": true
+          },
+          {
+            "key": "plazos_prescripcion",
+            "title": "Plazos y prescripción",
+            "description": "Fechas relevantes, vencimientos, mora y posibles riesgos de prescripción.",
+            "countable": true
+          },
+          {
+            "key": "mora",
+            "title": "Mora",
+            "description": "Configuración de la mora, fecha, intimación y consecuencias.",
+            "countable": false
+          },
+          {
+            "key": "riesgos",
+            "title": "Riesgos detectados",
+            "description": "Riesgos probatorios, legales, comerciales o estratégicos del reclamo.",
+            "countable": true
+          },
+          {
+            "key": "estrategia_extrajudicial",
+            "title": "Estrategia extrajudicial",
+            "description": "Opciones de reclamo previo, negociación, intimación o acuerdo.",
+            "countable": true
+          },
+          {
+            "key": "estrategia_judicial",
+            "title": "Estrategia judicial",
+            "description": "Posibles vías judiciales o preparación de demanda.",
+            "countable": true
+          },
+          {
+            "key": "documentacion_faltante",
+            "title": "Documentación faltante",
+            "description": "Información o prueba necesaria para fortalecer el reclamo.",
+            "countable": true
+          },
+          {
+            "key": "borradores_posibles",
+            "title": "Borradores posibles",
+            "description": "Piezas que JurisApp podría generar: intimación, mail, convenio, demanda o resumen.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Acciones recomendadas para avanzar con el cobro.",
+            "countable": true
+          }
+        ]
+      },
+      "defensa_consumidor": {
+        "displayName": "Defensa del consumidor",
+        "segments": [
+          {
+            "key": "resumen",
+            "title": "Resumen",
+            "description": "Síntesis del conflicto de consumo y reclamo principal.",
+            "countable": false
+          },
+          {
+            "key": "relacion_consumo",
+            "title": "Relación de consumo",
+            "description": "Identificación del consumidor, proveedor, producto o servicio involucrado.",
+            "countable": false
+          },
+          {
+            "key": "hechos",
+            "title": "Hechos",
+            "description": "Cronología y descripción de lo ocurrido.",
+            "countable": true
+          },
+          {
+            "key": "producto_servicio",
+            "title": "Producto o servicio",
+            "description": "Bien o servicio contratado, adquirido o reclamado.",
+            "countable": false
+          },
+          {
+            "key": "incumplimientos",
+            "title": "Incumplimientos",
+            "description": "Fallas, incumplimientos, falta de información, trato indigno o problemas detectados.",
+            "countable": true
+          },
+          {
+            "key": "prueba_disponible",
+            "title": "Prueba disponible",
+            "description": "Facturas, tickets, chats, mails, garantías, capturas, reclamos o comprobantes.",
+            "countable": true
+          },
+          {
+            "key": "reclamos_previos",
+            "title": "Reclamos previos",
+            "description": "Contactos con la empresa, números de reclamo, respuestas o silencios.",
+            "countable": true
+          },
+          {
+            "key": "pretension_consumidor",
+            "title": "Pretensión del consumidor",
+            "description": "Qué busca obtener: reparación, devolución, cambio, indemnización, cumplimiento u otra medida.",
+            "countable": true
+          },
+          {
+            "key": "riesgos",
+            "title": "Riesgos detectados",
+            "description": "Riesgos probatorios, de plazo, competencia, cuantificación o estrategia.",
+            "countable": true
+          },
+          {
+            "key": "estrategia_reclamo",
+            "title": "Estrategia de reclamo",
+            "description": "Vías posibles: reclamo administrativo, conciliación, carta documento o acción judicial.",
+            "countable": true
+          },
+          {
+            "key": "documentacion_faltante",
+            "title": "Documentación faltante",
+            "description": "Elementos necesarios para sostener mejor el reclamo.",
+            "countable": true
+          },
+          {
+            "key": "borradores_posibles",
+            "title": "Borradores posibles",
+            "description": "Reclamo, intimación, denuncia administrativa, mail o resumen para cliente.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Acciones recomendadas para avanzar.",
+            "countable": true
+          }
+        ]
+      },
+      "despido": {
+        "displayName": "Despido",
+        "segments": [
+          {
+            "key": "resumen",
+            "title": "Resumen",
+            "description": "Síntesis del caso de despido y situación actual.",
+            "countable": false
+          },
+          {
+            "key": "relacion_laboral",
+            "title": "Relación laboral",
+            "description": "Datos del vínculo: fecha de ingreso, tareas, empleador, modalidad y registración.",
+            "countable": true
+          },
+          {
+            "key": "tipo_despido",
+            "title": "Tipo de despido",
+            "description": "Despido con causa, sin causa, indirecto, verbal, por carta documento u otro supuesto.",
+            "countable": false
+          },
+          {
+            "key": "causales_invocadas",
+            "title": "Causales invocadas",
+            "description": "Motivos expresados por la parte empleadora o trabajador.",
+            "countable": true
+          },
+          {
+            "key": "comunicaciones",
+            "title": "Comunicaciones",
+            "description": "Telegramas, cartas documento, mails, chats o notificaciones relevantes.",
+            "countable": true
+          },
+          {
+            "key": "rubros_indemnizatorios",
+            "title": "Rubros indemnizatorios",
+            "description": "Conceptos indemnizatorios, salarios adeudados, liquidación final y multas posibles.",
+            "countable": true
+          },
+          {
+            "key": "prueba_disponible",
+            "title": "Prueba disponible",
+            "description": "Recibos, telegramas, testigos, chats, mails, controles horarios o documentación laboral.",
+            "countable": true
+          },
+          {
+            "key": "plazos",
+            "title": "Plazos",
+            "description": "Fechas relevantes, vencimientos, intimaciones y riesgos temporales.",
+            "countable": true
+          },
+          {
+            "key": "riesgos",
+            "title": "Riesgos detectados",
+            "description": "Riesgos probatorios, registrales, de causal, liquidación o estrategia.",
+            "countable": true
+          },
+          {
+            "key": "estrategia",
+            "title": "Estrategia",
+            "description": "Cursos de acción posibles: intimación, negociación, reclamo administrativo o demanda.",
+            "countable": true
+          },
+          {
+            "key": "documentacion_faltante",
+            "title": "Documentación faltante",
+            "description": "Información y prueba necesaria para completar el caso.",
+            "countable": true
+          },
+          {
+            "key": "borradores_posibles",
+            "title": "Borradores posibles",
+            "description": "Telegrama, carta documento, liquidación, demanda, respuesta o mail al cliente.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Acciones concretas recomendadas.",
+            "countable": true
+          }
+        ]
+      },
+      "accidente_laboral": {
+        "displayName": "Accidente laboral",
+        "segments": [
+          {
+            "key": "resumen",
+            "title": "Resumen",
+            "description": "Síntesis del accidente, daño y estado del reclamo.",
+            "countable": false
+          },
+          {
+            "key": "hecho_accidente",
+            "title": "Hecho del accidente",
+            "description": "Descripción, fecha, lugar, mecánica del accidente y contexto laboral.",
+            "countable": true
+          },
+          {
+            "key": "relacion_laboral",
+            "title": "Relación laboral",
+            "description": "Datos del trabajador, empleador, tareas, registración y modalidad.",
+            "countable": true
+          },
+          {
+            "key": "lesiones",
+            "title": "Lesiones",
+            "description": "Daños físicos, psicológicos, diagnósticos, tratamientos y secuelas.",
+            "countable": true
+          },
+          {
+            "key": "art_aseguradora",
+            "title": "ART / aseguradora",
+            "description": "Intervención de ART, denuncias, prestaciones, rechazos o altas médicas.",
+            "countable": true
+          },
+          {
+            "key": "atencion_medica",
+            "title": "Atención médica",
+            "description": "Tratamientos, estudios, certificados, altas, derivaciones o rehabilitación.",
+            "countable": true
+          },
+          {
+            "key": "prueba_disponible",
+            "title": "Prueba disponible",
+            "description": "Denuncia, certificados, estudios, testigos, recibos, chats, fotos o documentación.",
+            "countable": true
+          },
+          {
+            "key": "plazos",
+            "title": "Plazos",
+            "description": "Fechas críticas, denuncias, vencimientos, trámites y riesgos temporales.",
+            "countable": true
+          },
+          {
+            "key": "incapacidad_rubros",
+            "title": "Incapacidad y rubros",
+            "description": "Incapacidad estimada, prestaciones, indemnizaciones o conceptos reclamables.",
+            "countable": true
+          },
+          {
+            "key": "riesgos",
+            "title": "Riesgos detectados",
+            "description": "Riesgos probatorios, médicos, de nexo causal, plazos o estrategia.",
+            "countable": true
+          },
+          {
+            "key": "estrategia",
+            "title": "Estrategia",
+            "description": "Cursos posibles ante ART, comisión médica, negociación o instancia judicial.",
+            "countable": true
+          },
+          {
+            "key": "documentacion_faltante",
+            "title": "Documentación faltante",
+            "description": "Documentos médicos, laborales o administrativos necesarios.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Acciones concretas recomendadas.",
+            "countable": true
+          }
+        ]
+      },
+      "sucesion": {
+        "displayName": "Sucesión",
+        "segments": [
+          {
+            "key": "resumen",
+            "title": "Resumen",
+            "description": "Síntesis del caso sucesorio y estado de información.",
+            "countable": false
+          },
+          {
+            "key": "causante",
+            "title": "Causante",
+            "description": "Datos de la persona fallecida y fecha de fallecimiento.",
+            "countable": false
+          },
+          {
+            "key": "herederos",
+            "title": "Herederos",
+            "description": "Personas con posible vocación hereditaria, vínculos y datos conocidos.",
+            "countable": true
+          },
+          {
+            "key": "bienes",
+            "title": "Bienes",
+            "description": "Inmuebles, vehículos, cuentas, sociedades, bienes muebles u otros activos.",
+            "countable": true
+          },
+          {
+            "key": "deudas_cargas",
+            "title": "Deudas y cargas",
+            "description": "Deudas del causante, cargas hereditarias, impuestos o gastos.",
+            "countable": true
+          },
+          {
+            "key": "testamento",
+            "title": "Testamento",
+            "description": "Existencia, ausencia o necesidad de verificar testamento.",
+            "countable": false
+          },
+          {
+            "key": "documentacion_disponible",
+            "title": "Documentación disponible",
+            "description": "Partidas, actas, títulos, informes, certificados y documentación ya reunida.",
+            "countable": true
+          },
+          {
+            "key": "documentacion_faltante",
+            "title": "Documentación faltante",
+            "description": "Partidas, certificados, informes de dominio, valuaciones u otros documentos necesarios.",
+            "countable": true
+          },
+          {
+            "key": "competencia",
+            "title": "Competencia",
+            "description": "Jurisdicción probable para iniciar o continuar el trámite sucesorio.",
+            "countable": false
+          },
+          {
+            "key": "conflictos_potenciales",
+            "title": "Conflictos potenciales",
+            "description": "Disputas entre herederos, bienes omitidos, ocupación de inmuebles o desacuerdos.",
+            "countable": true
+          },
+          {
+            "key": "riesgos",
+            "title": "Riesgos detectados",
+            "description": "Riesgos documentales, familiares, patrimoniales o procesales.",
+            "countable": true
+          },
+          {
+            "key": "estrategia",
+            "title": "Estrategia",
+            "description": "Cursos posibles para iniciar, ordenar o avanzar la sucesión.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Acciones concretas recomendadas.",
+            "countable": true
+          }
+        ]
+      },
+      "sociedad_poder_acta": {
+        "displayName": "Sociedad / poder / acta",
+        "segments": [
+          {
+            "key": "resumen",
+            "title": "Resumen",
+            "description": "Síntesis del documento societario, poder o acta.",
+            "countable": false
+          },
+          {
+            "key": "tipo_documento",
+            "title": "Tipo de documento",
+            "description": "Identificación del documento: acta, poder, estatuto, contrato social, designación u otro.",
+            "countable": false
+          },
+          {
+            "key": "sociedad_personas_intervinientes",
+            "title": "Sociedad y personas intervinientes",
+            "description": "Sociedad, socios, administradores, apoderados, firmantes o comparecientes.",
+            "countable": true
+          },
+          {
+            "key": "facultades_representacion",
+            "title": "Facultades y representación",
+            "description": "Alcance de poderes, cargos, facultades, límites y representación invocada.",
+            "countable": true
+          },
+          {
+            "key": "objeto_decision",
+            "title": "Objeto o decisión",
+            "description": "Acto, decisión, autorización, designación o gestión documentada.",
+            "countable": false
+          },
+          {
+            "key": "vigencia_plazos",
+            "title": "Vigencia y plazos",
+            "description": "Duración de cargos, vigencia de poderes, fechas y vencimientos.",
+            "countable": true
+          },
+          {
+            "key": "formalidades",
+            "title": "Formalidades",
+            "description": "Firmas, certificaciones, quórum, mayorías, inscripción, legalización o protocolización.",
+            "countable": true
+          },
+          {
+            "key": "limitaciones",
+            "title": "Limitaciones",
+            "description": "Restricciones a facultades, actos excluidos o condiciones para actuar.",
+            "countable": true
+          },
+          {
+            "key": "inscripciones_registros",
+            "title": "Inscripciones y registros",
+            "description": "Necesidad de inscripción registral, actualización o presentación ante organismos.",
+            "countable": true
+          },
+          {
+            "key": "riesgos",
+            "title": "Riesgos detectados",
+            "description": "Riesgos de representación, validez, inscripción, facultades o formalidades.",
+            "countable": true
+          },
+          {
+            "key": "documentacion_faltante",
+            "title": "Documentación faltante",
+            "description": "Estatuto, actas previas, DNI, CUIT, poderes, constancias o certificaciones.",
+            "countable": true
+          },
+          {
+            "key": "recomendaciones",
+            "title": "Recomendaciones",
+            "description": "Correcciones o medidas sugeridas.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Acciones recomendadas para validar, completar o usar el documento.",
+            "countable": true
+          }
+        ]
+      },
+      "documento_administrativo": {
+        "displayName": "Documento administrativo",
+        "segments": [
+          {
+            "key": "resumen",
+            "title": "Resumen",
+            "description": "Síntesis del documento administrativo, trámite o actuación.",
+            "countable": false
+          },
+          {
+            "key": "organismo_interviniente",
+            "title": "Organismo interviniente",
+            "description": "Autoridad, dependencia, expediente, área o entidad administrativa involucrada.",
+            "countable": false
+          },
+          {
+            "key": "objeto_tramite",
+            "title": "Objeto del trámite",
+            "description": "Finalidad del documento, presentación, reclamo, resolución o requerimiento.",
+            "countable": false
+          },
+          {
+            "key": "antecedentes",
+            "title": "Antecedentes",
+            "description": "Hechos, actuaciones previas, expedientes o comunicaciones anteriores.",
+            "countable": true
+          },
+          {
+            "key": "requerimientos",
+            "title": "Requerimientos",
+            "description": "Solicitudes, intimaciones, pedidos de documentación o exigencias del organismo.",
+            "countable": true
+          },
+          {
+            "key": "plazos",
+            "title": "Plazos",
+            "description": "Vencimientos, términos para responder, recurrir, completar o cumplir.",
+            "countable": true
+          },
+          {
+            "key": "notificaciones",
+            "title": "Notificaciones",
+            "description": "Fechas, medios, destinatarios y validez de notificaciones.",
+            "countable": true
+          },
+          {
+            "key": "sanciones_consecuencias",
+            "title": "Sanciones o consecuencias",
+            "description": "Multas, apercibimientos, rechazos, caducidad o consecuencias administrativas.",
+            "countable": true
+          },
+          {
+            "key": "recursos_impugnaciones",
+            "title": "Recursos e impugnaciones",
+            "description": "Opciones para recurrir, impugnar, responder o solicitar revisión.",
+            "countable": true
+          },
+          {
+            "key": "documentacion_disponible",
+            "title": "Documentación disponible",
+            "description": "Documentos ya presentes en el trámite o expediente.",
+            "countable": true
+          },
+          {
+            "key": "documentacion_faltante",
+            "title": "Documentación faltante",
+            "description": "Documentos o datos necesarios para avanzar o responder.",
+            "countable": true
+          },
+          {
+            "key": "riesgos",
+            "title": "Riesgos detectados",
+            "description": "Riesgos de plazo, rechazo, sanción, falta documental o estrategia.",
+            "countable": true
+          },
+          {
+            "key": "recomendaciones",
+            "title": "Recomendaciones",
+            "description": "Medidas sugeridas para contestar, completar o avanzar.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Acciones administrativas recomendadas.",
+            "countable": true
+          }
+        ]
+      },
+      "consulta_juridica_general": {
+        "displayName": "Consulta jurídica general",
+        "segments": [
+          {
+            "key": "resumen_consulta",
+            "title": "Resumen de la consulta",
+            "description": "Síntesis del problema jurídico planteado por el usuario.",
+            "countable": false
+          },
+          {
+            "key": "tema_juridico_detectado",
+            "title": "Tema jurídico detectado",
+            "description": "Área o materia legal relacionada con la consulta.",
+            "countable": false
+          },
+          {
+            "key": "hechos_relevantes",
+            "title": "Hechos relevantes",
+            "description": "Hechos aportados por el usuario que impactan en el análisis.",
+            "countable": true
+          },
+          {
+            "key": "informacion_disponible",
+            "title": "Información disponible",
+            "description": "Datos ya conocidos que permiten un primer análisis.",
+            "countable": true
+          },
+          {
+            "key": "informacion_faltante",
+            "title": "Información faltante",
+            "description": "Preguntas o datos necesarios para afinar el análisis.",
+            "countable": true
+          },
+          {
+            "key": "opciones_posibles",
+            "title": "Opciones posibles",
+            "description": "Cursos de acción o alternativas disponibles según la consulta.",
+            "countable": true
+          },
+          {
+            "key": "riesgos_advertencias",
+            "title": "Riesgos y advertencias",
+            "description": "Riesgos, límites del análisis, incertidumbres o puntos sensibles.",
+            "countable": true
+          },
+          {
+            "key": "recomendacion_practica",
+            "title": "Recomendación práctica",
+            "description": "Orientación concreta para avanzar con lo disponible.",
+            "countable": false
+          },
+          {
+            "key": "documentacion_necesaria",
+            "title": "Documentación necesaria",
+            "description": "Documentos o pruebas que conviene reunir.",
+            "countable": true
+          },
+          {
+            "key": "acciones_sugeridas",
+            "title": "Acciones sugeridas",
+            "description": "Acciones concretas que el usuario o abogado podría realizar.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Orden recomendado para continuar.",
+            "countable": true
+          }
+        ]
+      },
+      "pregunta_libre": {
+        "displayName": "Pregunta libre",
+        "segments": [
+          {
+            "key": "respuesta_directa",
+            "title": "Respuesta directa",
+            "description": "Respuesta breve y concreta a la pregunta del usuario.",
+            "countable": false
+          },
+          {
+            "key": "contexto",
+            "title": "Contexto",
+            "description": "Explicación mínima necesaria para entender la respuesta.",
+            "countable": false
+          },
+          {
+            "key": "puntos_clave",
+            "title": "Puntos clave",
+            "description": "Ideas principales que el usuario debería tener en cuenta.",
+            "countable": true
+          },
+          {
+            "key": "advertencias",
+            "title": "Advertencias",
+            "description": "Limitaciones, riesgos o aclaraciones importantes.",
+            "countable": true
+          },
+          {
+            "key": "ejemplos",
+            "title": "Ejemplos",
+            "description": "Ejemplos prácticos cuando ayuden a entender la respuesta.",
+            "countable": true
+          },
+          {
+            "key": "acciones_sugeridas",
+            "title": "Acciones sugeridas",
+            "description": "Posibles acciones que el usuario puede pedirle a JurisApp.",
+            "countable": true
+          },
+          {
+            "key": "siguientes_pasos",
+            "title": "Siguientes pasos",
+            "description": "Continuación recomendada si el usuario quiere avanzar.",
+            "countable": true
+          }
+        ]
+      }
+    }
+  }

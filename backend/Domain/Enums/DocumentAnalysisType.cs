@@ -5,5 +5,6 @@ public enum DocumentAnalysisType
     Summary,
     RiskAnalysis,
     ContractReview,
-    Custom
+    Custom,
+    Segmented
 }

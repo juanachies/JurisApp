@@ -107,6 +107,47 @@ export interface DocumentAnalysisDto {
   references: string
 }
 
+export type AnalysisSeverity = 'low' | 'medium' | 'high' | 'critical' | 'neutral'
+
+export interface AnalyzeSegmentedRequest {
+  chatId: string
+  documentId?: string
+  input?: string
+}
+
+export interface DocumentAnalysisSegmentItemDto {
+  title: string
+  description: string
+  severity: AnalysisSeverity
+  recommendation: string
+}
+
+export interface DocumentAnalysisSegmentDto {
+  key: string
+  title: string
+  countable: boolean
+  itemsCount: number | null
+  severity: AnalysisSeverity
+  content: string
+  items: DocumentAnalysisSegmentItemDto[]
+}
+
+export interface SuggestedActionDto {
+  key: string
+  title: string
+}
+
+export interface SegmentedDocumentAnalysisDto {
+  id?: string | null
+  documentId?: string | null
+  categoryKey: string
+  displayName: string
+  confidence: number
+  mainFields: Record<string, unknown>
+  segments: DocumentAnalysisSegmentDto[]
+  suggestedActions: SuggestedActionDto[]
+}
+
 export interface FolderDto {
   id: string
   lawyerProfileId: string

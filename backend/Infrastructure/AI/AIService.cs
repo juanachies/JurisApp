@@ -1,12 +1,8 @@
-using System.Net.Http.Json;
 using System.Text.Json;
-using JurisApp.Application.Common;
 using JurisApp.Application.DTOs.AITasks;
 using JurisApp.Application.Interfaces.AI;
 using JurisApp.Domain.Entities;
 using JurisApp.Domain.Enums;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace JurisApp.Infrastructure.AI;
 
@@ -14,18 +10,12 @@ public class AIService : IAIService
 {
     private const string DevFallbackReply = "Respuesta simulada de IA en modo desarrollo.";
 
-    private readonly HttpClient _httpClient;
-    private readonly ClaudeOptions _options;
-    private readonly ILogger<AIService> _logger;
+    private readonly AnthropicMessageClient _client;
 
     public AIService(
-        HttpClient httpClient,
-        IOptions<ClaudeOptions> options,
-        ILogger<AIService> logger)
+        AnthropicMessageClient client)
     {
-        _httpClient = httpClient;
-        _options = options.Value;
-        _logger = logger;
+        _client = client;
     }
 
     public async Task<string> SendChatMessageAsync(
@@ -35,12 +25,12 @@ public class AIService : IAIService
         IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
         CancellationToken cancellationToken = default)
     {
-        if (!IsLiveMode())
+        if (!_client.IsLiveMode())
             return DevFallbackReply;
 
         var systemPrompt = BuildChatSystemPrompt(activeSkills, chatDocuments);
         var messages = BuildMessageHistory(previousMessages, userMessage);
-        return await SendRequestAsync(systemPrompt, messages, cancellationToken);
+        return await _client.SendAsync(systemPrompt, messages, cancellationToken: cancellationToken);
     }
 
     public async Task<DocumentAnalysisResult> AnalyzeDocumentAsync(
@@ -49,7 +39,7 @@ public class AIService : IAIService
         IReadOnlyList<CustomSkill> activeSkills,
         CancellationToken cancellationToken = default)
     {
-        if (!IsLiveMode())
+        if (!_client.IsLiveMode())
         {
             return new DocumentAnalysisResult
             {
@@ -66,7 +56,7 @@ public class AIService : IAIService
             new { role = "user", content = $"Analyze the following document:\n\n{documentText}" }
         };
 
-        var raw = await SendRequestAsync(systemPrompt, messages, cancellationToken);
+        var raw = await _client.SendAsync(systemPrompt, messages, cancellationToken: cancellationToken);
         return ParseAnalysisResult(raw);
     }
 
@@ -77,7 +67,7 @@ public class AIService : IAIService
         IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
         CancellationToken cancellationToken = default)
     {
-        if (!IsLiveMode())
+        if (!_client.IsLiveMode())
             return TaskPlanParser.BuildMockPlan(description);
 
         var systemPrompt =
@@ -93,7 +83,7 @@ public class AIService : IAIService
             $"{contextBlock}\n\nEncargo del abogado:\n{description}";
 
         var messages = new[] { new { role = "user", content = userContent } };
-        var raw = await SendRequestAsync(systemPrompt, messages, cancellationToken);
+        var raw = await _client.SendAsync(systemPrompt, messages, cancellationToken: cancellationToken);
         return TaskPlanParser.Parse(raw, description);
     }
 
@@ -106,7 +96,7 @@ public class AIService : IAIService
         IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
         CancellationToken cancellationToken = default)
     {
-        if (!IsLiveMode())
+        if (!_client.IsLiveMode())
         {
             return $"[Paso {step.Order} simulado: {step.Title}]\n\n" +
                    $"Resultado de desarrollo para: {step.Description}\n\n" +
@@ -131,7 +121,7 @@ public class AIService : IAIService
             $"Instrucción del paso: {step.Description}";
 
         var messages = new[] { new { role = "user", content = userContent } };
-        return await SendRequestAsync(systemPrompt, messages, cancellationToken);
+        return await _client.SendAsync(systemPrompt, messages, cancellationToken: cancellationToken);
     }
 
     private static string BuildTaskContextBlock(
@@ -154,70 +144,6 @@ public class AIService : IAIService
         }
 
         return parts.Count == 0 ? string.Empty : string.Join("\n\n", parts);
-    }
-
-    private bool IsLiveMode() =>
-        _options.Enabled && !string.IsNullOrWhiteSpace(_options.ApiKey);
-
-    private async Task<string> SendRequestAsync(
-        string systemPrompt,
-        object messages,
-        CancellationToken cancellationToken)
-    {
-        var requestUrl = $"{_options.BaseUrl.TrimEnd('/')}/v1/messages";
-
-        var body = new
-        {
-            model = _options.Model,
-            max_tokens = _options.MaxTokens,
-            system = systemPrompt,
-            messages
-        };
-
-        _logger.LogInformation(
-            "Claude request → URL: {Url}, Model: {Model}",
-            requestUrl,
-            _options.Model);
-
-        HttpResponseMessage response;
-        try
-        {
-            response = await _httpClient.PostAsJsonAsync("/v1/messages", body, cancellationToken);
-        }
-        catch (Exception ex) when (ex is not AIServiceException)
-        {
-            _logger.LogError(ex, "Error de red al llamar a Claude en {Url}", requestUrl);
-            throw new AIServiceException("No se pudo conectar con el servicio de IA.", ex);
-        }
-
-        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            _logger.LogError(
-                "Claude error → Status: {StatusCode}, URL: {Url}, Model: {Model}, Body: {Body}",
-                (int)response.StatusCode,
-                requestUrl,
-                _options.Model,
-                responseBody);
-
-            throw new AIServiceException(
-                $"El servicio de IA respondió con error {(int)response.StatusCode}.");
-        }
-
-        try
-        {
-            using var doc = JsonDocument.Parse(responseBody);
-            return doc.RootElement
-                .GetProperty("content")[0]
-                .GetProperty("text")
-                .GetString() ?? string.Empty;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Respuesta inesperada de Claude: {Body}", responseBody);
-            throw new AIServiceException("La respuesta del servicio de IA no tiene el formato esperado.", ex);
-        }
     }
 
     private static string BuildChatSystemPrompt(
@@ -273,6 +199,8 @@ public class AIService : IAIService
                 "Review the contract and highlight key clauses, obligations, and concerns.",
             DocumentAnalysisType.Custom =>
                 "Analyze the document thoroughly according to any active custom skills.",
+            DocumentAnalysisType.Segmented =>
+                "Analyze the document thoroughly for segmented legal review.",
             _ => "Analyze the document."
         };
 
@@ -315,7 +243,7 @@ public class AIService : IAIService
 
     private static DocumentAnalysisResult ParseAnalysisResult(string raw)
     {
-        var json = StripMarkdownJson(raw);
+        var json = JsonResponseHelper.StripMarkdownJson(raw);
 
         try
         {
@@ -324,10 +252,10 @@ public class AIService : IAIService
 
             return new DocumentAnalysisResult
             {
-                Summary         = ReadJsonField(root, "summary"),
-                Risks           = ReadJsonField(root, "risks"),
-                Recommendations = ReadJsonField(root, "recommendations"),
-                References      = ReadJsonField(root, "references")
+                Summary         = JsonResponseHelper.ReadJsonField(root, "summary"),
+                Risks           = JsonResponseHelper.ReadJsonField(root, "risks"),
+                Recommendations = JsonResponseHelper.ReadJsonField(root, "recommendations"),
+                References      = JsonResponseHelper.ReadJsonField(root, "references")
             };
         }
         catch
@@ -340,44 +268,5 @@ public class AIService : IAIService
                 References      = string.Empty
             };
         }
-    }
-
-    private static string StripMarkdownJson(string raw)
-    {
-        var trimmed = raw.Trim();
-
-        if (!trimmed.StartsWith("```", StringComparison.Ordinal))
-            return trimmed;
-
-        var firstNewline = trimmed.IndexOf('\n');
-        if (firstNewline < 0)
-            return trimmed;
-
-        trimmed = trimmed[(firstNewline + 1)..];
-
-        if (trimmed.EndsWith("```", StringComparison.Ordinal))
-            trimmed = trimmed[..^3];
-
-        return trimmed.Trim();
-    }
-
-    private static string ReadJsonField(JsonElement root, string propertyName)
-    {
-        if (!root.TryGetProperty(propertyName, out var element))
-            return string.Empty;
-
-        return element.ValueKind switch
-        {
-            JsonValueKind.String => element.GetString() ?? string.Empty,
-            JsonValueKind.Array => string.Join(
-                "\n",
-                element.EnumerateArray().Select(item => item.ValueKind switch
-                {
-                    JsonValueKind.String => "- " + item.GetString(),
-                    _ => "- " + item.ToString()
-                })),
-            JsonValueKind.Null => string.Empty,
-            _ => element.ToString()
-        };
     }
 }
