@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo, type KeyboardEvent } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Paperclip, Send, Trash2, Sparkles, ScanSearch } from 'lucide-react'
+import { ScanSearch } from 'lucide-react'
 import {
   chatsApi,
   documentsApi,
@@ -12,19 +12,17 @@ import {
   type SegmentedDocumentAnalysisDto,
   type ApiError,
 } from '@/lib/api'
-import { ChatMessage } from '@/components/domain/ChatMessage'
 import { DocumentCard } from '@/components/domain/DocumentCard'
 import { AITaskPanel } from '@/components/domain/AITaskPanel'
 import { SegmentedAnalysisPanel } from '@/components/domain/SegmentedAnalysisPanel'
+import { FloatingChat } from '@/components/domain/FloatingChat'
 import { SkillChip } from '@/components/domain/SkillChip'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select } from '@/components/ui/Select'
 import { Alert } from '@/components/ui/Alert'
-import { Tabs, TabPanel } from '@/components/ui/Tabs'
 import { ConfirmDialog } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Loading'
-import { LegalDisclaimer } from '@/components/ui/LegalDisclaimer'
 import { useAuth } from '@/lib/auth/AuthContext'
 import {
   getAnalysisMaxSeverity,
@@ -33,10 +31,13 @@ import {
 
 type ChatMode = 'normal' | 'task'
 
-function buildSegmentQuestion(segment: DocumentAnalysisSegmentDto): string {
+function buildMessageWithSegmentContext(
+  userMessage: string,
+  segment: DocumentAnalysisSegmentDto,
+): string {
   const itemsSummary =
     segment.items.length > 0
-      ? `\n\nÍtems detectados:\n${segment.items
+      ? `\n\nÍtems detectados en el segmento:\n${segment.items
           .map(
             (item) =>
               `- ${item.title}: ${item.description}${item.recommendation ? ` (Recomendación: ${item.recommendation})` : ''}`,
@@ -44,7 +45,7 @@ function buildSegmentQuestion(segment: DocumentAnalysisSegmentDto): string {
           .join('\n')}`
       : ''
 
-  return `Explicame en detalle el segmento "${segment.title}" del análisis.\n\nContenido del segmento:\n${segment.content}${itemsSummary}`
+  return `[Contexto del segmento "${segment.title}"]\n${segment.content}${itemsSummary}\n\n[Pregunta]\n${userMessage}`
 }
 
 export function ChatDetailPage() {
@@ -67,7 +68,9 @@ export function ChatDetailPage() {
   const [activeAnalysisDocId, setActiveAnalysisDocId] = useState<string | null>(null)
   const [analyzingDocId, setAnalyzingDocId] = useState<string | null>(null)
   const [showDelete, setShowDelete] = useState(false)
-  const [mobileTab, setMobileTab] = useState('chat')
+  const [chatExpanded, setChatExpanded] = useState(false)
+  const [selectedSegment, setSelectedSegment] =
+    useState<DocumentAnalysisSegmentDto | null>(null)
 
   const { data: chat, isLoading } = useQuery({
     queryKey: ['chats', id],
@@ -174,7 +177,6 @@ export function ChatDetailPage() {
       setActiveAnalysisDocId(documentId)
       setFreeTextAnalysis(null)
       queryClient.setQueryData(['analysis', 'document', documentId], data)
-      setMobileTab('insights')
     },
     onSettled: () => setAnalyzingDocId(null),
   })
@@ -185,7 +187,6 @@ export function ChatDetailPage() {
     onSuccess: (data) => {
       setFreeTextAnalysis(data)
       setActiveAnalysisDocId(null)
-      setMobileTab('insights')
     },
   })
 
@@ -249,11 +250,18 @@ export function ChatDetailPage() {
   const handleSend = () => {
     const content = message.trim()
     if (!content) return
+
     if (mode === 'task') {
       createTaskMutation.mutate(content)
-    } else {
-      sendMutation.mutate(content)
+      return
     }
+
+    const payload =
+      selectedSegment != null
+        ? buildMessageWithSegmentContext(content, selectedSegment)
+        : content
+
+    sendMutation.mutate(payload)
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -264,13 +272,17 @@ export function ChatDetailPage() {
   }
 
   const handleAskFromAnalysis = (prompt: string) => {
+    setSelectedSegment(null)
     setMessage(prompt)
     setMode('normal')
-    setMobileTab('chat')
+    setChatExpanded(true)
   }
 
   const handleAskAboutSegment = (segment: DocumentAnalysisSegmentDto) => {
-    handleAskFromAnalysis(buildSegmentQuestion(segment))
+    setSelectedSegment(segment)
+    setMessage('')
+    setMode('normal')
+    setChatExpanded(true)
   }
 
   const getDocumentRiskLevel = (docId: string) => {
@@ -319,299 +331,153 @@ export function ChatDetailPage() {
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   )
 
-  const contextPanel = (
-    <div className="space-y-6">
-      <section>
-        <h3
-          className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-accent-secondary"
-          style={{ fontFamily: 'var(--font-display)' }}
-        >
-          Skills aplicadas
-        </h3>
-        {chat.appliedSkills?.length ? (
-          <div className="flex flex-wrap gap-2">
-            {chat.appliedSkills.map((s) => (
-              <SkillChip
-                key={s.id}
-                name={s.name}
-                onRemove={() => removeSkillMutation.mutate(s.id)}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">Sin skills aplicadas</p>
-        )}
-        {skills && skills.length > 0 && (
-          <div className="mt-3 flex gap-2">
-            <Select
-              value={selectedSkillId}
-              onChange={(e) => setSelectedSkillId(e.target.value)}
-              className="flex-1"
-            >
-              <option value="">Seleccionar skill</option>
-              {skills.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </Select>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => applySkillMutation.mutate()}
-              disabled={!selectedSkillId}
-              isLoading={applySkillMutation.isPending}
-            >
-              Aplicar
-            </Button>
-          </div>
-        )}
-      </section>
-
-      <section>
-        <h3
-          className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-accent-secondary"
-          style={{ fontFamily: 'var(--font-display)' }}
-        >
-          Documentos
-        </h3>
-        {documents?.length ? (
-          <div className="space-y-3">
-            {documents.map((doc) => (
-              <DocumentCard
-                key={doc.id}
-                document={doc}
-                onAnalyze={() => analyzeDocumentMutation.mutate(doc.id)}
-                isAnalyzing={analyzingDocId === doc.id}
-                riskLevel={getDocumentRiskLevel(doc.id)}
-                isActive={activeAnalysisDocId === doc.id}
-                onSelect={
-                  analysesByDocId[doc.id]
-                    ? () => {
-                        setActiveAnalysisDocId(doc.id)
-                        setFreeTextAnalysis(null)
-                        setMobileTab('insights')
-                      }
-                    : undefined
-                }
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">Sin documentos adjuntos</p>
-        )}
-      </section>
-
-      {taskDetail && (
-        <AITaskPanel
-          task={taskDetail}
-          onSavePlan={(steps) => savePlanMutation.mutate(steps)}
-          onApprove={() => approveMutation.mutate()}
-          onPause={() => pauseMutation.mutate()}
-          onResume={() => resumeMutation.mutate()}
-          onCancel={() => cancelTaskMutation.mutate()}
-          isLoading={
-            savePlanMutation.isPending ||
-            approveMutation.isPending ||
-            pauseMutation.isPending ||
-            resumeMutation.isPending ||
-            cancelTaskMutation.isPending
-          }
-        />
-      )}
-
-      {analysisPanel}
-    </div>
-  )
-
-  const chatThread = (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto chat-scrollbar space-y-4 min-h-[300px] max-h-[calc(100vh-320px)] pr-2">
-        {sortedMessages.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground py-8">
-            Sin mensajes. Escribí tu consulta legal.
-          </p>
-        ) : (
-          sortedMessages.map((msg) => <ChatMessage key={msg.id} message={msg} />)
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      <div className="mt-4 border-t border-border pt-4">
-        <div className="mb-3 flex flex-wrap items-center gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="chatMode"
-              checked={mode === 'normal'}
-              onChange={() => setMode('normal')}
-            />
-            Modo normal
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="chatMode"
-              checked={mode === 'task'}
-              onChange={() => setMode('task')}
-            />
-            <Sparkles className="h-3.5 w-3.5 text-ai" aria-hidden="true" />
-            Modo Tarea IA
-          </label>
-        </div>
-
-        <Textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={
-            mode === 'task'
-              ? 'Describí el encargo legal completo...'
-              : 'Escribí tu consulta legal aquí...'
-          }
-          rows={4}
-        />
-
-        <p className="mt-1 text-xs text-muted-foreground">
-          {mode === 'task'
-            ? 'Genera un plan de trabajo paso a paso para tu encargo.'
-            : 'Ctrl+Enter para enviar. '}
-          <LegalDisclaimer />
-        </p>
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".pdf,.doc,.docx,.txt,.rtf,.odt"
-            className="sr-only"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) uploadMutation.mutate(file)
-              e.target.value = ''
-            }}
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => fileRef.current?.click()}
-            isLoading={uploadMutation.isPending}
-          >
-            <Paperclip className="h-4 w-4" aria-hidden="true" />
-            Adjuntar
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleSend}
-            isLoading={sendMutation.isPending || createTaskMutation.isPending}
-          >
-            <Send className="h-4 w-4" aria-hidden="true" />
-            {mode === 'task' ? 'Generar plan' : 'Enviar'}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowDelete(true)}
-          >
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
-            Eliminar
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-
   return (
-    <div className="mx-auto max-w-7xl">
-      <div className="mb-4">
-        <h2 className="font-heading text-xl text-foreground">{chat.title}</h2>
-      </div>
-
-      {(analyzeDocumentMutation.isError || analyzeConsultaMutation.isError) && (
-        <Alert variant="error" className="mb-4">
-          {(analyzeDocumentMutation.error as ApiError | undefined)?.message ??
-            (analyzeConsultaMutation.error as ApiError | undefined)?.message ??
-            'No se pudo completar el análisis.'}
-        </Alert>
-      )}
-
-      <div className="hidden lg:grid lg:grid-cols-[1fr_380px] gap-6">
-        {chatThread}
-        <aside className="space-y-4 max-h-[calc(100vh-140px)] overflow-y-auto chat-scrollbar pr-1">
-          {contextPanel}
-        </aside>
-      </div>
-
-      <div className="lg:hidden">
-        <Tabs
-          tabs={[
-            { id: 'chat', label: 'Chat' },
-            { id: 'docs', label: 'Documentos' },
-            { id: 'insights', label: 'Análisis' },
-            { id: 'task', label: 'Tarea IA' },
-          ]}
-          activeTab={mobileTab}
-          onChange={setMobileTab}
-        />
-        <TabPanel id="chat" activeTab={mobileTab}>
-          {chatThread}
-        </TabPanel>
-        <TabPanel id="docs" activeTab={mobileTab}>
-          <div className="space-y-6">
-            <section>
-              <h3
-                className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-accent-secondary"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                Documentos
-              </h3>
-              {documents?.length ? (
-                <div className="space-y-3">
-                  {documents.map((doc) => (
-                    <DocumentCard
-                      key={doc.id}
-                      document={doc}
-                      onAnalyze={() => analyzeDocumentMutation.mutate(doc.id)}
-                      isAnalyzing={analyzingDocId === doc.id}
-                      riskLevel={getDocumentRiskLevel(doc.id)}
-                      isActive={activeAnalysisDocId === doc.id}
-                      onSelect={
-                        analysesByDocId[doc.id]
-                          ? () => {
-                              setActiveAnalysisDocId(doc.id)
-                              setFreeTextAnalysis(null)
-                              setMobileTab('insights')
-                            }
-                          : undefined
-                      }
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">Sin documentos adjuntos</p>
-              )}
-            </section>
+    <div className="analysis-workspace mx-auto max-w-[88rem]">
+      <header className="analysis-header space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-heading text-xl text-foreground">{chat.title}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Tablero de análisis documental con copiloto legal integrado.
+            </p>
           </div>
-        </TabPanel>
-        <TabPanel id="insights" activeTab={mobileTab}>
-          {analysisPanel}
-        </TabPanel>
-        <TabPanel id="task" activeTab={mobileTab}>
-          {taskDetail ? (
-            <AITaskPanel
-              task={taskDetail}
-              onSavePlan={(steps) => savePlanMutation.mutate(steps)}
-              onApprove={() => approveMutation.mutate()}
-              onPause={() => pauseMutation.mutate()}
-              onResume={() => resumeMutation.mutate()}
-              onCancel={() => cancelTaskMutation.mutate()}
-              isLoading={approveMutation.isPending}
-            />
-          ) : (
-            <p className="text-sm text-muted-foreground">Sin tarea IA activa.</p>
-          )}
-        </TabPanel>
-      </div>
+        </div>
+
+        {(analyzeDocumentMutation.isError || analyzeConsultaMutation.isError) && (
+          <Alert variant="error">
+            {(analyzeDocumentMutation.error as ApiError | undefined)?.message ??
+              (analyzeConsultaMutation.error as ApiError | undefined)?.message ??
+              'No se pudo completar el análisis.'}
+          </Alert>
+        )}
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <section className="rounded-[16px] border border-border bg-background-alt p-4">
+            <h3
+              className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-accent-secondary"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              Documentos
+            </h3>
+            {documents?.length ? (
+              <div className="space-y-3">
+                {documents.map((doc) => (
+                  <DocumentCard
+                    key={doc.id}
+                    document={doc}
+                    onAnalyze={() => analyzeDocumentMutation.mutate(doc.id)}
+                    isAnalyzing={analyzingDocId === doc.id}
+                    riskLevel={getDocumentRiskLevel(doc.id)}
+                    isActive={activeAnalysisDocId === doc.id}
+                    onSelect={
+                      analysesByDocId[doc.id]
+                        ? () => {
+                            setActiveAnalysisDocId(doc.id)
+                            setFreeTextAnalysis(null)
+                          }
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Sin documentos adjuntos</p>
+            )}
+          </section>
+
+          <section className="rounded-[16px] border border-border bg-background-alt p-4">
+            <h3
+              className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-accent-secondary"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              Skills aplicadas
+            </h3>
+            {chat.appliedSkills?.length ? (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {chat.appliedSkills.map((s) => (
+                  <SkillChip
+                    key={s.id}
+                    name={s.name}
+                    onRemove={() => removeSkillMutation.mutate(s.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="mb-3 text-xs text-muted-foreground">Sin skills aplicadas</p>
+            )}
+            {skills && skills.length > 0 && (
+              <div className="flex gap-2">
+                <Select
+                  value={selectedSkillId}
+                  onChange={(e) => setSelectedSkillId(e.target.value)}
+                  className="flex-1"
+                >
+                  <option value="">Seleccionar skill</option>
+                  {skills.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </Select>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => applySkillMutation.mutate()}
+                  disabled={!selectedSkillId}
+                  isLoading={applySkillMutation.isPending}
+                >
+                  Aplicar
+                </Button>
+              </div>
+            )}
+          </section>
+        </div>
+
+        {taskDetail && (
+          <AITaskPanel
+            task={taskDetail}
+            onSavePlan={(steps) => savePlanMutation.mutate(steps)}
+            onApprove={() => approveMutation.mutate()}
+            onPause={() => pauseMutation.mutate()}
+            onResume={() => resumeMutation.mutate()}
+            onCancel={() => cancelTaskMutation.mutate()}
+            isLoading={
+              savePlanMutation.isPending ||
+              approveMutation.isPending ||
+              pauseMutation.isPending ||
+              resumeMutation.isPending ||
+              cancelTaskMutation.isPending
+            }
+          />
+        )}
+      </header>
+
+      <section className="segments-dashboard">{analysisPanel}</section>
+
+      <FloatingChat
+        messages={sortedMessages}
+        message={message}
+        onMessageChange={setMessage}
+        onSend={handleSend}
+        onKeyDown={handleKeyDown}
+        mode={mode}
+        onModeChange={setMode}
+        selectedSegment={selectedSegment}
+        onClearSelectedSegment={() => setSelectedSegment(null)}
+        isSending={sendMutation.isPending || createTaskMutation.isPending}
+        isExpanded={chatExpanded}
+        onExpandedChange={setChatExpanded}
+        fileInputRef={fileRef}
+        onAttachClick={() => fileRef.current?.click()}
+        onFileChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) uploadMutation.mutate(file)
+          e.target.value = ''
+        }}
+        isUploading={uploadMutation.isPending}
+        onDeleteClick={() => setShowDelete(true)}
+        messagesEndRef={messagesEndRef}
+      />
 
       <ConfirmDialog
         isOpen={showDelete}

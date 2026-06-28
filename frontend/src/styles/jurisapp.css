@@ -126,6 +126,121 @@
   animation: ai-pulse 2s ease-in-out infinite;
 }
 
+.analysis-workspace {
+  position: relative;
+  min-height: calc(100vh - 8rem);
+  padding-bottom: 7.5rem;
+}
+
+.analysis-header {
+  margin-bottom: 1.5rem;
+}
+
+.segments-dashboard {
+  width: 100%;
+}
+
+.segments-dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+@media (min-width: 640px) {
+  .segments-dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .segments-dashboard-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+.segment-card {
+  background: #ffffff;
+}
+
+.floating-chat-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  border: none;
+  background: rgba(17, 24, 39, 0.18);
+  backdrop-filter: blur(2px);
+  cursor: pointer;
+}
+
+.floating-chat {
+  position: fixed;
+  left: 50%;
+  z-index: 50;
+  width: min(100% - 1.5rem, 52rem);
+  transform: translateX(-50%);
+  transition:
+    bottom 0.28s ease,
+    height 0.28s ease,
+    box-shadow 0.28s ease;
+}
+
+.floating-chat--collapsed {
+  bottom: 1rem;
+}
+
+.floating-chat--expanded {
+  bottom: 0;
+  width: min(100%, 56rem);
+  height: min(65vh, 42rem);
+}
+
+.floating-chat-bar,
+.floating-chat-panel {
+  border: 1px solid #e5e2dc;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow:
+    0 12px 40px rgba(17, 24, 39, 0.14),
+    0 2px 8px rgba(17, 24, 39, 0.06);
+}
+
+.floating-chat--expanded .floating-chat-panel {
+  height: 100%;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom: none;
+  box-shadow:
+    0 -8px 40px rgba(17, 24, 39, 0.16),
+    0 -2px 12px rgba(17, 24, 39, 0.08);
+}
+
+.floating-chat-bar {
+  padding: 0.875rem 1rem 0.75rem;
+}
+
+@media (max-width: 639px) {
+  .analysis-workspace {
+    padding-bottom: 8.5rem;
+  }
+
+  .floating-chat {
+    width: calc(100% - 1rem);
+  }
+
+  .floating-chat--expanded {
+    width: 100%;
+    height: min(88vh, 100%);
+    border-radius: 0;
+  }
+
+  .floating-chat--expanded .floating-chat-panel {
+    border-radius: 16px 16px 0 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

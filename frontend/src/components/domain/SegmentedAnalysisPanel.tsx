@@ -93,7 +93,7 @@ export function SegmentedAnalysisPanel({
   const handleDragEnd = () => setDraggingKey(null)
 
   return (
-    <div className="space-y-4">
+    <div className="segments-dashboard space-y-5">
       <Card highlight className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -150,14 +150,7 @@ export function SegmentedAnalysisPanel({
         )}
       </Card>
 
-      <div className="space-y-3">
-        <h4
-          className="text-xs font-semibold uppercase tracking-[0.14em] text-accent-secondary"
-          style={{ fontFamily: 'var(--font-display)' }}
-        >
-          Segmentos del análisis
-        </h4>
-
+      <div className="segments-dashboard-grid">
         {orderedSegments.map((segment) => (
           <AnalysisSegmentCard
             key={segment.key}
@@ -182,7 +175,7 @@ export function SegmentedAnalysisPanel({
       </div>
 
       {analysis.suggestedActions.length > 0 && (
-        <section>
+        <section className="mt-2">
           <h4
             className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-accent-secondary"
             style={{ fontFamily: 'var(--font-display)' }}
@@ -238,19 +231,19 @@ function AnalysisSegmentCard({
 
   return (
     <Card
-      className={`border-l-[3px] ${severityToBorderClass(segment.severity)} ${
-        isDragging ? 'opacity-60' : ''
+      className={`segment-card flex h-full flex-col border-l-[3px] transition-shadow ${severityToBorderClass(segment.severity)} ${
+        isDragging ? 'opacity-60 shadow-lg ring-2 ring-accent/20' : ''
       }`}
       draggable={draggable}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex min-h-0 flex-1 items-start gap-3">
         {draggable && (
           <button
             type="button"
-            className="mt-0.5 cursor-grab text-muted-foreground active:cursor-grabbing"
+            className="segment-drag-handle mt-0.5 shrink-0 cursor-grab rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-background hover:text-foreground active:cursor-grabbing"
             aria-label={`Reordenar ${segment.title}`}
             tabIndex={-1}
           >
@@ -258,7 +251,7 @@ function AnalysisSegmentCard({
           </button>
         )}
 
-        <div className="min-w-0 flex-1 space-y-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h5 className="text-sm font-semibold text-foreground">{segment.title}</h5>
             <div className="flex items-center gap-2">
@@ -326,7 +319,7 @@ function AnalysisSegmentCard({
           )}
 
           {onAsk && (
-            <Button variant="ghost" size="sm" onClick={onAsk}>
+            <Button variant="secondary" size="sm" onClick={onAsk} className="mt-auto w-full sm:w-auto">
               <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
               Preguntar sobre este segmento
             </Button>
