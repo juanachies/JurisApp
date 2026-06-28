@@ -26,12 +26,14 @@ public class DocumentsController : ControllerBase
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> Upload(
-        [FromForm] UploadDocumentFormRequest form,
+        IFormFile file,
+        [FromForm] Guid chatId,
+        [FromForm] Guid? folderId,
         CancellationToken cancellationToken)
     {
         var userId = _currentUserService.UserId!.Value;
 
-        if (form.File is null)
+        if (file is null || file.Length == 0)
         {
             return BadRequest(new
             {
@@ -42,12 +44,12 @@ public class DocumentsController : ControllerBase
 
         var request = new UploadDocumentRequest
         {
-            ChatId      = form.ChatId,
-            FolderId    = form.FolderId,
-            Title       = form.File.FileName,
-            FileName    = form.File.FileName,
-            ContentType = form.File.ContentType,
-            FileStream  = form.File.OpenReadStream()
+            ChatId      = chatId,
+            FolderId    = folderId,
+            Title       = file.FileName,
+            FileName    = file.FileName,
+            ContentType = file.ContentType,
+            FileStream  = file.OpenReadStream()
         };
 
         var result = await _documentService.UploadAsync(userId, request, cancellationToken);
@@ -79,11 +81,4 @@ public class DocumentsController : ControllerBase
         var result = await _documentService.AnalyzeAsync(userId, request, cancellationToken);
         return result.ToActionResult();
     }
-}
-
-public sealed class UploadDocumentFormRequest
-{
-    public IFormFile? File { get; set; }
-    public Guid ChatId { get; set; }
-    public Guid? FolderId { get; set; }
 }
