@@ -84,7 +84,7 @@
 
         <div class="auth-block">
           <h3>1. Registrarse</h3>
-          <p class="hint">Crea cuenta y queda autenticado (JWT en respuesta 201).</p>
+          <p class="hint">Crea cuenta y envía un código de 6 dígitos por email. El código aparece en los logs del servidor (<code>dotnet run</code>). Sin verificar → login 401.</p>
           <input id="regFirstName" placeholder="Nombre" value="Juan">
           <input id="regLastName" placeholder="Apellido" value="Pérez">
           <input id="regEmail" placeholder="Email (único)" value="">
@@ -94,8 +94,20 @@
         </div>
 
         <div class="auth-block">
+          <h3>1b. Verificar email</h3>
+          <p class="hint">Ingresá el email y el código de 6 dígitos del log del servidor. Devuelve JWT al verificar.</p>
+          <input id="verifyEmail" placeholder="Email a verificar">
+          <input id="verifyCode" placeholder="Código de 6 dígitos" maxlength="6">
+          <button type="button" onclick="syncVerifyEmail()">Usar email de login</button>
+          <button type="button" onclick="verifyEmail()">Verificar email</button>
+          <input id="resendEmail" placeholder="Email para reenviar verificación">
+          <button type="button" onclick="syncResendEmail()">Usar email de login</button>
+          <button type="button" onclick="resendVerification()">Reenviar verificación</button>
+        </div>
+
+        <div class="auth-block">
           <h3>2. Iniciar sesión</h3>
-          <p class="hint">Valida credenciales. Usuario inactivo → 401 "Cuenta desactivada".</p>
+          <p class="hint">Valida credenciales. Email no verificado → 401. Usuario inactivo → 401 "Cuenta desactivada".</p>
           <input id="loginEmail" placeholder="Email" value="">
           <input id="loginPassword" type="password" placeholder="Password" value="Test1234!">
           <button type="button" onclick="login()">Login</button>
@@ -121,29 +133,26 @@
 
         <div class="auth-block">
           <h3>5. Editar perfil</h3>
-          <p class="hint">Actualiza nombre, apellido y email del usuario autenticado.</p>
+          <p class="hint">Actualiza nombre, apellido y tema del usuario autenticado. El email no se puede modificar.</p>
           <input id="profileFirstName" placeholder="Nombre" value="Juan">
           <input id="profileLastName" placeholder="Apellido" value="Pérez">
-          <input id="profileEmail" placeholder="Email" value="">
+          <select id="profileTheme">
+            <option value="Bright">Bright</option>
+            <option value="Dark">Dark</option>
+          </select>
           <button type="button" onclick="fillProfileFromSession()">Cargar datos actuales</button>
           <button type="button" onclick="updateProfile()">PUT /api/users/me</button>
         </div>
 
         <div class="auth-block">
-          <h3>6. Visualizar usuarios (Admin)</h3>
-          <p class="hint">Requiere rol Admin. Admin dev: <code>admin@jurisapp.local</code> / <code>Admin123!</code></p>
-          <button type="button" onclick="listUsers()">GET /api/users (listado)</button>
-          <input id="targetUserId" placeholder="User ID (GUID)">
-          <button type="button" onclick="fillTargetUserFromMe()">Usar mi ID</button>
-          <button type="button" onclick="getUserById()">GET /api/users/{id}</button>
-        </div>
-
-        <div class="auth-block">
-          <h3>7. Gestionar usuarios (Admin)</h3>
-          <p class="hint">Editar datos, rol, activar/desactivar o eliminar. No podés desactivarte ni eliminarte a vos mismo.</p>
-          <input id="adminFirstName" placeholder="Nombre (opcional)">
-          <input id="adminLastName" placeholder="Apellido (opcional)">
-          <input id="adminEmail" placeholder="Email (opcional)">
+          <h3>6. Usuarios (Admin)</h3>
+          <p class="hint">Requiere rol Admin. Listá usuarios, elegí cuál modificar y actualizá solo su rol o estado (no el tuyo).</p>
+          <button type="button" onclick="listUsers()">Listar usuarios</button>
+          <select id="adminUserPick" onchange="pickAdminUser()">
+            <option value="">— Elegir usuario del listado —</option>
+          </select>
+          <input id="targetUserId" placeholder="User ID (GUID) del usuario a modificar">
+          <button type="button" onclick="getUserById()">Ver detalle (GET /api/users/{id})</button>
           <select id="adminRole">
             <option value="">— Rol (sin cambiar) —</option>
             <option value="User">User</option>
@@ -155,19 +164,36 @@
             <option value="true">Activar</option>
             <option value="false">Desactivar</option>
           </select>
-          <button type="button" onclick="adminUpdateUser()">PUT /api/users/{id}</button>
-          <button type="button" onclick="adminDeleteUser()">DELETE /api/users/{id}</button>
+          <button type="button" onclick="adminUpdateUser()">Actualizar rol/estado (PUT /api/users/{id})</button>
         </div>
       </section>
 
       <section>
-        <h2>Perfil abogado</h2>
+        <h2>Solicitud de verificación de abogado</h2>
+        <p class="chat-hint">Completá tus datos profesionales. Un administrador debe aprobar la solicitud antes de obtener el rol Lawyer.</p>
         <input id="licenseNumber" value="MAT-12345">
         <input id="barAssociation" value="Colegio de Abogados de CABA">
         <input id="province" value="Buenos Aires">
         <input id="specialty" value="Civil">
-        <button type="button" onclick="createLawyerProfile()">Crear perfil abogado</button>
-        <button type="button" onclick="getLawyerProfile()">Get perfil</button>
+        <button type="button" onclick="createLawyerVerificationRequest()">Enviar solicitud</button>
+        <button type="button" onclick="getLawyerProfile()">Ver mi solicitud</button>
+      </section>
+
+      <section>
+        <h2>Admin — Solicitudes de verificación</h2>
+        <p class="chat-hint">Requiere login como Admin (admin@jurisapp.local / Admin123!).</p>
+        <select id="verificationStatusFilter">
+          <option value="">Todas</option>
+          <option value="Pending" selected>Pendientes</option>
+          <option value="Verified">Aprobadas</option>
+          <option value="Rejected">Rechazadas</option>
+        </select>
+        <button type="button" onclick="listVerificationRequests()">Listar solicitudes</button>
+        <input id="verificationRequestId" placeholder="Request ID">
+        <button type="button" onclick="getVerificationRequestDetail()">Ver detalle</button>
+        <button type="button" onclick="approveVerificationRequest()">Aprobar</button>
+        <input id="rejectionReason" placeholder="Motivo de rechazo (opcional)">
+        <button type="button" onclick="rejectVerificationRequest()">Rechazar</button>
       </section>
 
       <section>
@@ -304,7 +330,7 @@
       if (!currentUser) { showLocal("Cargar perfil", "Hacé GET /me primero o registrate/login.", true); return; }
       document.getElementById("profileFirstName").value = currentUser.firstName || currentUser.FirstName || "";
       document.getElementById("profileLastName").value = currentUser.lastName || currentUser.LastName || "";
-      document.getElementById("profileEmail").value = currentUser.email || currentUser.Email || "";
+      document.getElementById("profileTheme").value = currentUser.theme || currentUser.Theme || "Bright";
       showLocal("Cargar perfil", "Datos del usuario actual cargados en el formulario.", false);
     }
 
@@ -353,7 +379,6 @@
       document.getElementById("regEmail").value = email;
       document.getElementById("loginEmail").value = email;
       document.getElementById("forgotEmail").value = email;
-      document.getElementById("profileEmail").value = email;
       if (!silent) showLocal("Generar email", { email, mensaje: "Email listo para register/login/recuperación." }, false);
     }
 
@@ -430,13 +455,53 @@
           email, password: document.getElementById("regPassword").value
         })
       });
-      const token = pickToken(result.data);
-      const user = pickUser(result.data);
-      if (result.ok && token) {
-        setToken(token);
+      if (result.ok) {
         document.getElementById("loginEmail").value = email;
+        document.getElementById("resendEmail").value = email;
+        document.getElementById("verifyEmail").value = email;
+        show("Register", result.data, result.status,
+          "Revisá la consola del servidor (dotnet run) para copiar el código de 6 dígitos.", false);
+        setStatus("Register — OK. Verificá el email antes de hacer login.");
+      }
+    }
+
+    async function verifyEmail() {
+      const email = document.getElementById("verifyEmail").value.trim();
+      const code = document.getElementById("verifyCode").value.trim();
+      if (!email) { showLocal("Verify email", "Ingresá el email.", true); return; }
+      if (!code) { showLocal("Verify email", "Ingresá el código de 6 dígitos.", true); return; }
+      const result = await api("Verify email", "/api/auth/verify-email", {
+        method: "POST",
+        body: JSON.stringify({ email, code })
+      });
+      const jwt = pickToken(result.data);
+      const user = pickUser(result.data);
+      if (result.ok && jwt) {
+        setToken(jwt);
         if (user) rememberUser(user);
       }
+    }
+
+    async function resendVerification() {
+      const email = document.getElementById("resendEmail").value.trim();
+      if (!email) { showLocal("Resend verification", "Ingresá un email.", true); return; }
+      const result = await api("Resend verification", "/api/auth/resend-verification", {
+        method: "POST",
+        body: JSON.stringify({ email })
+      });
+      if (result.ok) {
+        show("Resend verification", result.data, result.status,
+          "Revisá la consola del servidor (dotnet run) para copiar el nuevo código de 6 dígitos.", false);
+        setStatus("Resend verification — OK. Revisá logs del servidor.");
+      }
+    }
+
+    function syncResendEmail() {
+      document.getElementById("resendEmail").value = document.getElementById("loginEmail").value.trim();
+    }
+
+    function syncVerifyEmail() {
+      document.getElementById("verifyEmail").value = document.getElementById("loginEmail").value.trim();
     }
 
     async function login() {
@@ -494,24 +559,43 @@
         body: JSON.stringify({
           firstName: document.getElementById("profileFirstName").value,
           lastName: document.getElementById("profileLastName").value,
-          email: document.getElementById("profileEmail").value
+          theme: document.getElementById("profileTheme").value
         })
       });
       if (result.ok && result.data) {
         rememberUser(result.data);
-        document.getElementById("loginEmail").value = result.data.email || result.data.Email || document.getElementById("loginEmail").value;
       }
     }
 
     async function listUsers() {
       if (!requireToken("Listar usuarios (Admin)")) return;
       const result = await api("Listar usuarios (Admin)", "/api/users");
-      if (result.ok && Array.isArray(result.data) && result.data.length) {
-        const first = result.data[0];
-        if (!document.getElementById("targetUserId").value.trim()) {
-          document.getElementById("targetUserId").value = first.id || first.Id;
-        }
+      if (!result.ok || !Array.isArray(result.data)) return;
+
+      const pick = document.getElementById("adminUserPick");
+      pick.innerHTML = '<option value="">— Elegir usuario del listado —</option>';
+      result.data.forEach(user => {
+        const id = user.id || user.Id;
+        const email = user.email || user.Email || "";
+        const role = user.role || user.Role || "";
+        const active = user.isActive ?? user.IsActive;
+        const option = document.createElement("option");
+        option.value = id;
+        option.textContent = `${email} (${role}${active === false ? ", inactivo" : ""})`;
+        pick.appendChild(option);
+      });
+
+      if (result.data.length && !document.getElementById("targetUserId").value.trim()) {
+        pick.selectedIndex = 1;
+        pickAdminUser();
       }
+    }
+
+    function pickAdminUser() {
+      const id = document.getElementById("adminUserPick").value;
+      if (!id) return;
+      document.getElementById("targetUserId").value = id;
+      showLocal("Usuario seleccionado", { targetUserId: id }, false);
     }
 
     async function getUserById() {
@@ -527,43 +611,26 @@
       if (!id) { showLocal("Gestionar usuario (Admin)", "Ingresá un User ID.", true); return; }
 
       const body = {};
-      const firstName = document.getElementById("adminFirstName").value.trim();
-      const lastName = document.getElementById("adminLastName").value.trim();
-      const email = document.getElementById("adminEmail").value.trim();
       const role = document.getElementById("adminRole").value;
       const isActive = document.getElementById("adminIsActive").value;
 
-      if (firstName) body.firstName = firstName;
-      if (lastName) body.lastName = lastName;
-      if (email) body.email = email;
       if (role) body.role = role;
       if (isActive !== "") body.isActive = isActive === "true";
 
       if (!Object.keys(body).length) {
-        showLocal("Gestionar usuario (Admin)", "Completá al menos un campo para actualizar.", true);
+        showLocal("Gestionar usuario (Admin)", "Seleccioná el rol o el estado a modificar.", true);
         return;
       }
 
-      const result = await api("Gestionar usuario (Admin)", "/api/users/" + id, {
+      await api("Gestionar usuario (Admin)", "/api/users/" + id, {
         method: "PUT",
         body: JSON.stringify(body)
       });
-      if (result.ok && result.data && currentUser && (currentUser.id || currentUser.Id) === (result.data.id || result.data.Id)) {
-        rememberUser(result.data);
-      }
     }
 
-    async function adminDeleteUser() {
-      if (!requireToken("Eliminar usuario (Admin)")) return;
-      const id = document.getElementById("targetUserId").value.trim();
-      if (!id) { showLocal("Eliminar usuario (Admin)", "Ingresá un User ID.", true); return; }
-      if (!confirm("¿Eliminar usuario " + id + "?")) return;
-      await api("Eliminar usuario (Admin)", "/api/users/" + id, { method: "DELETE" });
-    }
-
-    async function createLawyerProfile() {
-      if (!requireToken("Crear perfil abogado")) return;
-      const result = await api("Crear perfil abogado", "/api/lawyer-profiles", {
+    async function createLawyerVerificationRequest() {
+      if (!requireToken("Enviar solicitud de verificación")) return;
+      const result = await api("Enviar solicitud de verificación", "/api/lawyer-profiles", {
         method: "POST",
         body: JSON.stringify({
           licenseNumber: document.getElementById("licenseNumber").value,
@@ -572,14 +639,52 @@
           specialty: document.getElementById("specialty").value
         })
       });
-      if (result.ok && result.data?.id) lawyerProfileId = result.data.id;
+      if (result.ok && result.data?.id) {
+        lawyerProfileId = result.data.id;
+        document.getElementById("verificationRequestId").value = result.data.id;
+      }
     }
 
     async function getLawyerProfile() {
-      if (!requireToken("Get perfil abogado")) return { ok: false };
-      const result = await api("Get perfil abogado", "/api/lawyer-profiles/me");
-      if (result.ok && result.data?.id) lawyerProfileId = result.data.id;
+      if (!requireToken("Ver mi solicitud")) return { ok: false };
+      const result = await api("Ver mi solicitud", "/api/lawyer-profiles/me");
+      if (result.ok && result.data?.id) {
+        lawyerProfileId = result.data.id;
+        document.getElementById("verificationRequestId").value = result.data.id;
+      }
       return result;
+    }
+
+    async function listVerificationRequests() {
+      if (!requireToken("Listar solicitudes (Admin)")) return;
+      const status = document.getElementById("verificationStatusFilter").value;
+      const query = status ? "?status=" + encodeURIComponent(status) : "";
+      await api("Listar solicitudes (Admin)", "/api/lawyer-profiles/requests" + query);
+    }
+
+    async function getVerificationRequestDetail() {
+      if (!requireToken("Detalle solicitud (Admin)")) return;
+      const id = document.getElementById("verificationRequestId").value.trim();
+      if (!id) { showLocal("Detalle solicitud", "Ingresá un Request ID.", true); return; }
+      await api("Detalle solicitud (Admin)", "/api/lawyer-profiles/requests/" + id);
+    }
+
+    async function approveVerificationRequest() {
+      if (!requireToken("Aprobar solicitud (Admin)")) return;
+      const id = document.getElementById("verificationRequestId").value.trim();
+      if (!id) { showLocal("Aprobar solicitud", "Ingresá un Request ID.", true); return; }
+      await api("Aprobar solicitud (Admin)", "/api/lawyer-profiles/requests/" + id + "/approve", { method: "POST" });
+    }
+
+    async function rejectVerificationRequest() {
+      if (!requireToken("Rechazar solicitud (Admin)")) return;
+      const id = document.getElementById("verificationRequestId").value.trim();
+      if (!id) { showLocal("Rechazar solicitud", "Ingresá un Request ID.", true); return; }
+      const reason = document.getElementById("rejectionReason").value.trim();
+      await api("Rechazar solicitud (Admin)", "/api/lawyer-profiles/requests/" + id + "/reject", {
+        method: "POST",
+        body: JSON.stringify({ reason: reason || null })
+      });
     }
 
     async function createChat() {

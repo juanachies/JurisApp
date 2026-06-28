@@ -15,6 +15,44 @@ public static class LawyerProfileMappings
         Specialty = profile.Specialty,
         IsVerified = profile.IsVerified,
         VerificationStatus = profile.VerificationStatus,
-        VerifiedAt = profile.VerifiedAt
+        RejectionReason = profile.RejectionReason,
+        VerifiedAt = profile.VerifiedAt,
+        ResolvedAt = profile.ResolvedAt
+    };
+
+    public static LawyerVerificationRequestSummaryDto ToSummaryDto(this LawyerProfile profile) => new()
+    {
+        Id = profile.Id,
+        UserId = profile.UserId,
+        UserFirstName = profile.User.FirstName,
+        UserLastName = profile.User.LastName,
+        UserEmail = profile.User.Email,
+        LicenseNumber = profile.LicenseNumber,
+        BarAssociation = profile.BarAssociation,
+        Province = profile.Province,
+        Specialty = profile.Specialty,
+        VerificationStatus = profile.VerificationStatus,
+        CreatedAt = profile.CreatedAt,
+        VerifiedAt = profile.VerifiedAt,
+        ResolvedAt = profile.ResolvedAt
+    };
+
+    public static LawyerVerificationRequestDetailDto ToDetailDto(this LawyerProfile profile) => new()
+    {
+        Id = profile.Id,
+        UserId = profile.UserId,
+        UserFirstName = profile.User.FirstName,
+        UserLastName = profile.User.LastName,
+        UserEmail = profile.User.Email,
+        LicenseNumber = profile.LicenseNumber,
+        BarAssociation = profile.BarAssociation,
+        Province = profile.Province,
+        Specialty = profile.Specialty,
+        VerificationStatus = profile.VerificationStatus,
+        IsVerified = profile.IsVerified,
+        RejectionReason = profile.RejectionReason,
+        CreatedAt = profile.CreatedAt,
+        VerifiedAt = profile.VerifiedAt,
+        ResolvedAt = profile.ResolvedAt
     };
 }

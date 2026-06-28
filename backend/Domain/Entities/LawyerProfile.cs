@@ -14,6 +14,8 @@ public class LawyerProfile : BaseEntity
     public Guid? VerifiedById { get; private set; }
     public DateTime? VerifiedAt { get; private set; }
     public LawyerVerificationStatus VerificationStatus { get; private set; }
+    public string? RejectionReason { get; private set; }
+    public DateTime? ResolvedAt { get; private set; }
 
     public User User { get; private set; } = null!;
     public ICollection<Folder> Folders { get; private set; } = new List<Folder>();
@@ -35,7 +37,7 @@ public class LawyerProfile : BaseEntity
         BarAssociation = barAssociation;
         Province = province;
         Specialty = specialty;
-        VerificationStatus = LawyerVerificationStatus.NotSubmitted;
+        VerificationStatus = LawyerVerificationStatus.Pending;
     }
 
     public void Verify(Guid verifiedById)
@@ -47,12 +49,14 @@ public class LawyerProfile : BaseEntity
         Touch();
     }
 
-    public void RejectVerification()
+    public void RejectVerification(string? reason = null)
     {
         VerificationStatus = LawyerVerificationStatus.Rejected;
         IsVerified = false;
         VerifiedById = null;
         VerifiedAt = null;
+        RejectionReason = reason;
+        ResolvedAt = DateTime.UtcNow;
         Touch();
     }
 
@@ -62,8 +66,30 @@ public class LawyerProfile : BaseEntity
         IsVerified = false;
         VerifiedById = null;
         VerifiedAt = null;
+        RejectionReason = null;
+        ResolvedAt = null;
         Touch();
     }
+
+    public void Resubmit(
+        string licenseNumber,
+        string barAssociation,
+        string province,
+        string specialty)
+    {
+        if (VerificationStatus != LawyerVerificationStatus.Rejected)
+            throw new InvalidOperationException("Solo se puede reenviar una solicitud rechazada.");
+
+        Update(licenseNumber, barAssociation, province, specialty);
+        MarkAsPendingVerification();
+    }
+
+    public bool CanSubmitRequest =>
+        VerificationStatus is LawyerVerificationStatus.Rejected or LawyerVerificationStatus.NotSubmitted;
+
+    public bool IsPending => VerificationStatus == LawyerVerificationStatus.Pending;
+
+    public bool IsVerifiedLawyer => VerificationStatus == LawyerVerificationStatus.Verified;
 
     public void Update(
         string licenseNumber,

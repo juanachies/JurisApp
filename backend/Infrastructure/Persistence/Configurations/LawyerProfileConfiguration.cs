@@ -31,6 +31,9 @@ public class LawyerProfileConfiguration : IEntityTypeConfiguration<LawyerProfile
             .IsRequired()
             .HasConversion<string>();
 
+        builder.Property(lp => lp.RejectionReason)
+            .HasMaxLength(1000);
+
         builder.HasOne(lp => lp.User)
             .WithOne(u => u.LawyerProfile)
             .HasForeignKey<LawyerProfile>(lp => lp.UserId)

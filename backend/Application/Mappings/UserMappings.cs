@@ -13,6 +13,8 @@ public static class UserMappings
         Email = user.Email,
         Role = user.Role,
         IsActive = user.IsActive,
+        IsEmailVerified = user.IsEmailVerified,
+        Theme = user.Theme,
         CreatedAt = user.CreatedAt
     };
 

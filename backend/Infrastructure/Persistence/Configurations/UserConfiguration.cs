@@ -1,4 +1,5 @@
 using JurisApp.Domain.Entities;
+using JurisApp.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -35,5 +36,14 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.IsActive)
             .IsRequired()
             .HasDefaultValue(true);
+
+        builder.Property(u => u.IsEmailVerified)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(u => u.Theme)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasDefaultValue(UserTheme.Bright);
     }
 }

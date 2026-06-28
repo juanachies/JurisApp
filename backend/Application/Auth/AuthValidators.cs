@@ -9,6 +9,9 @@ public static class AuthValidators
 {
     public const int MinPasswordLength = 8;
 
+    public static string NormalizeEmail(string email) =>
+        email.Trim().ToLowerInvariant();
+
     public static bool IsValidEmail(string email)
     {
         if (string.IsNullOrWhiteSpace(email))
@@ -17,7 +20,7 @@ public static class AuthValidators
         try
         {
             var addr = new MailAddress(email);
-            return addr.Address.Equals(email.Trim(), StringComparison.OrdinalIgnoreCase);
+            return addr.Address.Equals(NormalizeEmail(email), StringComparison.OrdinalIgnoreCase);
         }
         catch
         {
@@ -63,5 +66,23 @@ public static class AuthValidators
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
         return Convert.ToHexString(bytes);
+    }
+
+    public static string GenerateVerificationCode()
+    {
+        var value = RandomNumberGenerator.GetInt32(0, 1_000_000);
+        return value.ToString("D6");
+    }
+
+    public static Error? ValidateVerificationCode(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return Error.Validation("El código es obligatorio.");
+
+        var normalized = code.Trim();
+        if (normalized.Length != 6 || !normalized.All(char.IsDigit))
+            return Error.Validation("El código debe tener 6 dígitos.");
+
+        return null;
     }
 }

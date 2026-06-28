@@ -21,4 +21,14 @@ public class LoggingEmailSender : IEmailSender
 
         return Task.CompletedTask;
     }
+
+    public Task SendEmailVerificationCodeAsync(string email, string verificationCode, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "Email verification code for {Email}: {VerificationCode}",
+            email,
+            verificationCode);
+
+        return Task.CompletedTask;
+    }
 }

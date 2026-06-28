@@ -19,13 +19,19 @@ public class UserRepository : IUserRepository
         => await _context.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 
     public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
-        => await _context.Users.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+        => await _context.Users.FirstOrDefaultAsync(
+            u => u.Email.ToLower() == email.ToLower(),
+            cancellationToken);
 
     public async Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken = default)
-        => await _context.Users.AnyAsync(u => u.Email == email, cancellationToken);
+        => await _context.Users.AnyAsync(
+            u => u.Email.ToLower() == email.ToLower(),
+            cancellationToken);
 
     public async Task<bool> EmailExistsAsync(string email, Guid excludeUserId, CancellationToken cancellationToken = default)
-        => await _context.Users.AnyAsync(u => u.Email == email && u.Id != excludeUserId, cancellationToken);
+        => await _context.Users.AnyAsync(
+            u => u.Email.ToLower() == email.ToLower() && u.Id != excludeUserId,
+            cancellationToken);
 
     public async Task AddAsync(User user, CancellationToken cancellationToken = default)
         => await _context.Users.AddAsync(user, cancellationToken);

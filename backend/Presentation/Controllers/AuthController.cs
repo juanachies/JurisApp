@@ -28,6 +28,24 @@ public class AuthController : ControllerBase
         return new ObjectResult(result.Value) { StatusCode = StatusCodes.Status201Created };
     }
 
+    [HttpPost("verify-email")]
+    public async Task<IActionResult> VerifyEmail(
+        [FromBody] VerifyEmailRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _authService.VerifyEmailAsync(request, cancellationToken);
+        return result.ToActionResult();
+    }
+
+    [HttpPost("resend-verification")]
+    public async Task<IActionResult> ResendVerification(
+        [FromBody] ResendVerificationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _authService.ResendVerificationAsync(request, cancellationToken);
+        return result.ToActionResult();
+    }
+
     [HttpPost("login")]
     public async Task<IActionResult> Login(
         [FromBody] LoginRequest request,

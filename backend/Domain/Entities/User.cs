@@ -11,6 +11,8 @@ public class User : BaseEntity
     public string PasswordHash { get; private set; } = string.Empty;
     public UserRole Role { get; private set; }
     public bool IsActive { get; private set; } = true;
+    public bool IsEmailVerified { get; private set; }
+    public UserTheme Theme { get; private set; } = UserTheme.Bright;
 
     public LawyerProfile? LawyerProfile { get; private set; }
     public ICollection<Chat> Chats { get; private set; } = new List<Chat>();
@@ -27,6 +29,21 @@ public class User : BaseEntity
         PasswordHash = passwordHash;
         Role = role;
         IsActive = true;
+        IsEmailVerified = false;
+        Theme = UserTheme.Bright;
+    }
+
+    public void VerifyEmail()
+    {
+        IsEmailVerified = true;
+        Touch();
+    }
+
+    public void UpdateProfile(string firstName, string lastName)
+    {
+        FirstName = firstName;
+        LastName = lastName;
+        Touch();
     }
 
     public void UpdateProfile(string firstName, string lastName, string email)
@@ -34,6 +51,12 @@ public class User : BaseEntity
         FirstName = firstName;
         LastName = lastName;
         Email = email;
+        Touch();
+    }
+
+    public void ChangeTheme(UserTheme theme)
+    {
+        Theme = theme;
         Touch();
     }
 

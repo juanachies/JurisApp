@@ -1,8 +1,10 @@
+using JurisApp.Domain.Enums;
+
 namespace JurisApp.Application.DTOs.Users;
 
 public class UpdateUserProfileRequest
 {
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
+    public UserTheme Theme { get; set; } = UserTheme.Bright;
 }

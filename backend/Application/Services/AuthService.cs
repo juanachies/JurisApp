@@ -15,6 +15,7 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IPasswordResetTokenRepository _passwordResetTokenRepository;
+    private readonly IEmailVerificationTokenRepository _emailVerificationTokenRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly IEmailSender _emailSender;
@@ -24,6 +25,7 @@ public class AuthService : IAuthService
     public AuthService(
         IUserRepository userRepository,
         IPasswordResetTokenRepository passwordResetTokenRepository,
+        IEmailVerificationTokenRepository emailVerificationTokenRepository,
         IPasswordHasher passwordHasher,
         IJwtTokenGenerator jwtTokenGenerator,
         IEmailSender emailSender,
@@ -32,6 +34,7 @@ public class AuthService : IAuthService
     {
         _userRepository = userRepository;
         _passwordResetTokenRepository = passwordResetTokenRepository;
+        _emailVerificationTokenRepository = emailVerificationTokenRepository;
         _passwordHasher = passwordHasher;
         _jwtTokenGenerator = jwtTokenGenerator;
         _emailSender = emailSender;
@@ -39,25 +42,26 @@ public class AuthService : IAuthService
         _configuration = configuration;
     }
 
-    public async Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+    public async Task<Result<RegisterResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.FirstName) ||
             string.IsNullOrWhiteSpace(request.LastName))
         {
-            return Result<AuthResponse>.Failure(Error.Validation("Nombre y apellido son obligatorios."));
+            return Result<RegisterResponse>.Failure(Error.Validation("Nombre y apellido son obligatorios."));
         }
 
         var emailError = AuthValidators.ValidateEmail(request.Email);
         if (emailError is not null)
-            return Result<AuthResponse>.Failure(emailError);
+            return Result<RegisterResponse>.Failure(emailError);
 
         var passwordError = AuthValidators.ValidatePassword(request.Password);
         if (passwordError is not null)
-            return Result<AuthResponse>.Failure(passwordError);
+            return Result<RegisterResponse>.Failure(passwordError);
 
-        if (await _userRepository.EmailExistsAsync(request.Email, cancellationToken))
+        var normalizedEmail = AuthValidators.NormalizeEmail(request.Email);
+        if (await _userRepository.EmailExistsAsync(normalizedEmail, cancellationToken))
         {
-            return Result<AuthResponse>.Failure(Error.Conflict("El email ya está registrado."));
+            return Result<RegisterResponse>.Failure(Error.Conflict("El email ya está registrado."));
         }
 
         var passwordHash = _passwordHasher.HashPassword(request.Password);
@@ -65,16 +69,18 @@ public class AuthService : IAuthService
             Guid.NewGuid(),
             request.FirstName,
             request.LastName,
-            request.Email.Trim(),
+            normalizedEmail,
             passwordHash,
             UserRole.User);
 
         await _userRepository.AddAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result<AuthResponse>.Success(new AuthResponse
+        await SendVerificationEmailAsync(user, cancellationToken);
+
+        return Result<RegisterResponse>.Success(new RegisterResponse
         {
-            Token = _jwtTokenGenerator.GenerateToken(user),
+            Message = "Te enviamos un código de 6 dígitos a tu email. Ingresalo en la web para verificar tu cuenta.",
             User = user.ToDto()
         });
     }
@@ -88,7 +94,7 @@ public class AuthService : IAuthService
         if (string.IsNullOrWhiteSpace(request.Password))
             return Result<AuthResponse>.Failure(Error.Validation("La contraseña es obligatoria."));
 
-        var user = await _userRepository.GetByEmailAsync(request.Email.Trim(), cancellationToken);
+        var user = await _userRepository.GetByEmailAsync(AuthValidators.NormalizeEmail(request.Email), cancellationToken);
         if (user is null || !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
             return Result<AuthResponse>.Failure(Error.Unauthorized("Credenciales inválidas."));
@@ -99,11 +105,70 @@ public class AuthService : IAuthService
             return Result<AuthResponse>.Failure(Error.Unauthorized("Cuenta desactivada."));
         }
 
+        if (!user.IsEmailVerified)
+        {
+            return Result<AuthResponse>.Failure(Error.Unauthorized("Debes verificar tu email antes de iniciar sesión."));
+        }
+
         return Result<AuthResponse>.Success(new AuthResponse
         {
             Token = _jwtTokenGenerator.GenerateToken(user),
             User = user.ToDto()
         });
+    }
+
+    public async Task<Result<AuthResponse>> VerifyEmailAsync(VerifyEmailRequest request, CancellationToken cancellationToken = default)
+    {
+        var emailError = AuthValidators.ValidateEmail(request.Email);
+        if (emailError is not null)
+            return Result<AuthResponse>.Failure(emailError);
+
+        var codeError = AuthValidators.ValidateVerificationCode(request.Code);
+        if (codeError is not null)
+            return Result<AuthResponse>.Failure(codeError);
+
+        var user = await _userRepository.GetByEmailAsync(AuthValidators.NormalizeEmail(request.Email), cancellationToken);
+        if (user is null)
+            return Result<AuthResponse>.Failure(Error.Validation("El código es inválido o ha expirado."));
+
+        if (user.IsEmailVerified)
+        {
+            return Result<AuthResponse>.Success(new AuthResponse
+            {
+                Token = _jwtTokenGenerator.GenerateToken(user),
+                User = user.ToDto()
+            });
+        }
+
+        var codeHash = AuthValidators.HashToken(request.Code.Trim());
+        var verificationToken = await _emailVerificationTokenRepository.GetValidForUserAsync(user.Id, codeHash, cancellationToken);
+        if (verificationToken is null)
+            return Result<AuthResponse>.Failure(Error.Validation("El código es inválido o ha expirado."));
+
+        user.VerifyEmail();
+        verificationToken.MarkAsUsed();
+
+        _userRepository.Update(user);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<AuthResponse>.Success(new AuthResponse
+        {
+            Token = _jwtTokenGenerator.GenerateToken(user),
+            User = user.ToDto()
+        });
+    }
+
+    public async Task<Result> ResendVerificationAsync(ResendVerificationRequest request, CancellationToken cancellationToken = default)
+    {
+        var emailError = AuthValidators.ValidateEmail(request.Email);
+        if (emailError is not null)
+            return Result.Failure(emailError);
+
+        var user = await _userRepository.GetByEmailAsync(AuthValidators.NormalizeEmail(request.Email), cancellationToken);
+        if (user is not null && !user.IsEmailVerified)
+            await SendVerificationEmailAsync(user, cancellationToken);
+
+        return Result.Success();
     }
 
     public async Task<Result> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default)
@@ -112,7 +177,7 @@ public class AuthService : IAuthService
         if (emailError is not null)
             return Result.Failure(emailError);
 
-        var user = await _userRepository.GetByEmailAsync(request.Email.Trim(), cancellationToken);
+        var user = await _userRepository.GetByEmailAsync(AuthValidators.NormalizeEmail(request.Email), cancellationToken);
         if (user is not null)
         {
             await _passwordResetTokenRepository.InvalidateAllForUserAsync(user.Id, cancellationToken);
@@ -160,5 +225,28 @@ public class AuthService : IAuthService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();
+    }
+
+    private async Task SendVerificationEmailAsync(User user, CancellationToken cancellationToken)
+    {
+        await _emailVerificationTokenRepository.InvalidateAllForUserAsync(user.Id, cancellationToken);
+
+        var code = AuthValidators.GenerateVerificationCode();
+        var codeHash = AuthValidators.HashToken(code);
+        var expirationMinutes = int.Parse(
+            _configuration["EmailVerification:CodeExpirationMinutes"]
+            ?? _configuration["EmailVerification:TokenExpirationMinutes"]
+            ?? "15");
+
+        var verificationToken = new EmailVerificationToken(
+            Guid.NewGuid(),
+            user.Id,
+            codeHash,
+            DateTime.UtcNow.AddMinutes(expirationMinutes));
+
+        await _emailVerificationTokenRepository.AddAsync(verificationToken, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _emailSender.SendEmailVerificationCodeAsync(user.Email, code, cancellationToken);
     }
 }

@@ -10,5 +10,7 @@ public class UserDto
     public string Email { get; set; } = string.Empty;
     public UserRole Role { get; set; }
     public bool IsActive { get; set; }
+    public bool IsEmailVerified { get; set; }
+    public UserTheme Theme { get; set; }
     public DateTime CreatedAt { get; set; }
 }

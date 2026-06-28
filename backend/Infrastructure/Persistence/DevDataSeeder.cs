@@ -12,6 +12,7 @@ public static class DevDataSeeder
     {
         await SeedPlansAsync(db);
         await SeedAdminUserAsync(db, serviceProvider);
+        await EnsureAdminVerifiedAsync(db);
     }
 
     private static async Task SeedPlansAsync(AppDbContext db)
@@ -48,8 +49,20 @@ public static class DevDataSeeder
             adminEmail,
             passwordHasher.HashPassword("Admin123!"),
             UserRole.Admin);
+        admin.VerifyEmail();
 
         await db.Users.AddAsync(admin);
         await db.SaveChangesAsync();
+    }
+
+    public static async Task EnsureAdminVerifiedAsync(AppDbContext db)
+    {
+        const string adminEmail = "admin@jurisapp.local";
+        var admin = await db.Users.FirstOrDefaultAsync(u => u.Email == adminEmail);
+        if (admin is not null && !admin.IsEmailVerified)
+        {
+            admin.VerifyEmail();
+            await db.SaveChangesAsync();
+        }
     }
 }

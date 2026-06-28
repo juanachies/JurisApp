@@ -1,6 +1,7 @@
 using JurisApp.Application.DTOs.LawyerProfiles;
 using JurisApp.Application.Interfaces.Auth;
 using JurisApp.Application.Interfaces.Services;
+using JurisApp.Domain.Enums;
 using JurisApp.Presentation.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -24,17 +25,17 @@ public class LawyerProfilesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(
+    public async Task<IActionResult> CreateVerificationRequest(
         [FromBody] CreateLawyerProfileRequest request,
         CancellationToken cancellationToken)
     {
         var userId = _currentUserService.UserId!.Value;
-        var result = await _lawyerProfileService.CreateAsync(userId, request, cancellationToken);
+        var result = await _lawyerProfileService.CreateVerificationRequestAsync(userId, request, cancellationToken);
         return result.ToActionResult();
     }
 
     [HttpGet("me")]
-    public async Task<IActionResult> GetMyProfile(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetMyRequest(CancellationToken cancellationToken)
     {
         var userId = _currentUserService.UserId!.Value;
         var result = await _lawyerProfileService.GetByUserIdAsync(userId, cancellationToken);
@@ -42,7 +43,7 @@ public class LawyerProfilesController : ControllerBase
     }
 
     [HttpPut("me")]
-    public async Task<IActionResult> UpdateMyProfile(
+    public async Task<IActionResult> UpdateMyRequest(
         [FromBody] UpdateLawyerProfileRequest request,
         CancellationToken cancellationToken)
     {
@@ -51,23 +52,66 @@ public class LawyerProfilesController : ControllerBase
         return result.ToActionResult();
     }
 
+    [HttpGet("requests")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetAllRequests(
+        [FromQuery] LawyerVerificationStatus? status,
+        CancellationToken cancellationToken)
+    {
+        var result = await _lawyerProfileService.GetAllRequestsAsync(status, cancellationToken);
+        return result.ToActionResult();
+    }
+
+    [HttpGet("requests/{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetRequestDetail(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _lawyerProfileService.GetRequestDetailAsync(id, cancellationToken);
+        return result.ToActionResult();
+    }
+
+    [HttpPost("requests/{id:guid}/approve")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ApproveRequest(Guid id, CancellationToken cancellationToken)
+    {
+        var adminUserId = _currentUserService.UserId!.Value;
+        var result = await _lawyerProfileService.ApproveAsync(id, adminUserId, cancellationToken);
+        return result.ToActionResult();
+    }
+
+    [HttpPost("requests/{id:guid}/reject")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> RejectRequest(
+        Guid id,
+        [FromBody] RejectLawyerRequest request,
+        CancellationToken cancellationToken)
+    {
+        var adminUserId = _currentUserService.UserId!.Value;
+        var result = await _lawyerProfileService.RejectAsync(id, adminUserId, request.Reason, cancellationToken);
+        return result.ToActionResult();
+    }
+
     [HttpPost("verify")]
     [Authorize(Roles = "Admin")]
+    [Obsolete("Usar POST /api/lawyer-profiles/requests/{id}/approve")]
     public async Task<IActionResult> Verify(
         [FromBody] VerifyLawyerRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _lawyerProfileService.VerifyAsync(request, cancellationToken);
+        var adminUserId = _currentUserService.UserId!.Value;
+        var result = await _lawyerProfileService.ApproveAsync(request.LawyerProfileId, adminUserId, cancellationToken);
         return result.ToActionResult();
     }
 
     [HttpPost("reject")]
     [Authorize(Roles = "Admin")]
+    [Obsolete("Usar POST /api/lawyer-profiles/requests/{id}/reject")]
     public async Task<IActionResult> Reject(
         [FromBody] RejectLawyerRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _lawyerProfileService.RejectAsync(request, cancellationToken);
+        var adminUserId = _currentUserService.UserId!.Value;
+        var result = await _lawyerProfileService.RejectAsync(request.LawyerProfileId, adminUserId, request.Reason, cancellationToken);
         return result.ToActionResult();
     }
 }

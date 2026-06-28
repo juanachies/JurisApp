@@ -3,6 +3,7 @@ using System;
 using JurisApp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260616232935_AddLawyerVerificationWorkflow")]
+    partial class AddLawyerVerificationWorkflow
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.8");
@@ -411,6 +414,43 @@ namespace Infrastructure.Migrations
                     b.ToTable("LawyerProfiles");
                 });
 
+            modelBuilder.Entity("JurisApp.Domain.Entities.LawyerVerificationDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("LawyerProfileId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LawyerProfileId");
+
+                    b.ToTable("LawyerVerificationDocuments");
+                });
+
             modelBuilder.Entity("JurisApp.Domain.Entities.Message", b =>
                 {
                     b.Property<Guid>("Id")
@@ -740,6 +780,17 @@ namespace Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("JurisApp.Domain.Entities.LawyerVerificationDocument", b =>
+                {
+                    b.HasOne("JurisApp.Domain.Entities.LawyerProfile", "LawyerProfile")
+                        .WithMany("VerificationDocuments")
+                        .HasForeignKey("LawyerProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LawyerProfile");
+                });
+
             modelBuilder.Entity("JurisApp.Domain.Entities.Message", b =>
                 {
                     b.HasOne("JurisApp.Domain.Entities.Chat", "Chat")
@@ -816,6 +867,8 @@ namespace Infrastructure.Migrations
                     b.Navigation("CustomSkills");
 
                     b.Navigation("Folders");
+
+                    b.Navigation("VerificationDocuments");
                 });
 
             modelBuilder.Entity("JurisApp.Domain.Entities.Plan", b =>

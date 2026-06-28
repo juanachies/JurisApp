@@ -67,13 +67,4 @@ public class UsersController : ControllerBase
         var result = await _userService.AdminUpdateAsync(id, adminUserId, request, cancellationToken);
         return result.ToActionResult();
     }
-
-    [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
-    {
-        var adminUserId = _currentUserService.UserId!.Value;
-        var result = await _userService.DeleteAsync(id, adminUserId, cancellationToken);
-        return result.ToActionResult();
-    }
 }
