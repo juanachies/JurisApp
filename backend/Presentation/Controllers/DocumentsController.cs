@@ -26,21 +26,28 @@ public class DocumentsController : ControllerBase
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> Upload(
-        IFormFile file,
-        [FromForm] Guid chatId,
-        [FromForm] Guid? folderId,
+        [FromForm] UploadDocumentFormRequest form,
         CancellationToken cancellationToken)
     {
         var userId = _currentUserService.UserId!.Value;
 
+        if (form.File is null)
+        {
+            return BadRequest(new
+            {
+                Code = "Validation",
+                Message = "El archivo es obligatorio."
+            });
+        }
+
         var request = new UploadDocumentRequest
         {
-            ChatId      = chatId,
-            FolderId    = folderId,
-            Title       = file.FileName,
-            FileName    = file.FileName,
-            ContentType = file.ContentType,
-            FileStream  = file.OpenReadStream()
+            ChatId      = form.ChatId,
+            FolderId    = form.FolderId,
+            Title       = form.File.FileName,
+            FileName    = form.File.FileName,
+            ContentType = form.File.ContentType,
+            FileStream  = form.File.OpenReadStream()
         };
 
         var result = await _documentService.UploadAsync(userId, request, cancellationToken);
@@ -72,4 +79,11 @@ public class DocumentsController : ControllerBase
         var result = await _documentService.AnalyzeAsync(userId, request, cancellationToken);
         return result.ToActionResult();
     }
+}
+
+public sealed class UploadDocumentFormRequest
+{
+    public IFormFile? File { get; set; }
+    public Guid ChatId { get; set; }
+    public Guid? FolderId { get; set; }
 }
