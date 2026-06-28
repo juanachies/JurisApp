@@ -67,6 +67,39 @@ dotnet ef migrations add NombreMigracion --project ../Infrastructure --startup-p
 - `Jwt__Secret`
 - `AI__Claude__ApiKey` y `AI__Claude__Model` (si `AI__UseMock=false`)
 
+### Deploy API a Azure App Service con GitHub Actions
+
+El workflow está en `.github/workflows/api-azure-app-service.yml`. En cada push a `main`, o manualmente con `workflow_dispatch`, ejecuta:
+
+1. `dotnet restore`
+2. `dotnet build --configuration Release`
+3. `dotnet publish --configuration Release`
+4. Deploy a Azure App Service con `azure/webapps-deploy`
+
+Secrets necesarios en GitHub (`Settings` -> `Secrets and variables` -> `Actions`):
+
+- `AZURE_WEBAPP_NAME`: nombre del Azure App Service donde se despliega la API.
+- `AZURE_WEBAPP_PUBLISH_PROFILE`: contenido completo del publish profile descargado desde Azure App Service.
+
+Configuración runtime necesaria en Azure App Service (`Configuration` -> `Application settings`):
+
+- `ASPNETCORE_ENVIRONMENT`: `Production`
+- `ConnectionStrings__DefaultConnection`: connection string PostgreSQL de producción.
+- `Jwt__Secret`: secreto JWT fuerte, mínimo 32 caracteres.
+- `Jwt__Issuer`: por ejemplo `JurisApp`.
+- `Jwt__Audience`: por ejemplo `JurisApp`.
+- `AI__UseMock`: `false` para usar IA real, o `true` para respuestas simuladas.
+- `AI__Claude__Enabled`: `true` si se usa Claude real.
+- `AI__Claude__ApiKey`: API key de Claude, solo si `AI__UseMock=false`.
+- `AI__Claude__Model`: modelo de Claude a usar.
+- `Stripe__UseMock`: `false` para Stripe real.
+- `Stripe__SecretKey`: secret key de Stripe, si se habilita Stripe real.
+- `Stripe__WebhookSecret`: webhook secret de Stripe, si se habilita Stripe real.
+- `Stripe__SuccessUrl`: URL de éxito del checkout.
+- `Stripe__CancelUrl`: URL de cancelación del checkout.
+
+No subir secretos reales al repositorio. GitHub Actions usa solo secrets y Azure usa variables de entorno.
+
 ### Seed de desarrollo
 
 Al levantar en Development se crean automáticamente:
