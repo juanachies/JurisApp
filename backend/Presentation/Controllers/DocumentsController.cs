@@ -2,7 +2,6 @@ using JurisApp.Application.DTOs.Documents;
 using JurisApp.Application.Interfaces.Auth;
 using JurisApp.Application.Interfaces.Services;
 using JurisApp.Presentation.Extensions;
-using JurisApp.Presentation.Models.Documents;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,19 +26,21 @@ public class DocumentsController : ControllerBase
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> Upload(
-        [FromForm] UploadDocumentForm form,
+        IFormFile file,
+        [FromForm] Guid chatId,
+        [FromForm] Guid? folderId,
         CancellationToken cancellationToken)
     {
         var userId = _currentUserService.UserId!.Value;
 
         var request = new UploadDocumentRequest
         {
-            ChatId      = form.ChatId,
-            FolderId    = form.FolderId,
-            Title       = form.File.FileName,
-            FileName    = form.File.FileName,
-            ContentType = form.File.ContentType,
-            FileStream  = form.File.OpenReadStream()
+            ChatId      = chatId,
+            FolderId    = folderId,
+            Title       = file.FileName,
+            FileName    = file.FileName,
+            ContentType = file.ContentType,
+            FileStream  = file.OpenReadStream()
         };
 
         var result = await _documentService.UploadAsync(userId, request, cancellationToken);
