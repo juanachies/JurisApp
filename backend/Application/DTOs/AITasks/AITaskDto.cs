@@ -10,4 +10,6 @@ public class AITaskDto
     public AITaskStatus Status { get; set; }
     public string Plan { get; set; } = string.Empty;
     public string? Result { get; set; }
+    public int CurrentStepIndex { get; set; }
+    public bool IsPaused { get; set; }
 }

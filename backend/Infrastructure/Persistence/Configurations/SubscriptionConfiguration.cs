@@ -14,6 +14,12 @@ public class SubscriptionConfiguration : IEntityTypeConfiguration<Subscription>
             .IsRequired()
             .HasConversion<string>();
 
+        builder.Property(s => s.StripeCustomerId)
+            .HasMaxLength(255);
+
+        builder.Property(s => s.StripeSubscriptionId)
+            .HasMaxLength(255);
+
         builder.HasOne(s => s.User)
             .WithMany(u => u.Subscriptions)
             .HasForeignKey(s => s.UserId)

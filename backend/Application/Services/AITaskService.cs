@@ -2,9 +2,10 @@ using JurisApp.Application.Common;
 using JurisApp.Application.DTOs.AITasks;
 using JurisApp.Application.Interfaces.AI;
 using JurisApp.Application.Interfaces.Persistence;
-using JurisApp.Application.Mappings;
 using JurisApp.Application.Interfaces.Services;
+using JurisApp.Application.Mappings;
 using JurisApp.Domain.Entities;
+using JurisApp.Domain.Enums;
 
 namespace JurisApp.Application.Services;
 
@@ -12,127 +13,382 @@ public class AITaskService : IAITaskService
 {
     private readonly IChatRepository _chatRepository;
     private readonly IAITaskRepository _aiTaskRepository;
+    private readonly IMessageRepository _messageRepository;
+    private readonly ICustomSkillRepository _customSkillRepository;
+    private readonly IChatDocumentContextService _chatDocumentContextService;
     private readonly IAIService _aiService;
     private readonly IUnitOfWork _unitOfWork;
 
     public AITaskService(
         IChatRepository chatRepository,
         IAITaskRepository aiTaskRepository,
+        IMessageRepository messageRepository,
+        ICustomSkillRepository customSkillRepository,
+        IChatDocumentContextService chatDocumentContextService,
         IAIService aiService,
         IUnitOfWork unitOfWork)
     {
         _chatRepository = chatRepository;
         _aiTaskRepository = aiTaskRepository;
+        _messageRepository = messageRepository;
+        _customSkillRepository = customSkillRepository;
+        _chatDocumentContextService = chatDocumentContextService;
         _aiService = aiService;
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result<AITaskDto>> CreateAsync(Guid userId, CreateAITaskRequest request, CancellationToken cancellationToken = default)
+    public async Task<Result<AITaskDetailDto>> CreateAsync(
+        Guid userId,
+        CreateAITaskRequest request,
+        CancellationToken cancellationToken = default)
     {
         if (request.ChatId == Guid.Empty || string.IsNullOrWhiteSpace(request.Description))
-        {
-            return Result<AITaskDto>.Failure(Error.Validation("Chat y descripción son obligatorios."));
-        }
+            return Result<AITaskDetailDto>.Failure(Error.Validation("Chat y descripción son obligatorios."));
 
         var chat = await _chatRepository.GetByIdAsync(request.ChatId, cancellationToken);
         if (chat is null)
-        {
-            return Result<AITaskDto>.Failure(Error.NotFound("Chat no encontrado."));
-        }
+            return Result<AITaskDetailDto>.Failure(Error.NotFound("Chat no encontrado."));
 
         if (chat.UserId != userId)
+            return Result<AITaskDetailDto>.Failure(Error.Unauthorized("No tenés acceso a este chat."));
+
+        var activeSkills = await _customSkillRepository.GetActiveByChatIdAsync(request.ChatId, cancellationToken);
+        var skillNames = activeSkills.Select(s => s.Name).ToList();
+        var previousMessages = await _messageRepository.GetByChatIdAsync(request.ChatId, cancellationToken);
+        var chatDocuments = await _chatDocumentContextService.BuildForChatAsync(request.ChatId, cancellationToken);
+
+        var userMessage = new Message(
+            Guid.NewGuid(),
+            request.ChatId,
+            DateTime.UtcNow,
+            MessageRole.User,
+            request.Description);
+        userMessage.SetSkillsUsed(skillNames);
+        await _messageRepository.AddAsync(userMessage, cancellationToken);
+
+        var structuredPlan = await _aiService.CreateStructuredTaskPlanAsync(
+            request.Description,
+            previousMessages,
+            activeSkills,
+            chatDocuments,
+            cancellationToken);
+
+        var planSummary = string.IsNullOrWhiteSpace(structuredPlan.Summary)
+            ? structuredPlan.Objective
+            : structuredPlan.Summary;
+
+        var taskId = Guid.NewGuid();
+        var task = new AITask(taskId, request.ChatId, request.Description, planSummary);
+
+        foreach (var step in structuredPlan.Steps.OrderBy(s => s.Order))
         {
-            return Result<AITaskDto>.Failure(Error.Unauthorized("No tenés acceso a este chat."));
+            task.Steps.Add(new AITaskStep(
+                Guid.NewGuid(),
+                taskId,
+                step.Order,
+                step.Title,
+                step.Description));
         }
 
-        var plan = await _aiService.CreateTaskPlanAsync(request.Description, cancellationToken);
-
-        var task = new AITask(Guid.NewGuid(), request.ChatId, request.Description, plan);
         await _aiTaskRepository.AddAsync(task, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result<AITaskDto>.Success(task.ToDto());
+        var created = await _aiTaskRepository.GetByIdWithStepsAsync(taskId, cancellationToken);
+        return Result<AITaskDetailDto>.Success(created!.ToDetailDto());
     }
 
-    public async Task<Result<AITaskDto>> CompleteAsync(Guid userId, Guid taskId, string result, CancellationToken cancellationToken = default)
+    public async Task<Result<AITaskDetailDto>> GetByIdAsync(
+        Guid userId,
+        Guid taskId,
+        CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(result))
-        {
-            return Result<AITaskDto>.Failure(Error.Validation("El resultado es obligatorio."));
-        }
-
-        var task = await _aiTaskRepository.GetByIdAsync(taskId, cancellationToken);
+        var task = await _aiTaskRepository.GetByIdWithStepsAsync(taskId, cancellationToken);
         if (task is null)
+            return Result<AITaskDetailDto>.Failure(Error.NotFound("Tarea no encontrada."));
+
+        var accessError = await EnsureTaskAccessAsync(userId, task, cancellationToken);
+        if (accessError is not null)
+            return Result<AITaskDetailDto>.Failure(accessError);
+
+        return Result<AITaskDetailDto>.Success(task.ToDetailDto());
+    }
+
+    public async Task<Result<IReadOnlyList<AITaskDetailDto>>> GetByChatIdAsync(
+        Guid userId,
+        Guid chatId,
+        CancellationToken cancellationToken = default)
+    {
+        var chat = await _chatRepository.GetByIdAsync(chatId, cancellationToken);
+        if (chat is null)
+            return Result<IReadOnlyList<AITaskDetailDto>>.Failure(Error.NotFound("Chat no encontrado."));
+
+        if (chat.UserId != userId)
+            return Result<IReadOnlyList<AITaskDetailDto>>.Failure(Error.Unauthorized("No tenés acceso a este chat."));
+
+        var tasks = await _aiTaskRepository.GetByChatIdWithStepsAsync(chatId, cancellationToken);
+        var dtos = tasks.Select(t => t.ToDetailDto()).ToList();
+        return Result<IReadOnlyList<AITaskDetailDto>>.Success(dtos);
+    }
+
+    public async Task<Result<AITaskDetailDto>> UpdatePlanAsync(
+        Guid userId,
+        Guid taskId,
+        UpdateAITaskPlanRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var task = await _aiTaskRepository.GetByIdWithStepsAsync(taskId, cancellationToken);
+        if (task is null)
+            return Result<AITaskDetailDto>.Failure(Error.NotFound("Tarea no encontrada."));
+
+        var accessError = await EnsureTaskAccessAsync(userId, task, cancellationToken);
+        if (accessError is not null)
+            return Result<AITaskDetailDto>.Failure(accessError);
+
+        if (task.Status != AITaskStatus.AwaitingApproval)
+            return Result<AITaskDetailDto>.Failure(Error.Validation("Solo se puede editar el plan antes de aprobarlo."));
+
+        if (request.Steps.Count == 0)
+            return Result<AITaskDetailDto>.Failure(Error.Validation("El plan debe tener al menos un paso."));
+
+        foreach (var update in request.Steps)
         {
-            return Result<AITaskDto>.Failure(Error.NotFound("Tarea no encontrada."));
+            var step = task.Steps.FirstOrDefault(s => s.Order == update.Order);
+            if (step is null)
+                return Result<AITaskDetailDto>.Failure(Error.Validation($"No existe el paso {update.Order}."));
+
+            if (string.IsNullOrWhiteSpace(update.Title) || string.IsNullOrWhiteSpace(update.Description))
+                return Result<AITaskDetailDto>.Failure(Error.Validation($"El paso {update.Order} necesita título y descripción."));
+
+            step.UpdateContent(update.Title.Trim(), update.Description.Trim());
         }
 
-        var chat = await _chatRepository.GetByIdAsync(task.ChatId, cancellationToken);
-        if (chat is null || chat.UserId != userId)
-        {
-            return Result<AITaskDto>.Failure(Error.Unauthorized("No tenés acceso a esta tarea."));
-        }
-
-        task.MarkAsCompleted(result);
+        task.SetPlanSummary(string.Join("\n", task.Steps.OrderBy(s => s.Order).Select(s => $"{s.Order}. {s.Title}")));
         _aiTaskRepository.Update(task);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result<AITaskDto>.Success(task.ToDto());
+        return Result<AITaskDetailDto>.Success(task.ToDetailDto());
     }
 
-    public async Task<Result<AITaskDto>> GetByIdAsync(Guid userId, Guid taskId, CancellationToken cancellationToken = default)
+    public async Task<Result<AITaskDetailDto>> ApprovePlanAsync(
+        Guid userId,
+        Guid taskId,
+        CancellationToken cancellationToken = default)
     {
-        var task = await _aiTaskRepository.GetByIdAsync(taskId, cancellationToken);
+        var task = await _aiTaskRepository.GetByIdWithStepsAsync(taskId, cancellationToken);
         if (task is null)
-        {
-            return Result<AITaskDto>.Failure(Error.NotFound("Tarea no encontrada."));
-        }
+            return Result<AITaskDetailDto>.Failure(Error.NotFound("Tarea no encontrada."));
 
-        var chat = await _chatRepository.GetByIdAsync(task.ChatId, cancellationToken);
-        if (chat is null || chat.UserId != userId)
-        {
-            return Result<AITaskDto>.Failure(Error.Unauthorized("No tenés acceso a esta tarea."));
-        }
+        var accessError = await EnsureTaskAccessAsync(userId, task, cancellationToken);
+        if (accessError is not null)
+            return Result<AITaskDetailDto>.Failure(accessError);
 
-        return Result<AITaskDto>.Success(task.ToDto());
+        if (task.Status != AITaskStatus.AwaitingApproval)
+            return Result<AITaskDetailDto>.Failure(Error.Validation("La tarea no está pendiente de aprobación."));
+
+        if (!task.Steps.Any())
+            return Result<AITaskDetailDto>.Failure(Error.Validation("La tarea no tiene pasos para ejecutar."));
+
+        task.ApprovePlan();
+        _aiTaskRepository.Update(task);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return await RunPipelineAsync(userId, taskId, cancellationToken);
     }
 
-    public async Task<Result<AITaskDto>> CancelAsync(Guid userId, Guid taskId, CancellationToken cancellationToken = default)
-    {
-        var task = await _aiTaskRepository.GetByIdAsync(taskId, cancellationToken);
-        if (task is null)
-        {
-            return Result<AITaskDto>.Failure(Error.NotFound("Tarea no encontrada."));
-        }
+    public async Task<Result<AITaskDetailDto>> ExecuteNextStepAsync(
+        Guid userId,
+        Guid taskId,
+        CancellationToken cancellationToken = default)
+        => await RunPipelineAsync(userId, taskId, cancellationToken);
 
-        var chat = await _chatRepository.GetByIdAsync(task.ChatId, cancellationToken);
-        if (chat is null || chat.UserId != userId)
-        {
-            return Result<AITaskDto>.Failure(Error.Unauthorized("No tenés acceso a esta tarea."));
-        }
+    public async Task<Result<AITaskDetailDto>> PauseAsync(
+        Guid userId,
+        Guid taskId,
+        CancellationToken cancellationToken = default)
+    {
+        var task = await _aiTaskRepository.GetByIdWithStepsAsync(taskId, cancellationToken);
+        if (task is null)
+            return Result<AITaskDetailDto>.Failure(Error.NotFound("Tarea no encontrada."));
+
+        var accessError = await EnsureTaskAccessAsync(userId, task, cancellationToken);
+        if (accessError is not null)
+            return Result<AITaskDetailDto>.Failure(accessError);
+
+        if (task.Status != AITaskStatus.InProgress)
+            return Result<AITaskDetailDto>.Failure(Error.Validation("Solo se puede pausar una tarea en progreso."));
+
+        task.Pause();
+        _aiTaskRepository.Update(task);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result<AITaskDetailDto>.Success(task.ToDetailDto());
+    }
+
+    public async Task<Result<AITaskDetailDto>> ResumeAsync(
+        Guid userId,
+        Guid taskId,
+        CancellationToken cancellationToken = default)
+    {
+        var task = await _aiTaskRepository.GetByIdWithStepsAsync(taskId, cancellationToken);
+        if (task is null)
+            return Result<AITaskDetailDto>.Failure(Error.NotFound("Tarea no encontrada."));
+
+        var accessError = await EnsureTaskAccessAsync(userId, task, cancellationToken);
+        if (accessError is not null)
+            return Result<AITaskDetailDto>.Failure(accessError);
+
+        if (task.Status != AITaskStatus.InProgress)
+            return Result<AITaskDetailDto>.Failure(Error.Validation("Solo se puede reanudar una tarea en progreso."));
+
+        if (!task.IsPaused)
+            return Result<AITaskDetailDto>.Failure(Error.Validation("La tarea no está pausada."));
+
+        task.Resume();
+        _aiTaskRepository.Update(task);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return await RunPipelineAsync(userId, taskId, cancellationToken);
+    }
+
+    public async Task<Result<AITaskDetailDto>> CancelAsync(
+        Guid userId,
+        Guid taskId,
+        CancellationToken cancellationToken = default)
+    {
+        var task = await _aiTaskRepository.GetByIdWithStepsAsync(taskId, cancellationToken);
+        if (task is null)
+            return Result<AITaskDetailDto>.Failure(Error.NotFound("Tarea no encontrada."));
+
+        var accessError = await EnsureTaskAccessAsync(userId, task, cancellationToken);
+        if (accessError is not null)
+            return Result<AITaskDetailDto>.Failure(accessError);
+
+        if (task.Status is AITaskStatus.Completed or AITaskStatus.Cancelled)
+            return Result<AITaskDetailDto>.Failure(Error.Validation("La tarea ya está finalizada."));
 
         task.Cancel();
         _aiTaskRepository.Update(task);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result<AITaskDto>.Success(task.ToDto());
+        return Result<AITaskDetailDto>.Success(task.ToDetailDto());
     }
 
-    public async Task<Result<IReadOnlyList<AITaskDto>>> GetByChatIdAsync(Guid userId, Guid chatId, CancellationToken cancellationToken = default)
+    private async Task<Result<AITaskDetailDto>> RunPipelineAsync(
+        Guid userId,
+        Guid taskId,
+        CancellationToken cancellationToken)
     {
-        var chat = await _chatRepository.GetByIdAsync(chatId, cancellationToken);
-        if (chat is null)
+        while (true)
         {
-            return Result<IReadOnlyList<AITaskDto>>.Failure(Error.NotFound("Chat no encontrado."));
-        }
+            cancellationToken.ThrowIfCancellationRequested();
 
-        if (chat.UserId != userId)
+            var task = await _aiTaskRepository.GetByIdWithStepsAsync(taskId, cancellationToken);
+            if (task is null)
+                return Result<AITaskDetailDto>.Failure(Error.NotFound("Tarea no encontrada."));
+
+            var accessError = await EnsureTaskAccessAsync(userId, task, cancellationToken);
+            if (accessError is not null)
+                return Result<AITaskDetailDto>.Failure(accessError);
+
+            if (task.Status != AITaskStatus.InProgress || task.IsPaused)
+                return Result<AITaskDetailDto>.Success(task.ToDetailDto());
+
+            var stepResult = await ExecuteSingleStepAsync(task, cancellationToken);
+            if (!stepResult.IsSuccess)
+                return stepResult;
+
+            task = await _aiTaskRepository.GetByIdWithStepsAsync(taskId, cancellationToken);
+            if (task is null)
+                return Result<AITaskDetailDto>.Failure(Error.NotFound("Tarea no encontrada."));
+
+            if (task.Status != AITaskStatus.InProgress || task.IsPaused)
+                return Result<AITaskDetailDto>.Success(task.ToDetailDto());
+        }
+    }
+
+    private async Task<Result<AITaskDetailDto>> ExecuteSingleStepAsync(
+        AITask task,
+        CancellationToken cancellationToken)
+    {
+        var currentStep = task.Steps.FirstOrDefault(s => s.Order == task.CurrentStepIndex);
+        if (currentStep is null)
+            return Result<AITaskDetailDto>.Failure(Error.Validation("No hay un paso actual para ejecutar."));
+
+        if (currentStep.Status == AITaskStepStatus.Completed)
+            return Result<AITaskDetailDto>.Failure(Error.Validation("El paso actual ya fue completado."));
+
+        var activeSkills = await _customSkillRepository.GetActiveByChatIdAsync(task.ChatId, cancellationToken);
+        var previousMessages = await _messageRepository.GetByChatIdAsync(task.ChatId, cancellationToken);
+        var chatDocuments = await _chatDocumentContextService.BuildForChatAsync(task.ChatId, cancellationToken);
+
+        var completedSteps = task.Steps
+            .Where(s => s.Status == AITaskStepStatus.Completed)
+            .OrderBy(s => s.Order)
+            .Select(s => s.ToDto())
+            .ToList();
+
+        currentStep.MarkAsInProgress();
+        _aiTaskRepository.Update(task);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        try
         {
-            return Result<IReadOnlyList<AITaskDto>>.Failure(Error.Unauthorized("No tenés acceso a este chat."));
-        }
+            var stepResult = await _aiService.ExecuteTaskStepAsync(
+                task.Description,
+                currentStep.ToDto(),
+                completedSteps,
+                previousMessages,
+                activeSkills,
+                chatDocuments,
+                cancellationToken);
 
-        var tasks = await _aiTaskRepository.GetByChatIdAsync(chatId, cancellationToken);
-        var dtos = tasks.Select(t => t.ToDto()).ToList();
-        return Result<IReadOnlyList<AITaskDto>>.Success(dtos);
+            currentStep.MarkAsCompleted(stepResult);
+
+            var assistantMessage = new Message(
+                Guid.NewGuid(),
+                task.ChatId,
+                DateTime.UtcNow,
+                MessageRole.Assistant,
+                $"**Tarea IA — Paso {currentStep.Order}: {currentStep.Title}**\n\n{stepResult}");
+            assistantMessage.SetSkillsUsed(activeSkills.Where(s => s.IsActive).Select(s => s.Name));
+            await _messageRepository.AddAsync(assistantMessage, cancellationToken);
+
+            var nextStep = task.Steps
+                .Where(s => s.Order > currentStep.Order && s.Status == AITaskStepStatus.Pending)
+                .OrderBy(s => s.Order)
+                .FirstOrDefault();
+
+            if (nextStep is null)
+                task.MarkAsCompleted($"Plan completado. Último paso: {currentStep.Title}.");
+            else
+                task.AdvanceToNextStep();
+
+            _aiTaskRepository.Update(task);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var updated = await _aiTaskRepository.GetByIdWithStepsAsync(task.Id, cancellationToken);
+            return Result<AITaskDetailDto>.Success(updated!.ToDetailDto());
+        }
+        catch (AIServiceException ex)
+        {
+            currentStep.MarkAsFailed(ex.Message);
+            task.MarkAsFailed($"Error en paso {currentStep.Order}: {ex.Message}");
+            _aiTaskRepository.Update(task);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return Result<AITaskDetailDto>.Failure(Error.ExternalService(ex.Message));
+        }
+    }
+
+    private async Task<Error?> EnsureTaskAccessAsync(
+        Guid userId,
+        AITask task,
+        CancellationToken cancellationToken)
+    {
+        var chat = await _chatRepository.GetByIdAsync(task.ChatId, cancellationToken);
+        if (chat is null || chat.UserId != userId)
+            return Error.Unauthorized("No tenés acceso a esta tarea.");
+
+        return null;
     }
 }

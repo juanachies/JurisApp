@@ -87,6 +87,64 @@ Al levantar en Development se crean automáticamente:
 
 En Swagger: clic en **Authorize**, pegar `Bearer {tu-token}`.
 
+### Billing / Stripe (modo test)
+
+Suscripciones **Pro** y **Max** se compran vía Stripe Checkout. El plan **Free** sigue activándose con `POST /api/plans/{planId}/subscribe`.
+
+#### Modo simulado (sin Stripe)
+
+En Development, `appsettings.Development.json` trae `"Stripe": { "UseMock": true }`. Con eso podés activar Pro/Max **sin keys ni Stripe CLI**:
+
+1. Login en `test.html`
+2. **Listar planes** → se autocompleta el Id de Pro o Max
+3. **Simular compra (sin Stripe)** → activa la suscripción al instante
+4. **Ver suscripción activa** para confirmar
+
+Endpoint: `POST /api/billing/simulate-purchase` (solo Development + `Stripe:UseMock=true`).
+
+Para activar Stripe real más adelante: `"Stripe:UseMock": false` y configurar secretos abajo.
+
+#### Stripe real (cuando lo actives)
+
+**Configurar secretos locales** (desde `backend/Presentation`):
+
+```bash
+dotnet user-secrets set "Stripe:SecretKey" "sk_test_..."
+dotnet user-secrets set "Stripe:WebhookSecret" "whsec_..."
+```
+
+**Escuchar webhooks en local** (requiere [Stripe CLI](https://stripe.com/docs/stripe-cli)):
+
+```bash
+stripe login
+stripe listen --forward-to http://localhost:5248/api/billing/webhook
+```
+
+Copiá el `whsec_...` que muestra el CLI al user-secret `Stripe:WebhookSecret`.
+
+**Cargar Price IDs en la base de datos** (después de crear productos/precios en el [Dashboard de Stripe (test)](https://dashboard.stripe.com/test/products)):
+
+```sql
+UPDATE Plans SET StripePriceId = 'price_XXXXX', StripeProductId = 'prod_XXXXX' WHERE Type = 'Pro';
+UPDATE Plans SET StripePriceId = 'price_YYYYY', StripeProductId = 'prod_YYYYY' WHERE Type = 'Max';
+```
+
+**Probar desde test.html** (`http://localhost:5248/test.html`):
+
+1. Login con un usuario
+2. **Listar planes** → copiar Id de Pro o Max
+3. **Crear checkout Stripe** → abrir la URL en el navegador
+4. Pagar con tarjeta de prueba: `4242 4242 4242 4242`, fecha futura, CVC cualquiera
+5. **Ver suscripción activa** para confirmar
+
+**Endpoints de billing:**
+
+| Método | Ruta | Auth |
+|--------|------|------|
+| POST | `/api/billing/create-checkout-session` | JWT |
+| POST | `/api/billing/simulate-purchase` | JWT (solo dev + UseMock) |
+| POST | `/api/billing/webhook` | Stripe signature |
+
 ### Estructura del backend
 
 ```

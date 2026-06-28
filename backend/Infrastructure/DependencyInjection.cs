@@ -1,10 +1,12 @@
 using JurisApp.Application.Interfaces.AI;
 using JurisApp.Application.Interfaces.Auth;
 using JurisApp.Application.Interfaces.Files;
+using JurisApp.Application.Interfaces.Payments;
 using JurisApp.Application.Interfaces.Persistence;
 using JurisApp.Infrastructure.AI;
 using JurisApp.Infrastructure.Auth;
 using JurisApp.Infrastructure.Files;
+using JurisApp.Infrastructure.Payments;
 using JurisApp.Infrastructure.Persistence;
 using JurisApp.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -27,7 +29,8 @@ public static class DependencyInjection
             .AddRepositories()
             .AddAuthServices()
             .AddAIService(configuration)
-            .AddFileStorage();
+            .AddFileStorage()
+            .AddStripePayments(configuration, environment);
 
         return services;
     }
@@ -127,6 +130,32 @@ public static class DependencyInjection
     private static IServiceCollection AddFileStorage(this IServiceCollection services)
     {
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
+        services.AddScoped<IDocumentTextExtractor, DocumentTextExtractor>();
+        return services;
+    }
+
+    private static IServiceCollection AddStripePayments(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
+    {
+        services.AddOptions<StripeOptions>()
+            .Bind(configuration.GetSection(StripeOptions.SectionName))
+            .PostConfigure(options =>
+            {
+                if (!environment.IsDevelopment())
+                    return;
+
+                var useMockSetting = configuration[$"{StripeOptions.SectionName}:UseMock"];
+                if (string.IsNullOrWhiteSpace(useMockSetting))
+                    options.UseMock = true;
+            });
+
+        if (configuration.GetValue<bool>("Stripe:UseMock"))
+            services.AddScoped<IPaymentService, MockPaymentService>();
+        else
+            services.AddScoped<IPaymentService, StripePaymentService>();
+
         return services;
     }
 }

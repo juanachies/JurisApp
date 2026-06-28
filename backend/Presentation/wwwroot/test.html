@@ -62,7 +62,95 @@
     .msg-system { background: #eee; font-size: 0.9em; }
     .msg strong { display: block; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.25rem; opacity: 0.7; }
     .msg p { margin: 0; white-space: pre-wrap; }
+    .msg-debug {
+      font-size: 0.75rem;
+      color: #2e7d32;
+      margin-top: 0.35rem;
+      font-family: ui-monospace, monospace;
+    }
     .chat-hint { font-size: 0.85rem; color: #555; margin: 0.25rem 0; }
+    .skill-chip {
+      display: inline-block;
+      background: #e8f5e9;
+      border: 1px solid #a5d6a7;
+      padding: 0.2rem 0.5rem;
+      margin: 0.15rem 0.25rem 0.15rem 0;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    #chatAppliedSkills { margin: 0.5rem 0 0.75rem; min-height: 1.5rem; }
+    .chat-documents {
+      margin: 0.5rem 0 0.75rem;
+      padding: 0.5rem 0.65rem;
+      background: #fff;
+      border: 1px dashed #ccc;
+      border-radius: 6px;
+      min-height: 2rem;
+    }
+    .chat-documents h4 {
+      margin: 0 0 0.35rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .doc-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      padding: 0.2rem 0.45rem;
+      margin: 0.15rem 0.35rem 0.15rem 0;
+      border-radius: 4px;
+      font-size: 0.82rem;
+    }
+    .doc-chip button {
+      margin: 0;
+      padding: 0.1rem 0.35rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .chat-compose { margin-top: 0.75rem; }
+    .chat-mode-toggle { margin: 0.5rem 0 0.75rem; }
+    .ai-task-panel {
+      margin: 0.75rem 0;
+      padding: 0.75rem;
+      border: 1px solid #c5cae9;
+      background: #eef0fb;
+      border-radius: 8px;
+    }
+    .ai-task-panel h4 { margin: 0 0 0.5rem; font-size: 0.9rem; }
+    .ai-task-step {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 0.5rem 0.65rem;
+      margin-bottom: 0.5rem;
+    }
+    .ai-task-step.done { border-color: #a5d6a7; background: #f1f8f4; }
+    .ai-task-step.current { border-color: #7986cb; box-shadow: 0 0 0 1px #7986cb; }
+    .ai-task-step label { font-size: 0.75rem; color: #555; display: block; margin-bottom: 0.25rem; }
+    .ai-task-step input, .ai-task-step textarea {
+      margin: 0.25rem 0 0.5rem;
+      font-size: 0.85rem;
+    }
+    .ai-task-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem; }
+    .chat-compose-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 0.5rem;
+    }
+    .chat-compose-actions button { margin: 0; }
+    .btn-attach {
+      background: #fff;
+      border: 1px solid #bbb;
+    }
+    .btn-attach:hover { background: #f5f5f5; }
+    #docFile { display: none; }
     @media (max-width: 900px) {
       .layout { flex-direction: column; }
       .panel-right { width: 100%; max-width: none; height: 50vh; position: relative; }
@@ -205,11 +293,53 @@
         <input id="chatId" placeholder="Chat ID (se guarda al crear)">
         <button type="button" onclick="loadChat()">Cargar conversación</button>
 
+        <h3>Custom Skills en este chat</h3>
+        <p class="chat-hint">Aplicá skills con el botón. Permanecen activas hasta que uses <strong>Quitar del chat</strong>.</p>
+        <select id="chatSkillSelect">
+          <option value="">— Cargá tus skills primero —</option>
+        </select>
+        <div class="row">
+          <button type="button" onclick="loadSkillsForChat()">Cargar skills</button>
+          <button type="button" onclick="applySkillToChat()">Aplicar al chat</button>
+          <button type="button" onclick="removeSkillFromChat()">Quitar del chat</button>
+        </div>
+        <div id="chatAppliedSkills"><em>Sin skills aplicadas en este chat.</em></div>
+
+        <div class="chat-documents" id="chatDocuments">
+          <h4>Documentos del chat</h4>
+          <em>Sin documentos. Usá «Adjuntar documento» abajo.</em>
+        </div>
+
         <div id="chatThread" class="chat-thread"><em>Sin mensajes. Creá un chat y enviá una consulta.</em></div>
 
-        <textarea id="chatMessage" rows="4" placeholder="Escribí tu consulta legal aquí..."></textarea>
-        <button type="button" onclick="sendChatMessage()">Enviar mensaje</button>
-        <button type="button" onclick="deleteChat()">Eliminar chat</button>
+        <div id="aiTaskPanel" class="ai-task-panel" style="display:none;">
+          <h4>Tarea IA activa</h4>
+          <div id="aiTaskMeta"></div>
+          <div id="aiTaskSteps"></div>
+          <div class="ai-task-actions">
+            <button type="button" onclick="saveTaskPlan()">Guardar cambios al plan</button>
+            <button type="button" onclick="approveTask()">Aprobar plan</button>
+            <button type="button" id="btnPauseTask" onclick="pauseTask()" style="display:none;">Pausar</button>
+            <button type="button" id="btnResumeTask" onclick="resumeTask()" style="display:none;">Reanudar</button>
+            <button type="button" onclick="cancelTask()">Cancelar tarea</button>
+          </div>
+        </div>
+
+        <div class="chat-compose">
+          <div class="chat-mode-toggle">
+            <label class="inline"><input type="radio" name="chatMode" value="normal" checked onchange="updateChatModeUi()"> Modo normal</label>
+            <label class="inline"><input type="radio" name="chatMode" value="task" onchange="updateChatModeUi()"> Modo Tarea IA</label>
+            <button type="button" onclick="loadExampleDemand()">Cargar ejemplo demanda</button>
+          </div>
+          <textarea id="chatMessage" rows="6" placeholder="Escribí tu consulta legal aquí..."></textarea>
+          <div class="chat-compose-actions">
+            <input type="file" id="docFile" accept=".pdf,.doc,.docx,.txt,.rtf,.odt" onchange="uploadDocument()">
+            <button type="button" class="btn-attach" onclick="document.getElementById('docFile').click()">Adjuntar documento</button>
+            <button type="button" id="chatSendBtn" onclick="handleChatSend()">Enviar mensaje</button>
+            <button type="button" onclick="deleteChat()">Eliminar chat</button>
+          </div>
+          <p class="chat-hint" id="chatModeHint">Modo normal: respuesta directa de Claude. Modo Tarea IA: genera un plan de trabajo paso a paso.</p>
+        </div>
       </section>
 
       <section>
@@ -228,24 +358,20 @@
       </section>
 
       <section>
-        <h2>Documentos</h2>
-        <input type="file" id="docFile">
-        <button type="button" onclick="uploadDocument()">Subir documento</button>
-        <input id="documentId" placeholder="Document ID">
-        <button type="button" onclick="analyzeDocument()">Analizar documento</button>
-        <button type="button" onclick="listDocuments()">Listar documentos del chat</button>
-      </section>
-
-      <section>
-        <h2>Tareas IA</h2>
-        <input id="taskDescription" placeholder="Descripción" value="Preparar demanda por daños">
-        <button type="button" onclick="createTask()">Crear tarea</button>
-        <button type="button" onclick="listTasks()">Listar tareas</button>
+        <h2>Tareas IA (debug)</h2>
+        <p class="hint">El flujo principal está en la sección Chats con «Modo Tarea IA».</p>
+        <button type="button" onclick="listTasks()">Listar tareas del chat</button>
       </section>
 
       <section>
         <h2>Planes</h2>
+        <p style="font-size:0.85rem;color:#666;margin:0 0 0.5rem;">Listá planes, elegí Pro o Max. Con <code>Stripe:UseMock=true</code> usá simular compra.</p>
+        <input id="planId" placeholder="Plan ID (GUID de Pro o Max)">
         <button type="button" onclick="listPlans()">Listar planes</button>
+        <button type="button" onclick="simulatePurchase()">Simular compra (sin Stripe)</button>
+        <button type="button" onclick="createCheckoutSession()">Crear checkout Stripe</button>
+        <button type="button" onclick="openLastCheckoutUrl()">Abrir checkout</button>
+        <button type="button" onclick="getCurrentPlan()">Ver mi plan actual</button>
       </section>
     </main>
 
@@ -263,6 +389,29 @@
     const TOKEN_KEY = "jurisapp_token";
     let lawyerProfileId = null;
     let currentUser = null;
+    let cachedPlans = [];
+    let lastCheckoutUrl = null;
+    let activeTask = null;
+    let appliedSkillIds = new Set();
+    let messageSkillsDebug = {};
+
+    function skillsDebugStorageKey(chatId) {
+      return `jurisapp_msg_skills_${chatId}`;
+    }
+
+    function loadMessageSkillsDebug(chatId) {
+      if (!chatId) { messageSkillsDebug = {}; return; }
+      try {
+        messageSkillsDebug = JSON.parse(localStorage.getItem(skillsDebugStorageKey(chatId)) || "{}");
+      } catch {
+        messageSkillsDebug = {};
+      }
+    }
+
+    function saveMessageSkillsDebug(chatId) {
+      if (!chatId) return;
+      localStorage.setItem(skillsDebugStorageKey(chatId), JSON.stringify(messageSkillsDebug));
+    }
 
     function getToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
 
@@ -392,6 +541,160 @@
       return document.getElementById("chatId").value.trim();
     }
 
+    function getSelectedSkillId() {
+      return document.getElementById("chatSkillSelect").value.trim();
+    }
+
+    function resetChatSkillsState() {
+      appliedSkillIds.clear();
+      messageSkillsDebug = {};
+      const chatId = getChatId();
+      if (chatId) localStorage.removeItem(skillsDebugStorageKey(chatId));
+      renderAppliedSkills();
+    }
+
+    function syncAppliedSkillsFromChat(chat) {
+      const skills = chat?.appliedSkills || chat?.AppliedSkills || [];
+      appliedSkillIds.clear();
+      skills.forEach(s => appliedSkillIds.add(s.id || s.Id));
+      renderAppliedSkills();
+    }
+
+    function populateSkillSelect(skills) {
+      availableSkills = skills || [];
+      const select = document.getElementById("chatSkillSelect");
+      if (!availableSkills.length) {
+        select.innerHTML = '<option value="">(Sin skills — creá una abajo en Custom Skills)</option>';
+        return;
+      }
+      select.innerHTML = '<option value="">— Seleccioná una skill —</option>' +
+        availableSkills.map(s => {
+          const id = s.id || s.Id;
+          const name = s.name || s.Name;
+          const active = s.isActive ?? s.IsActive ?? true;
+          const label = active ? name : `${name} (inactiva)`;
+          return `<option value="${id}">${escapeHtml(label)}</option>`;
+        }).join("");
+    }
+
+    function renderAppliedSkills() {
+      const el = document.getElementById("chatAppliedSkills");
+      if (!appliedSkillIds.size) {
+        el.innerHTML = "<em>Sin skills aplicadas en este chat.</em>";
+        return;
+      }
+      const chips = [...appliedSkillIds].map(id => {
+        const skill = availableSkills.find(s => (s.id || s.Id) === id);
+        const name = skill ? (skill.name || skill.Name) : id;
+        return `<span class="skill-chip">${escapeHtml(name)}</span>`;
+      });
+      el.innerHTML = "Aplicadas: " + chips.join("");
+    }
+
+    function renderChatDocuments(documents) {
+      const el = document.getElementById("chatDocuments");
+      const heading = "<h4>Documentos del chat</h4>";
+      if (!documents || !documents.length) {
+        el.innerHTML = heading + "<em>Sin documentos. Usá «Adjuntar documento» abajo.</em>";
+        return;
+      }
+      const chips = documents.map(d => {
+        const id = d.id || d.Id;
+        const title = d.title || d.Title || "Sin título";
+        return `<span class="doc-chip">${escapeHtml(title)} <button type="button" onclick="analyzeDocument('${id}')">Analizar</button></span>`;
+      });
+      el.innerHTML = heading + chips.join("");
+    }
+
+    async function loadChatDocuments(silent) {
+      const chatId = getChatId();
+      if (!chatId) {
+        renderChatDocuments([]);
+        return { ok: false };
+      }
+      if (!requireToken("Listar documentos")) return { ok: false };
+      if (!silent) showLoading("Listar documentos del chat");
+      try {
+        const headers = {};
+        const token = getToken();
+        if (token) headers["Authorization"] = "Bearer " + token;
+        const res = await fetch(API_BASE + "/api/documents/chat/" + chatId, { headers });
+        const ct = res.headers.get("content-type") || "";
+        const text = await res.text();
+        let data = null;
+        if (text) {
+          data = ct.includes("application/json") ? (() => { try { return JSON.parse(text); } catch { return text; } })() : text;
+        }
+        if (!res.ok) {
+          if (!silent) {
+            show("Listar documentos del chat", data, res.status, "No se pudieron cargar los documentos.", true);
+            setStatus("Listar documentos — error " + res.status);
+          }
+          return { ok: false, data };
+        }
+        if (!silent) {
+          show("Listar documentos del chat", data, res.status, null, false);
+          setStatus("Listar documentos — OK (" + res.status + ")");
+        }
+        if (Array.isArray(data)) renderChatDocuments(data);
+        return { ok: true, data };
+      } catch (err) {
+        if (!silent) {
+          show("Listar documentos del chat", err.message, "red", "¿Está corriendo dotnet run?", true);
+          setStatus("Listar documentos — error de red");
+        }
+        return { ok: false, data: null };
+      }
+    }
+
+    async function loadSkillsForChat() {
+      if (!requireToken("Cargar skills")) return;
+      if (!lawyerProfileId) {
+        const p = await getLawyerProfile();
+        if (!p.ok) return;
+      }
+      if (!lawyerProfileId) {
+        showLocal("Cargar skills", "Necesitás perfil de abogado (rol Lawyer o Admin).", true);
+        return;
+      }
+      const result = await api("Cargar skills para chat", "/api/custom-skills/me");
+      if (result.ok && Array.isArray(result.data)) {
+        populateSkillSelect(result.data);
+      }
+    }
+
+    async function applySkillToChat() {
+      if (!requireToken("Aplicar skill")) return;
+      const chatId = getChatId();
+      const skillId = getSelectedSkillId();
+      if (!chatId) { showLocal("Aplicar skill", "Creá o cargá un chat primero.", true); return; }
+      if (!skillId) { showLocal("Aplicar skill", "Seleccioná una skill del listado.", true); return; }
+      const result = await api("Aplicar skill al chat", "/api/custom-skills/apply", {
+        method: "POST",
+        body: JSON.stringify({ chatId, customSkillId: skillId })
+      });
+      if (result.ok) {
+        appliedSkillIds.add(skillId);
+        renderAppliedSkills();
+      }
+    }
+
+    async function removeSkillFromChat() {
+      if (!requireToken("Quitar skill")) return;
+      const chatId = getChatId();
+      const skillId = getSelectedSkillId();
+      if (!chatId) { showLocal("Quitar skill", "Creá o cargá un chat primero.", true); return; }
+      if (!skillId) { showLocal("Quitar skill", "Seleccioná una skill del listado.", true); return; }
+      const result = await api("Quitar skill del chat", "/api/custom-skills/remove", {
+        method: "POST",
+        body: JSON.stringify({ chatId, customSkillId: skillId })
+      });
+      if (result.ok) {
+        appliedSkillIds.delete(skillId);
+        renderAppliedSkills();
+      }
+    }
+
     function renderChatMessages(messages) {
       const el = document.getElementById("chatThread");
       if (!messages || !messages.length) {
@@ -402,7 +705,12 @@
       el.innerHTML = sorted.map(m => {
         const role = (m.role || "").toLowerCase();
         const label = role === "user" ? "Vos" : role === "assistant" ? "JurisApp (Claude)" : m.role;
-        return `<div class="msg msg-${role}"><strong>${escapeHtml(label)}</strong><p>${escapeHtml(m.content)}</p></div>`;
+        const msgId = m.id || m.Id;
+        const skillsUsed = m.skillsUsed || m.SkillsUsed || messageSkillsDebug[msgId];
+        const debugHtml = skillsUsed?.length
+          ? `<div class="msg-debug">[debug] Skills usadas: ${skillsUsed.map(escapeHtml).join(", ")}</div>`
+          : "";
+        return `<div class="msg msg-${role}"><strong>${escapeHtml(label)}</strong><p>${escapeHtml(m.content)}</p>${debugHtml}</div>`;
       }).join("");
       el.scrollTop = el.scrollHeight;
     }
@@ -428,7 +736,7 @@
           if (res.status === 409) hint = "Conflicto (ej. email ya registrado).";
           if (res.status === 401) hint = "No autorizado. Hacé Login.";
           if (res.status === 403) hint = "Sin permiso para esta acción.";
-          if (res.status === 404) hint = "No encontrado.";
+          if (res.status === 404) hint = "No encontrado. ¿Reiniciaste dotnet run después de los cambios?";
           if (res.status === 500) hint = "Error del servidor. Revisá logs de dotnet run (ej. API key Claude).";
           show(action, data, res.status, hint, true);
           setStatus(`${action} — error ${res.status}`);
@@ -695,7 +1003,13 @@
       });
       if (result.ok && result.data?.id) {
         document.getElementById("chatId").value = result.data.id;
+        resetChatSkillsState();
+        syncAppliedSkillsFromChat(result.data);
         renderChatMessages(result.data.messages || []);
+        loadMessageSkillsDebug(result.data.id);
+        await loadSkillsForChat();
+        await loadChatDocuments(true);
+        await loadActiveTaskForChat();
       }
     }
 
@@ -704,7 +1018,55 @@
       const chatId = getChatId();
       if (!chatId) { showLocal("Cargar chat", "Ingresá o creá un Chat ID.", true); return; }
       const result = await api("Cargar chat", "/api/chats/" + chatId);
-      if (result.ok) renderChatMessages(result.data.messages || []);
+      if (result.ok) {
+        loadMessageSkillsDebug(chatId);
+        syncAppliedSkillsFromChat(result.data);
+        renderChatMessages(result.data.messages || []);
+        await loadChatDocuments(true);
+        await loadActiveTaskForChat();
+      }
+    }
+
+    function getChatMode() {
+      const selected = document.querySelector('input[name="chatMode"]:checked');
+      return selected ? selected.value : "normal";
+    }
+
+    function updateChatModeUi() {
+      const mode = getChatMode();
+      const btn = document.getElementById("chatSendBtn");
+      const hint = document.getElementById("chatModeHint");
+      const textarea = document.getElementById("chatMessage");
+      if (mode === "task") {
+        btn.textContent = "Generar plan de trabajo";
+        hint.textContent = "Modo Tarea IA: analiza la consulta, genera pasos y los ejecuta uno por uno tras tu aprobación.";
+        textarea.placeholder = "Describí el encargo legal completo (caso, documentación, objetivos)...";
+      } else {
+        btn.textContent = "Enviar mensaje";
+        hint.textContent = "Modo normal: respuesta directa de Claude. Ctrl+Enter para enviar.";
+        textarea.placeholder = "Escribí tu consulta legal aquí...";
+      }
+    }
+
+    function loadExampleDemand() {
+      document.getElementById("chatMessage").value =
+        "Tengo que preparar una demanda por incumplimiento contractual para un cliente en Argentina.\n\n" +
+        "El caso es este: mi cliente prestó servicios de desarrollo web a una empresa, se firmó un contrato simple por $1.200.000, entregó el trabajo en tiempo y forma, pero la empresa solo pagó $400.000 y dejó de responder. Tengo emails, comprobantes de entrega, capturas de WhatsApp y una factura emitida.\n\n" +
+        "Quiero que armes un plan de trabajo para preparar el caso:\n" +
+        "- identificar los hechos jurídicamente relevantes,\n" +
+        "- listar la documentación necesaria,\n" +
+        "- detectar riesgos o puntos débiles del caso,\n" +
+        "- preparar una teoría del caso,\n" +
+        "- armar un esquema de demanda,\n" +
+        "- redactar una intimación previa,\n" +
+        "- sugerir próximos pasos procesales.";
+      const taskRadio = document.querySelector('input[name="chatMode"][value="task"]');
+      if (taskRadio) { taskRadio.checked = true; updateChatModeUi(); }
+    }
+
+    async function handleChatSend() {
+      if (getChatMode() === "task") await createTaskFromChat();
+      else await sendChatMessage();
     }
 
     async function sendChatMessage() {
@@ -721,8 +1083,173 @@
 
       if (result.ok) {
         document.getElementById("chatMessage").value = "";
+        const msgId = result.data?.id || result.data?.Id;
+        const skillsUsed = result.data?.skillsUsed || result.data?.SkillsUsed;
+        if (msgId && skillsUsed?.length) {
+          messageSkillsDebug[msgId] = skillsUsed;
+          saveMessageSkillsDebug(chatId);
+        }
         await loadChat();
       }
+    }
+
+    function hideTaskPanel() {
+      activeTask = null;
+      document.getElementById("aiTaskPanel").style.display = "none";
+      document.getElementById("aiTaskMeta").innerHTML = "";
+      document.getElementById("aiTaskSteps").innerHTML = "";
+    }
+
+    function renderTaskPanel(task) {
+      if (!task) { hideTaskPanel(); return; }
+      activeTask = task;
+      const panel = document.getElementById("aiTaskPanel");
+      const status = task.status ?? task.Status ?? "?";
+      const current = task.currentStepIndex ?? task.CurrentStepIndex ?? 0;
+      const isPaused = task.isPaused ?? task.IsPaused ?? false;
+      const canEdit = status === "AwaitingApproval";
+      const pauseLabel = isPaused ? " · Pausada" : (status === "InProgress" ? " · Ejecutando..." : "");
+      document.getElementById("aiTaskMeta").innerHTML =
+        `<p><strong>Estado:</strong> ${status}${pauseLabel} · <strong>Paso actual:</strong> ${current || "—"}</p>` +
+        `<p style="font-size:0.85rem;color:#444;">${escapeHtml(task.plan ?? task.Plan ?? "")}</p>`;
+
+      document.getElementById("btnPauseTask").style.display =
+        (status === "InProgress" && !isPaused) ? "inline-block" : "none";
+      document.getElementById("btnResumeTask").style.display =
+        (status === "InProgress" && isPaused) ? "inline-block" : "none";
+      document.querySelector('.ai-task-actions button[onclick="approveTask()"]').style.display =
+        canEdit ? "inline-block" : "none";
+      document.querySelector('.ai-task-actions button[onclick="saveTaskPlan()"]').style.display =
+        canEdit ? "inline-block" : "none";
+
+      const steps = task.steps ?? task.Steps ?? [];
+      const stepsHtml = steps.map(step => {
+        const order = step.order ?? step.Order;
+        const title = step.title ?? step.Title ?? "";
+        const desc = step.description ?? step.Description ?? "";
+        const stepStatus = step.status ?? step.Status ?? "Pending";
+        const result = step.result ?? step.Result;
+        const isCurrent = status === "InProgress" && order === current;
+        const cls = "ai-task-step" + (stepStatus === "Completed" ? " done" : "") + (isCurrent ? " current" : "");
+        const resultBlock = result ? `<p style="font-size:0.8rem;margin:0.35rem 0 0;white-space:pre-wrap;"><strong>Resultado:</strong> ${escapeHtml(String(result).substring(0, 400))}${String(result).length > 400 ? "..." : ""}</p>` : "";
+        if (canEdit) {
+          return `<div class="${cls}" data-order="${order}">
+            <label>Paso ${order} — título</label>
+            <input type="text" class="task-step-title" data-order="${order}" value="${escapeAttr(title)}">
+            <label>Descripción</label>
+            <textarea class="task-step-desc" data-order="${order}" rows="2">${escapeHtml(desc)}</textarea>
+          </div>`;
+        }
+        return `<div class="${cls}">
+          <strong>Paso ${order}: ${escapeHtml(title)}</strong> <em>(${stepStatus})</em>
+          <p style="font-size:0.85rem;margin:0.25rem 0;">${escapeHtml(desc)}</p>
+          ${resultBlock}
+        </div>`;
+      }).join("");
+
+      document.getElementById("aiTaskSteps").innerHTML = stepsHtml || "<em>Sin pasos.</em>";
+      panel.style.display = "block";
+    }
+
+    function escapeHtml(text) {
+      return String(text ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    function escapeAttr(text) {
+      return escapeHtml(text).replace(/'/g, "&#39;");
+    }
+
+    async function loadActiveTaskForChat() {
+      const chatId = getChatId();
+      if (!chatId || !getToken()) return;
+      const result = await api("Cargar tareas IA", "/api/ai-tasks/chat/" + chatId);
+      if (!result.ok || !Array.isArray(result.data)) { hideTaskPanel(); return; }
+      const active = result.data.find(t => {
+        const s = t.status ?? t.Status;
+        return s !== "Completed" && s !== "Cancelled" && s !== "Failed";
+      });
+      renderTaskPanel(active || null);
+    }
+
+    async function createTaskFromChat() {
+      if (!requireToken("Generar plan de trabajo")) return;
+      const chatId = getChatId();
+      const description = document.getElementById("chatMessage").value.trim();
+      if (!chatId) { showLocal("Generar plan", "Creá o cargá un chat primero.", true); return; }
+      if (!description) { showLocal("Generar plan", "Escribí el encargo legal.", true); return; }
+
+      const result = await api("Generar plan de trabajo", "/api/ai-tasks", {
+        method: "POST",
+        body: JSON.stringify({ chatId, description })
+      });
+
+      if (result.ok) {
+        document.getElementById("chatMessage").value = "";
+        renderTaskPanel(result.data);
+        await loadChat();
+      }
+    }
+
+    function collectTaskPlanUpdates() {
+      if (!activeTask) return [];
+      const steps = activeTask.steps ?? activeTask.Steps ?? [];
+      return steps.map(step => {
+        const order = step.order ?? step.Order;
+        const titleEl = document.querySelector(`.task-step-title[data-order="${order}"]`);
+        const descEl = document.querySelector(`.task-step-desc[data-order="${order}"]`);
+        return {
+          order,
+          title: titleEl ? titleEl.value.trim() : (step.title ?? step.Title ?? ""),
+          description: descEl ? descEl.value.trim() : (step.description ?? step.Description ?? "")
+        };
+      });
+    }
+
+    async function saveTaskPlan() {
+      if (!activeTask) { showLocal("Guardar plan", "No hay tarea activa.", true); return; }
+      const taskId = activeTask.id ?? activeTask.Id;
+      const result = await api("Guardar plan", "/api/ai-tasks/" + taskId + "/plan", {
+        method: "PUT",
+        body: JSON.stringify({ steps: collectTaskPlanUpdates() })
+      });
+      if (result.ok) renderTaskPanel(result.data);
+    }
+
+    async function approveTask() {
+      if (!activeTask) { showLocal("Aprobar plan", "No hay tarea activa.", true); return; }
+      const taskId = activeTask.id ?? activeTask.Id;
+      setStatus("Ejecutando plan (paso a paso)...");
+      const result = await api("Aprobar y ejecutar plan", "/api/ai-tasks/" + taskId + "/approve", { method: "POST" });
+      if (result.ok) {
+        renderTaskPanel(result.data);
+        await loadChat();
+      }
+    }
+
+    async function pauseTask() {
+      if (!activeTask) return;
+      const taskId = activeTask.id ?? activeTask.Id;
+      const result = await api("Pausar tarea", "/api/ai-tasks/" + taskId + "/pause", { method: "POST" });
+      if (result.ok) renderTaskPanel(result.data);
+    }
+
+    async function resumeTask() {
+      if (!activeTask) return;
+      const taskId = activeTask.id ?? activeTask.Id;
+      setStatus("Reanudando plan...");
+      const result = await api("Reanudar tarea", "/api/ai-tasks/" + taskId + "/resume", { method: "POST" });
+      if (result.ok) {
+        renderTaskPanel(result.data);
+        await loadChat();
+      }
+    }
+
+    async function cancelTask() {
+      if (!activeTask) { showLocal("Cancelar tarea", "No hay tarea activa.", true); return; }
+      const taskId = activeTask.id ?? activeTask.Id;
+      if (!confirm("¿Cancelar la tarea IA activa?")) return;
+      const result = await api("Cancelar tarea", "/api/ai-tasks/" + taskId + "/cancel", { method: "POST" });
+      if (result.ok) hideTaskPanel();
     }
 
     async function deleteChat() {
@@ -732,7 +1259,10 @@
       const result = await api("Eliminar chat", "/api/chats/" + chatId, { method: "DELETE" });
       if (result.ok) {
         document.getElementById("chatId").value = "";
+        resetChatSkillsState();
         renderChatMessages([]);
+        renderChatDocuments([]);
+        hideTaskPanel();
       }
     }
 
@@ -758,7 +1288,7 @@
       if (!requireToken("Crear skill")) return;
       if (!lawyerProfileId) { const p = await getLawyerProfile(); if (!p.ok) return; }
       if (!lawyerProfileId) { showLocal("Crear skill", "Creá perfil de abogado primero.", true); return; }
-      await api("Crear skill", "/api/custom-skills", {
+      const result = await api("Crear skill", "/api/custom-skills", {
         method: "POST",
         body: JSON.stringify({
           lawyerProfileId, name: document.getElementById("skillName").value,
@@ -766,72 +1296,136 @@
           examples: "Ejemplo", redFlags: "Penalidades", outputFormat: "Lista"
         })
       });
+      if (result.ok) await loadSkillsForChat();
     }
 
     async function listSkills() {
       if (!requireToken("Listar skills")) return;
-      await api("Listar skills", "/api/custom-skills/me");
+      const result = await api("Listar skills", "/api/custom-skills/me");
+      if (result.ok && Array.isArray(result.data)) populateSkillSelect(result.data);
     }
 
     async function uploadDocument() {
       if (!requireToken("Subir documento")) return;
-      const chatId = getChatId();
-      if (!chatId) { showLocal("Subir documento", "Necesitás un Chat ID.", true); return; }
       const fileInput = document.getElementById("docFile");
-      if (!fileInput.files.length) { showLocal("Subir documento", "Seleccioná un archivo.", true); return; }
+      const chatId = getChatId();
+      if (!chatId) {
+        showLocal("Subir documento", "Creá o cargá un chat primero.", true);
+        fileInput.value = "";
+        return;
+      }
+      if (!fileInput.files.length) return;
       const form = new FormData();
       form.append("file", fileInput.files[0]);
       form.append("chatId", chatId);
       const result = await api("Subir documento", "/api/documents/upload", { method: "POST", body: form });
-      if (result.ok && result.data?.id) document.getElementById("documentId").value = result.data.id;
+      fileInput.value = "";
+      if (result.ok) await loadChatDocuments(true);
     }
 
-    async function analyzeDocument() {
+    async function analyzeDocument(documentId) {
       if (!requireToken("Analizar documento")) return;
-      const documentId = document.getElementById("documentId").value;
       if (!documentId) { showLocal("Analizar documento", "Sin Document ID.", true); return; }
       await api("Analizar documento", "/api/documents/analyze", {
         method: "POST",
-        body: JSON.stringify({ documentId, type: "Summary", extractedText: "Texto simulado del documento." })
+        body: JSON.stringify({ documentId, type: "Summary" })
       });
     }
 
     async function listDocuments() {
-      if (!requireToken("Listar documentos")) return;
-      const chatId = getChatId();
-      if (!chatId) { showLocal("Listar documentos", "Sin Chat ID.", true); return; }
-      await api("Listar documentos", "/api/documents/chat/" + chatId);
-    }
-
-    async function createTask() {
-      if (!requireToken("Crear tarea IA")) return;
-      const chatId = getChatId();
-      if (!chatId) { showLocal("Crear tarea IA", "Sin Chat ID.", true); return; }
-      await api("Crear tarea IA", "/api/ai-tasks", {
-        method: "POST",
-        body: JSON.stringify({ chatId, description: document.getElementById("taskDescription").value })
-      });
+      await loadChatDocuments(false);
     }
 
     async function listTasks() {
       if (!requireToken("Listar tareas IA")) return;
       const chatId = getChatId();
       if (!chatId) { showLocal("Listar tareas IA", "Sin Chat ID.", true); return; }
-      await api("Listar tareas IA", "/api/ai-tasks/chat/" + chatId);
+      const result = await api("Listar tareas IA", "/api/ai-tasks/chat/" + chatId);
+      if (result.ok) await loadActiveTaskForChat();
     }
 
-    async function listPlans() { await api("Listar planes", "/api/plans"); }
+    async function listPlans() {
+      const result = await api("Listar planes", "/api/plans");
+      if (result.ok && Array.isArray(result.data)) {
+        cachedPlans = result.data;
+        const paid = cachedPlans.filter(p => (p.price ?? p.Price) > 0);
+        if (paid.length && !document.getElementById("planId").value.trim()) {
+          const first = paid[0];
+          document.getElementById("planId").value = first.id ?? first.Id ?? "";
+        }
+        showLocal("Planes cargados", paid.map(p => ({
+          id: p.id ?? p.Id,
+          name: p.name ?? p.Name,
+          price: p.price ?? p.Price
+        })), false);
+      }
+    }
+
+    async function simulatePurchase() {
+      if (!requireToken("Simular compra")) return;
+      const planId = document.getElementById("planId").value.trim();
+      if (!planId) { showLocal("Simular compra", "Ingresá un Plan ID (Pro o Max).", true); return; }
+      const result = await api("Simular compra", "/api/billing/simulate-purchase", {
+        method: "POST",
+        body: JSON.stringify({ planId })
+      });
+      if (result.ok) showLocal("Compra simulada", "Suscripción activada. Tocá «Ver mi plan actual».", false);
+    }
+
+    async function getCurrentPlan() {
+      if (!requireToken("Ver mi plan actual")) return;
+      const result = await api("Ver mi plan actual", "/api/plans/current");
+      if (!result.ok || !result.data) return;
+      const d = result.data;
+      const name = d.planName ?? d.PlanName ?? "?";
+      const type = d.planType ?? d.PlanType ?? "?";
+      const price = d.price ?? d.Price ?? 0;
+      const active = d.hasActiveSubscription ?? d.HasActiveSubscription;
+      const limits = d.limitsJson ?? d.LimitsJson ?? "{}";
+      const status = d.subscriptionStatus ?? d.SubscriptionStatus;
+      showLocal("Plan actual", {
+        plan: name,
+        type,
+        price,
+        suscripcionActiva: active,
+        estado: status ?? (active ? "Active" : "Free (sin suscripción paga)"),
+        limites: limits
+      }, false);
+    }
+
+    async function createCheckoutSession() {
+      if (!requireToken("Crear checkout Stripe")) return;
+      const planId = document.getElementById("planId").value.trim();
+      if (!planId) { showLocal("Crear checkout Stripe", "Ingresá un Plan ID (Pro o Max).", true); return; }
+      const result = await api("Crear checkout Stripe", "/api/billing/create-checkout-session", {
+        method: "POST",
+        body: JSON.stringify({ planId })
+      });
+      const url = result.data?.url ?? result.data?.Url;
+      if (result.ok && url) {
+        lastCheckoutUrl = url;
+        showLocal("Checkout URL", url, false);
+      }
+    }
+
+    function openLastCheckoutUrl() {
+      if (!lastCheckoutUrl) { showLocal("Abrir checkout", "Creá un checkout primero.", true); return; }
+      window.open(lastCheckoutUrl, "_blank");
+      showLocal("Abrir checkout", lastCheckoutUrl, false);
+    }
 
     document.getElementById("chatMessage").addEventListener("keydown", e => {
-      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) sendChatMessage();
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleChatSend();
     });
 
     (function init() {
+      updateChatModeUi();
       const token = getToken();
       setStatus(token ? "Token cargado. Probá el módulo de autenticación o chateá con Claude." : "Sin token. Registrate o hacé login primero.");
       if (token) document.getElementById("tokenDisplay").textContent = token.substring(0, 40) + "...";
       suggestEmail(true);
       if (token) getMe();
+      if (token && getChatId()) loadChatDocuments(true);
     })();
   </script>
 </body>

@@ -24,5 +24,11 @@ public class PlanConfiguration : IEntityTypeConfiguration<Plan>
 
         builder.Property(p => p.LimitsJson)
             .IsRequired();
+
+        builder.Property(p => p.StripeProductId)
+            .HasMaxLength(255);
+
+        builder.Property(p => p.StripePriceId)
+            .HasMaxLength(255);
     }
 }

@@ -18,6 +18,7 @@ public class DocumentService : IDocumentService
     private readonly ILawyerProfileRepository _lawyerProfileRepository;
     private readonly ICustomSkillRepository _customSkillRepository;
     private readonly IFileStorageService _fileStorageService;
+    private readonly IDocumentTextExtractor _textExtractor;
     private readonly IAIService _aiService;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -29,6 +30,7 @@ public class DocumentService : IDocumentService
         ILawyerProfileRepository lawyerProfileRepository,
         ICustomSkillRepository customSkillRepository,
         IFileStorageService fileStorageService,
+        IDocumentTextExtractor textExtractor,
         IAIService aiService,
         IUnitOfWork unitOfWork)
     {
@@ -39,6 +41,7 @@ public class DocumentService : IDocumentService
         _lawyerProfileRepository = lawyerProfileRepository;
         _customSkillRepository = customSkillRepository;
         _fileStorageService = fileStorageService;
+        _textExtractor = textExtractor;
         _aiService = aiService;
         _unitOfWork = unitOfWork;
     }
@@ -96,9 +99,9 @@ public class DocumentService : IDocumentService
 
     public async Task<Result<DocumentAnalysisDto>> AnalyzeAsync(Guid userId, AnalyzeDocumentRequest request, CancellationToken cancellationToken = default)
     {
-        if (request.DocumentId == Guid.Empty || string.IsNullOrWhiteSpace(request.ExtractedText))
+        if (request.DocumentId == Guid.Empty)
         {
-            return Result<DocumentAnalysisDto>.Failure(Error.Validation("Documento y texto extraído son obligatorios."));
+            return Result<DocumentAnalysisDto>.Failure(Error.Validation("El documento es obligatorio."));
         }
 
         var document = await _documentRepository.GetByIdAsync(request.DocumentId, cancellationToken);
@@ -119,13 +122,42 @@ public class DocumentService : IDocumentService
             return Result<DocumentAnalysisDto>.Failure(Error.Conflict("El documento ya tiene un análisis."));
         }
 
+        string documentText;
+        try
+        {
+            await using var stream = await _fileStorageService.OpenReadAsync(document.Url, cancellationToken);
+            documentText = await _textExtractor.ExtractTextAsync(document.Title, stream, cancellationToken);
+        }
+        catch (FileNotFoundException)
+        {
+            return Result<DocumentAnalysisDto>.Failure(Error.NotFound("Archivo del documento no encontrado."));
+        }
+        catch (NotSupportedException ex)
+        {
+            return Result<DocumentAnalysisDto>.Failure(Error.Validation(ex.Message));
+        }
+
+        if (string.IsNullOrWhiteSpace(documentText))
+        {
+            return Result<DocumentAnalysisDto>.Failure(
+                Error.Validation("No se pudo extraer texto del documento. Verificá que el archivo no esté vacío o sea legible."));
+        }
+
         var activeSkills = await _customSkillRepository.GetActiveByChatIdAsync(document.ChatId, cancellationToken);
 
-        var aiResult = await _aiService.AnalyzeDocumentAsync(
-            request.ExtractedText,
-            request.Type,
-            activeSkills,
-            cancellationToken);
+        DocumentAnalysisResult aiResult;
+        try
+        {
+            aiResult = await _aiService.AnalyzeDocumentAsync(
+                documentText,
+                request.Type,
+                activeSkills,
+                cancellationToken);
+        }
+        catch (AIServiceException ex)
+        {
+            return Result<DocumentAnalysisDto>.Failure(Error.ExternalService(ex.Message));
+        }
 
         var analysis = new DocumentAnalysis(
             Guid.NewGuid(),

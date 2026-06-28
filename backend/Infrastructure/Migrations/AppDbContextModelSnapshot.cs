@@ -31,8 +31,14 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(1000)
+                        .HasMaxLength(8000)
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("CurrentStepIndex")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsPaused")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Plan")
                         .IsRequired()
@@ -54,6 +60,50 @@ namespace Infrastructure.Migrations
                     b.HasIndex("ChatId");
 
                     b.ToTable("AITasks");
+                });
+
+            modelBuilder.Entity("JurisApp.Domain.Entities.AITaskStep", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("AITaskId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Result")
+                        .HasMaxLength(16000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AITaskId", "Order")
+                        .IsUnique();
+
+                    b.ToTable("AITaskSteps");
                 });
 
             modelBuilder.Entity("JurisApp.Domain.Entities.Audit", b =>
@@ -434,6 +484,9 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SkillsUsedJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -500,6 +553,14 @@ namespace Infrastructure.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("StripePriceId")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeProductId")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -532,6 +593,14 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeCustomerId")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeSubscriptionId")
+                        .HasMaxLength(255)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -617,6 +686,17 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Chat");
+                });
+
+            modelBuilder.Entity("JurisApp.Domain.Entities.AITaskStep", b =>
+                {
+                    b.HasOne("JurisApp.Domain.Entities.AITask", "AITask")
+                        .WithMany("Steps")
+                        .HasForeignKey("AITaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AITask");
                 });
 
             modelBuilder.Entity("JurisApp.Domain.Entities.Audit", b =>
@@ -792,6 +872,11 @@ namespace Infrastructure.Migrations
                     b.Navigation("Messages");
 
                     b.Navigation("Tasks");
+                });
+
+            modelBuilder.Entity("JurisApp.Domain.Entities.AITask", b =>
+                {
+                    b.Navigation("Steps");
                 });
 
             modelBuilder.Entity("JurisApp.Domain.Entities.CustomSkill", b =>

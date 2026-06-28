@@ -41,6 +41,49 @@ public class AITasksController : ControllerBase
         return result.ToActionResult();
     }
 
+    [HttpPut("{id:guid}/plan")]
+    public async Task<IActionResult> UpdatePlan(
+        Guid id,
+        [FromBody] UpdateAITaskPlanRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService.UserId!.Value;
+        var result = await _aiTaskService.UpdatePlanAsync(userId, id, request, cancellationToken);
+        return result.ToActionResult();
+    }
+
+    [HttpPost("{id:guid}/approve")]
+    public async Task<IActionResult> Approve(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService.UserId!.Value;
+        var result = await _aiTaskService.ApprovePlanAsync(userId, id, cancellationToken);
+        return result.ToActionResult();
+    }
+
+    [HttpPost("{id:guid}/execute-next")]
+    public async Task<IActionResult> ExecuteNext(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService.UserId!.Value;
+        var result = await _aiTaskService.ExecuteNextStepAsync(userId, id, cancellationToken);
+        return result.ToActionResult();
+    }
+
+    [HttpPost("{id:guid}/pause")]
+    public async Task<IActionResult> Pause(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService.UserId!.Value;
+        var result = await _aiTaskService.PauseAsync(userId, id, cancellationToken);
+        return result.ToActionResult();
+    }
+
+    [HttpPost("{id:guid}/resume")]
+    public async Task<IActionResult> Resume(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService.UserId!.Value;
+        var result = await _aiTaskService.ResumeAsync(userId, id, cancellationToken);
+        return result.ToActionResult();
+    }
+
     [HttpPost("{id:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken cancellationToken)
     {

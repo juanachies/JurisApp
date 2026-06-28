@@ -122,6 +122,9 @@ else
         string.IsNullOrWhiteSpace(claudeOpts.Model) ? "claude-3-5-sonnet-20241022" : claudeOpts.Model);
 }
 
+if (builder.Configuration.GetValue<bool>("Stripe:UseMock"))
+    app.Logger.LogInformation("Stripe mock mode enabled. Use POST /api/billing/simulate-purchase to test subscriptions.");
+
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
@@ -141,6 +144,15 @@ app.UseStaticFiles();
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api/billing/webhook"))
+        context.Request.EnableBuffering();
+
+    await next();
+});
+
 app.MapControllers();
 
 app.Run();

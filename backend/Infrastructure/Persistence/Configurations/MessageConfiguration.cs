@@ -13,6 +13,8 @@ public class MessageConfiguration : IEntityTypeConfiguration<Message>
         builder.Property(m => m.Content)
             .IsRequired();
 
+        builder.Property(m => m.SkillsUsedJson);
+
         builder.Property(m => m.Role)
             .IsRequired()
             .HasConversion<string>();
