@@ -71,7 +71,8 @@ public class DocumentService : IDocumentService
 
         if (request.FolderId.HasValue)
         {
-            var folderError = await ValidateFolderOwnershipAsync(userId, request.FolderId.Value, cancellationToken);
+            var folderError = await FolderOwnershipValidator.ValidateAsync(
+                userId, request.FolderId.Value, _folderRepository, _lawyerProfileRepository, cancellationToken);
             if (folderError is not null)
             {
                 return Result<DocumentDto>.Failure(folderError);
@@ -143,7 +144,7 @@ public class DocumentService : IDocumentService
                 Error.Validation("No se pudo extraer texto del documento. Verificá que el archivo no esté vacío o sea legible."));
         }
 
-        var activeSkills = await _customSkillRepository.GetActiveByChatIdAsync(document.ChatId, cancellationToken);
+        var activeSkills = await _customSkillRepository.GetAppliedByChatIdAsync(document.ChatId, cancellationToken);
 
         DocumentAnalysisResult aiResult;
         try
@@ -209,20 +210,4 @@ public class DocumentService : IDocumentService
         return Result<IReadOnlyList<DocumentDto>>.Success(dtos);
     }
 
-    private async Task<Error?> ValidateFolderOwnershipAsync(Guid userId, Guid folderId, CancellationToken cancellationToken)
-    {
-        var folder = await _folderRepository.GetByIdAsync(folderId, cancellationToken);
-        if (folder is null)
-        {
-            return Error.NotFound("Carpeta no encontrada.");
-        }
-
-        var profile = await _lawyerProfileRepository.GetByUserIdAsync(userId, cancellationToken);
-        if (profile is null || folder.LawyerProfileId != profile.Id)
-        {
-            return Error.Unauthorized("No tenés acceso a esta carpeta.");
-        }
-
-        return null;
-    }
 }

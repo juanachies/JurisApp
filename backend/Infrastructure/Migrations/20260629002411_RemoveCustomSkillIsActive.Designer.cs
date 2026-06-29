@@ -3,6 +3,7 @@ using System;
 using JurisApp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260629002411_RemoveCustomSkillIsActive")]
+    partial class RemoveCustomSkillIsActive
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.8");
@@ -106,6 +109,39 @@ namespace Infrastructure.Migrations
                     b.ToTable("AITaskSteps");
                 });
 
+            modelBuilder.Entity("JurisApp.Domain.Entities.Audit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ChatId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PromptVersion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChatId")
+                        .IsUnique();
+
+                    b.ToTable("Audits");
+                });
+
             modelBuilder.Entity("JurisApp.Domain.Entities.Chat", b =>
                 {
                     b.Property<Guid>("Id")
@@ -185,6 +221,9 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Instructions")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid>("LawyerProfileId")
                         .HasColumnType("TEXT");
@@ -663,6 +702,17 @@ namespace Infrastructure.Migrations
                     b.Navigation("AITask");
                 });
 
+            modelBuilder.Entity("JurisApp.Domain.Entities.Audit", b =>
+                {
+                    b.HasOne("JurisApp.Domain.Entities.Chat", "Chat")
+                        .WithOne("Audit")
+                        .HasForeignKey("JurisApp.Domain.Entities.Audit", "ChatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Chat");
+                });
+
             modelBuilder.Entity("JurisApp.Domain.Entities.Chat", b =>
                 {
                     b.HasOne("JurisApp.Domain.Entities.Folder", "Folder")
@@ -822,6 +872,8 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("JurisApp.Domain.Entities.Chat", b =>
                 {
                     b.Navigation("AppliedSkills");
+
+                    b.Navigation("Audit");
 
                     b.Navigation("Documents");
 

@@ -59,34 +59,7 @@ public class PlanService : IPlanService
         await _subscriptionRepository.AddAsync(subscription, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result<SubscriptionDto>.Success(new SubscriptionDto
-        {
-            Id        = subscription.Id,
-            UserId    = subscription.UserId,
-            PlanId    = subscription.PlanId,
-            StartDate = subscription.StartDate,
-            EndDate   = subscription.EndDate,
-            Status    = subscription.Status
-        });
-    }
-
-    public async Task<Result<SubscriptionDto>> GetActiveSubscriptionAsync(
-        Guid userId,
-        CancellationToken cancellationToken = default)
-    {
-        var subscription = await _subscriptionRepository.GetActiveByUserIdAsync(userId, cancellationToken);
-        if (subscription is null)
-            return Result<SubscriptionDto>.Failure(Error.NotFound("No active subscription found."));
-
-        return Result<SubscriptionDto>.Success(new SubscriptionDto
-        {
-            Id        = subscription.Id,
-            UserId    = subscription.UserId,
-            PlanId    = subscription.PlanId,
-            StartDate = subscription.StartDate,
-            EndDate   = subscription.EndDate,
-            Status    = subscription.Status
-        });
+        return Result<SubscriptionDto>.Success(MapToDto(subscription));
     }
 
     public async Task<Result<CurrentPlanDto>> GetCurrentPlanAsync(

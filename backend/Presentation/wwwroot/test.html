@@ -657,7 +657,7 @@
         showLocal("Cargar skills", "Necesitás perfil de abogado (rol Lawyer o Admin).", true);
         return;
       }
-      const result = await api("Cargar skills para chat", "/api/custom-skills/me");
+      const result = await api("Cargar skills para chat", "/api/custom-skills");
       if (result.ok && Array.isArray(result.data)) {
         populateSkillSelect(result.data);
       }
@@ -1301,7 +1301,7 @@
 
     async function listSkills() {
       if (!requireToken("Listar skills")) return;
-      const result = await api("Listar skills", "/api/custom-skills/me");
+      const result = await api("Listar skills", "/api/custom-skills");
       if (result.ok && Array.isArray(result.data)) populateSkillSelect(result.data);
     }
 

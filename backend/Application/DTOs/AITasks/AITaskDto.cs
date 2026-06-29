@@ -12,4 +12,5 @@ public class AITaskDto
     public string? Result { get; set; }
     public int CurrentStepIndex { get; set; }
     public bool IsPaused { get; set; }
+    public IReadOnlyList<TaskStepDto> Steps { get; set; } = Array.Empty<TaskStepDto>();
 }

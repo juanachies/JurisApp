@@ -21,9 +21,9 @@ public class CustomSkillRepository : ICustomSkillRepository
             .Where(s => s.LawyerProfileId == lawyerProfileId)
             .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<CustomSkill>> GetActiveByChatIdAsync(Guid chatId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CustomSkill>> GetAppliedByChatIdAsync(Guid chatId, CancellationToken cancellationToken = default)
         => await _context.ChatCustomSkills
-            .Where(cs => cs.ChatId == chatId && cs.CustomSkill.IsActive)
+            .Where(cs => cs.ChatId == chatId)
             .Select(cs => cs.CustomSkill)
             .ToListAsync(cancellationToken);
 

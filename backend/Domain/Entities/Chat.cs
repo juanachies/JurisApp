@@ -10,7 +10,6 @@ public class Chat : BaseEntity
 
     public User User { get; private set; } = null!;
     public Folder? Folder { get; private set; }
-    public Audit? Audit { get; private set; }
     public ICollection<Message> Messages { get; private set; } = new List<Message>();
     public ICollection<Document> Documents { get; private set; } = new List<Document>();
     public ICollection<AITask> Tasks { get; private set; } = new List<AITask>();

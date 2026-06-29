@@ -35,15 +35,6 @@ public class PlansController : ControllerBase
         return result.ToActionResult();
     }
 
-    [HttpGet("subscription/active")]
-    [Authorize]
-    public async Task<IActionResult> GetActiveSubscription(CancellationToken cancellationToken)
-    {
-        var userId = _currentUserService.UserId!.Value;
-        var result = await _planService.GetActiveSubscriptionAsync(userId, cancellationToken);
-        return result.ToActionResult();
-    }
-
     [HttpGet("current")]
     [Authorize]
     public async Task<IActionResult> GetCurrentPlan(CancellationToken cancellationToken)

@@ -14,18 +14,6 @@ public static class AITaskMappings
         Plan = task.Plan,
         Result = task.Result,
         CurrentStepIndex = task.CurrentStepIndex,
-        IsPaused = task.IsPaused
-    };
-
-    public static AITaskDetailDto ToDetailDto(this AITask task) => new()
-    {
-        Id = task.Id,
-        ChatId = task.ChatId,
-        Description = task.Description,
-        Status = task.Status,
-        Plan = task.Plan,
-        Result = task.Result,
-        CurrentStepIndex = task.CurrentStepIndex,
         IsPaused = task.IsPaused,
         Steps = task.Steps
             .OrderBy(s => s.Order)

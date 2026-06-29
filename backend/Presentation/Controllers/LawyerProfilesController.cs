@@ -90,28 +90,4 @@ public class LawyerProfilesController : ControllerBase
         var result = await _lawyerProfileService.RejectAsync(id, adminUserId, request.Reason, cancellationToken);
         return result.ToActionResult();
     }
-
-    [HttpPost("verify")]
-    [Authorize(Roles = "Admin")]
-    [Obsolete("Usar POST /api/lawyer-profiles/requests/{id}/approve")]
-    public async Task<IActionResult> Verify(
-        [FromBody] VerifyLawyerRequest request,
-        CancellationToken cancellationToken)
-    {
-        var adminUserId = _currentUserService.UserId!.Value;
-        var result = await _lawyerProfileService.ApproveAsync(request.LawyerProfileId, adminUserId, cancellationToken);
-        return result.ToActionResult();
-    }
-
-    [HttpPost("reject")]
-    [Authorize(Roles = "Admin")]
-    [Obsolete("Usar POST /api/lawyer-profiles/requests/{id}/reject")]
-    public async Task<IActionResult> Reject(
-        [FromBody] RejectLawyerRequest request,
-        CancellationToken cancellationToken)
-    {
-        var adminUserId = _currentUserService.UserId!.Value;
-        var result = await _lawyerProfileService.RejectAsync(request.LawyerProfileId, adminUserId, request.Reason, cancellationToken);
-        return result.ToActionResult();
-    }
 }

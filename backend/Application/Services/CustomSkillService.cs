@@ -88,15 +88,15 @@ public class CustomSkillService : ICustomSkillService
         return Result<CustomSkillDto>.Success(skill.ToDto());
     }
 
-    public async Task<Result<IReadOnlyList<CustomSkillDto>>> GetByLawyerProfileIdAsync(Guid userId, Guid lawyerProfileId, CancellationToken cancellationToken = default)
+    public async Task<Result<IReadOnlyList<CustomSkillDto>>> GetByUserIdAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
     {
-        var ownershipError = await EnsureLawyerProfileOwnershipAsync(userId, lawyerProfileId, cancellationToken);
-        if (ownershipError is not null)
-        {
-            return Result<IReadOnlyList<CustomSkillDto>>.Failure(ownershipError);
-        }
+        var profile = await _lawyerProfileRepository.GetByUserIdAsync(userId, cancellationToken);
+        if (profile is null)
+            return Result<IReadOnlyList<CustomSkillDto>>.Failure(Error.NotFound("Perfil de abogado no encontrado."));
 
-        var skills = await _customSkillRepository.GetByLawyerProfileIdAsync(lawyerProfileId, cancellationToken);
+        var skills = await _customSkillRepository.GetByLawyerProfileIdAsync(profile.Id, cancellationToken);
         var dtos = skills.Select(s => s.ToDto()).ToList();
         return Result<IReadOnlyList<CustomSkillDto>>.Success(dtos);
     }
@@ -131,35 +131,6 @@ public class CustomSkillService : ICustomSkillService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();
-    }
-
-    public async Task<Result<CustomSkillDto>> SetActiveAsync(
-        Guid userId,
-        Guid customSkillId,
-        bool isActive,
-        CancellationToken cancellationToken = default)
-    {
-        var skill = await _customSkillRepository.GetByIdAsync(customSkillId, cancellationToken);
-        if (skill is null)
-        {
-            return Result<CustomSkillDto>.Failure(Error.NotFound("Custom skill no encontrada."));
-        }
-
-        var ownershipError = await EnsureLawyerProfileOwnershipAsync(userId, skill.LawyerProfileId, cancellationToken);
-        if (ownershipError is not null)
-        {
-            return Result<CustomSkillDto>.Failure(ownershipError);
-        }
-
-        if (isActive)
-            skill.Activate();
-        else
-            skill.Deactivate();
-
-        _customSkillRepository.Update(skill);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return Result<CustomSkillDto>.Success(skill.ToDto());
     }
 
     private async Task<Error?> ApplyOrRemoveSkillAsync(

@@ -14,7 +14,6 @@ public class AppDbContext : DbContext
     public DbSet<LawyerProfile> LawyerProfiles => Set<LawyerProfile>();
     public DbSet<Chat> Chats => Set<Chat>();
     public DbSet<Message> Messages => Set<Message>();
-    public DbSet<Audit> Audits => Set<Audit>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<DocumentAnalysis> DocumentAnalyses => Set<DocumentAnalysis>();
     public DbSet<Folder> Folders => Set<Folder>();

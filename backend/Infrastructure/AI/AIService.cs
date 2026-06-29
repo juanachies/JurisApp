@@ -146,10 +146,10 @@ public class AIService : IAIService
                 chatDocuments.Select(d => $"### {d.Title}\n{d.Content}")));
         }
 
-        var skills = activeSkills.Where(s => s.IsActive).ToList();
+        var skills = activeSkills.ToList();
         if (skills.Count > 0)
         {
-            parts.Add("Skills activas:\n" + string.Join("\n",
+            parts.Add("Skills aplicadas:\n" + string.Join("\n",
                 skills.Select(s => $"- {s.Name}: {s.Instructions}")));
         }
 
@@ -244,7 +244,6 @@ public class AIService : IAIService
             return basePrompt;
 
         var skillInstructions = activeSkills
-            .Where(s => s.IsActive)
             .Select(s =>
                 $"## Skill: {s.Name}\n" +
                 $"When to use: {s.WhenToUse}\n" +
@@ -254,7 +253,7 @@ public class AIService : IAIService
                 $"Output format: {s.OutputFormat}");
 
         return basePrompt +
-               "\n\nThe following custom skills are ACTIVE for this chat. " +
+               "\n\nThe following custom skills are applied to this chat. " +
                "You MUST follow their instructions in your response:\n\n" +
                string.Join("\n\n", skillInstructions);
     }
@@ -288,7 +287,6 @@ public class AIService : IAIService
             return basePrompt;
 
         var skillInstructions = activeSkills
-            .Where(s => s.IsActive)
             .Select(s => $"- {s.Name}: {s.Instructions}");
 
         return basePrompt + "\n\nApply these custom skills:\n" +

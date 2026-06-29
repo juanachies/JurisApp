@@ -17,11 +17,4 @@ public static class UserMappings
         Theme = user.Theme,
         CreatedAt = user.CreatedAt
     };
-
-    public static CurrentUserDto ToCurrentUserDto(this User user) => new()
-    {
-        Id = user.Id,
-        Email = user.Email,
-        Role = user.Role
-    };
 }

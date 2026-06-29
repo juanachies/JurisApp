@@ -11,7 +11,6 @@ public class CustomSkill : BaseEntity
     public string Examples { get; private set; } = string.Empty;
     public string RedFlags { get; private set; } = string.Empty;
     public string OutputFormat { get; private set; } = string.Empty;
-    public bool IsActive { get; private set; }
 
     public LawyerProfile LawyerProfile { get; private set; } = null!;
     public ICollection<ChatCustomSkill> ChatUsages { get; private set; } = new List<ChatCustomSkill>();
@@ -36,19 +35,6 @@ public class CustomSkill : BaseEntity
         Examples = examples;
         RedFlags = redFlags;
         OutputFormat = outputFormat;
-        IsActive = true;
-    }
-
-    public void Activate()
-    {
-        IsActive = true;
-        Touch();
-    }
-
-    public void Deactivate()
-    {
-        IsActive = false;
-        Touch();
     }
 
     public void Update(

@@ -88,6 +88,7 @@ Una forma simple de explicarlo:
 JurisApp/
   README.md
   DOCUMENTACION_JURISAPP.md
+  .gitignore
   backend/
     Solution.slnx
     Domain/
@@ -113,8 +114,11 @@ JurisApp/
 
 - `frontend/node_modules`: dependencias instaladas de Node.
 - `backend/**/bin` y `backend/**/obj`: compilacion generada por .NET.
-- `backend/Presentation/wwwroot/uploads`: archivos subidos en pruebas.
-- `backend/Infrastructure/Migrations`: importante saber para que esta, pero no estudiar cada linea generada.
+- `backend/Presentation/wwwroot/uploads`: archivos subidos en runtime (ignorados por git).
+- `backend/_swagger-*`: salidas temporales de publish usadas para verificar Swagger.
+- `.gitignore` en la raiz: excluye builds, bases SQLite, uploads, secretos locales y artefactos temporales.
+
+Las migraciones EF Core (`backend/Infrastructure/Migrations`) importan saber para que estan, pero no hace falta estudiar cada linea generada.
 
 ---
 
@@ -144,7 +148,7 @@ Es la capa mas interna. No depende de ASP.NET, EF Core, Stripe ni Claude. Contie
 | `Document` | Documento adjunto al chat. | Titulo, URL/ruta, chat y carpeta opcional. |
 | `DocumentAnalysis` | Resultado de analisis de documento. | Resumen, riesgos, recomendaciones, referencias y tipo de analisis. |
 | `Folder` | Carpeta o expediente del abogado. | Nombre, contexto legal, chats y documentos asociados. |
-| `CustomSkill` | Instruccion personalizada para la IA. | Nombre, cuando usarla, instrucciones, ejemplos, alertas, formato de salida, activo/inactivo. |
+| `CustomSkill` | Instruccion personalizada para la IA. | Nombre, cuando usarla, instrucciones, ejemplos, alertas y formato de salida. |
 | `ChatCustomSkill` | Relacion entre un chat y una skill aplicada. | Chat, skill y fecha de aplicacion. |
 | `AITask` | Tarea IA estructurada. | Descripcion, estado, plan, resultado, paso actual, pausada/no pausada. |
 | `AITaskStep` | Paso individual de una tarea IA. | Orden, titulo, descripcion, estado y resultado. |
@@ -152,7 +156,6 @@ Es la capa mas interna. No depende de ASP.NET, EF Core, Stripe ni Claude. Contie
 | `Subscription` | Suscripcion de usuario. | Usuario, plan, fecha de inicio/fin, estado e IDs Stripe. |
 | `PasswordResetToken` | Token de recuperacion de password. | Usuario, hash del token, vencimiento, uso. |
 | `EmailVerificationToken` | Codigo de verificacion de email. | Usuario, hash del codigo, vencimiento, uso. |
-| `Audit` | Auditoria potencial de IA. | Chat, modelo y version de prompt. Esta configurada pero no es central en los servicios actuales. |
 
 ### Enums importantes
 
@@ -174,7 +177,7 @@ Es la capa mas interna. No depende de ASP.NET, EF Core, Stripe ni Claude. Contie
 - `User.UpgradeToLawyer()` cambia el rol a abogado cuando un admin aprueba el perfil.
 - `LawyerProfile.Verify()` aprueba una solicitud y registra quien la verifico.
 - `LawyerProfile.RejectVerification()` rechaza una solicitud y guarda motivo.
-- `Chat.ApplySkill()` y `Chat.RemoveSkill()` administran skills activas en un chat.
+- `Chat.ApplySkill()` y `Chat.RemoveSkill()` administran skills aplicadas a un chat.
 - `AITask.ApprovePlan()` pasa una tarea a ejecucion y arranca en el paso 1.
 - `AITask.Pause()`, `Resume()`, `Cancel()` y `MarkAsCompleted()` modelan el flujo de tareas IA.
 - `AITaskStep.MarkAsCompleted()` guarda el resultado de cada paso.
@@ -201,7 +204,7 @@ Es la capa de casos de uso. No expone HTTP ni sabe detalles de EF Core. Define q
 | `Interfaces/Payments` | Contrato para Stripe/mock payments. |
 | `DTOs/` | Objetos de entrada/salida de la API. |
 | `Mappings/` | Convierte entidades de dominio a DTOs. |
-| `Common/` | Resultado uniforme, errores, paginacion y excepcion de IA. |
+| `Common/` | Resultado uniforme, errores, validacion compartida de carpetas y excepcion de IA. |
 | `Auth/AuthValidators.cs` | Validaciones de email, password, codigos y tokens. |
 | `DependencyInjection.cs` | Registra servicios de aplicacion en DI. |
 
@@ -215,7 +218,7 @@ Es la capa de casos de uso. No expone HTTP ni sabe detalles de EF Core. Define q
 | `ChatService` | Crear/listar/ver/eliminar chats y enviar mensajes a la IA. |
 | `ChatDocumentContextService` | Construye contexto de documentos para enviar a la IA. |
 | `DocumentService` | Subida de documentos, lectura, analisis con IA y consulta por chat. |
-| `CustomSkillService` | Crear/editar/listar/eliminar skills, activarlas y aplicarlas a chats. |
+| `CustomSkillService` | Crear/editar/listar/eliminar skills y aplicarlas o quitarlas de chats. |
 | `FolderService` | Crear, editar, listar y eliminar carpetas del abogado. |
 | `AITaskService` | Crear plan IA, editarlo, aprobarlo, ejecutar pasos, pausar, reanudar y cancelar. |
 | `PlanService` | Listar planes, suscribirse a Free, consultar plan actual y activar pagos. |
@@ -233,6 +236,10 @@ El proyecto usa `Result` y `Result<T>` para devolver exito o error sin tirar exc
 
 Luego Presentation convierte esos errores a HTTP con `ResultExtensions`.
 
+Helpers compartidos en `Common/`:
+
+- `FolderOwnershipValidator`: valida que una carpeta pertenezca al perfil de abogado del usuario (usado por `ChatService` y `DocumentService`).
+
 Ejemplo defendible:
 
 > En vez de que cada controlador arme manualmente respuestas HTTP, los servicios devuelven un resultado uniforme y `ResultExtensions` traduce eso a `200`, `400`, `401`, `404`, `409` o `502`.
@@ -245,7 +252,7 @@ Los DTOs separan el modelo interno de dominio de lo que entra/sale por API. Ejem
 - `CreateChatRequest`, `ChatDto`, `MessageDto`.
 - `UploadDocumentRequest`, `DocumentDto`, `DocumentAnalysisDto`.
 - `CreateCustomSkillRequest`, `CustomSkillDto`.
-- `CreateAITaskRequest`, `AITaskDetailDto`, `TaskStepDto`.
+- `CreateAITaskRequest`, `AITaskDto`, `TaskStepDto`.
 - `PlanDto`, `SubscriptionDto`, `CurrentPlanDto`.
 
 Esto evita exponer directamente entidades con propiedades internas como `PasswordHash`.
@@ -283,7 +290,6 @@ Implementa los detalles tecnicos que Application solo conoce como interfaces.
 - `LawyerProfiles`
 - `Chats`
 - `Messages`
-- `Audits`
 - `Documents`
 - `DocumentAnalyses`
 - `Folders`
@@ -325,12 +331,11 @@ Esto permite desarrollo local simple y produccion mas robusta.
 
 | Archivo | Funcion |
 |---|---|
-| `AIService.cs` | Implementa chat, analisis de documentos, plan estructurado y ejecucion de pasos usando Claude. |
+| `AIService.cs` | Implementa chat, analisis de documentos, plan estructurado y ejecucion de pasos usando Claude. Incluye fallback de desarrollo cuando no hay API key o modo live deshabilitado. |
 | `ClaudeOptions.cs` | Opciones de configuracion: API key, modelo, base URL, max tokens. |
-| `MockAIService.cs` | Implementacion simulada de IA. |
 | `TaskPlanParser.cs` | Convierte respuesta JSON de IA en plan estructurado y tiene plan mock. |
 
-Punto importante: `AIService` tiene fallback. Si no esta habilitado el modo live o falta API key, responde con textos simulados. Eso permite demostrar la aplicacion sin depender siempre de una API externa.
+Punto importante: `AIService` tiene fallback interno. Si no esta habilitado el modo live o falta API key, responde con textos simulados via `DevFallbackReply` y `TaskPlanParser.BuildMockPlan()`. Eso permite demostrar la aplicacion sin depender siempre de una API externa. No hay una clase Mock separada registrada en DI.
 
 ### Archivos y documentos
 
@@ -405,7 +410,6 @@ Traduce errores del dominio/aplicacion a HTTP:
 |---|---|
 | Exito sin valor | `200 OK` |
 | Exito con valor | `200 OK` + JSON |
-| Creacion | `201 Created` |
 | `NotFound` | `404 Not Found` |
 | `Unauthorized` | `401 Unauthorized` |
 | `Conflict` | `409 Conflict` |
@@ -435,7 +439,7 @@ Requiere JWT. Algunas rutas requieren Admin.
 
 | Metodo | Ruta | Permiso | Funcion |
 |---|---|---|---|
-| GET | `/api/users/me` | Usuario autenticado | Perfil actual. |
+| GET | `/api/users/me` | Usuario autenticado | Perfil actual (`UserDto`). |
 | PUT | `/api/users/me` | Usuario autenticado | Edita nombre, apellido y tema. |
 | GET | `/api/users` | Admin | Lista usuarios. |
 | GET | `/api/users/{id}` | Admin | Detalle de usuario. |
@@ -453,9 +457,7 @@ Maneja solicitudes de verificacion profesional.
 | GET | `/api/lawyer-profiles/requests` | Admin | Listar solicitudes. |
 | GET | `/api/lawyer-profiles/requests/{id}` | Admin | Ver detalle. |
 | POST | `/api/lawyer-profiles/requests/{id}/approve` | Admin | Aprobar solicitud. |
-| POST | `/api/lawyer-profiles/requests/{id}/reject` | Admin | Rechazar solicitud. |
-| POST | `/api/lawyer-profiles/verify` | Admin | Endpoint alternativo de verificacion. |
-| POST | `/api/lawyer-profiles/reject` | Admin | Endpoint alternativo de rechazo. |
+| POST | `/api/lawyer-profiles/requests/{id}/reject` | Admin | Rechazar solicitud (motivo opcional en body). |
 
 ### ChatsController - `api/chats`
 
@@ -484,17 +486,16 @@ Requiere JWT.
 
 Requiere rol `Lawyer` o `Admin`.
 
+Una skill solo influye en la IA si esta **aplicada al chat** (`apply` / `remove`). No existe estado global activo/inactivo.
+
 | Metodo | Ruta | Funcion |
 |---|---|---|
+| GET | `/api/custom-skills` | Listar skills del abogado autenticado. |
 | POST | `/api/custom-skills` | Crear skill. |
 | PUT | `/api/custom-skills/{id}` | Editar skill. |
-| GET | `/api/custom-skills/me` | Listar skills propias. |
-| GET | `/api/custom-skills/lawyer-profile/{lawyerProfileId}` | Listar por perfil. |
-| POST | `/api/custom-skills/{id}/activate` | Activar skill. |
-| POST | `/api/custom-skills/{id}/deactivate` | Desactivar skill. |
-| POST | `/api/custom-skills/apply` | Aplicar skill a chat. |
-| POST | `/api/custom-skills/remove` | Quitar skill del chat. |
 | DELETE | `/api/custom-skills/{id}` | Eliminar skill. |
+| POST | `/api/custom-skills/apply` | Aplicar skill a un chat (`chatId` + `customSkillId`). |
+| POST | `/api/custom-skills/remove` | Quitar skill de un chat. |
 
 ### FoldersController - `api/folders`
 
@@ -514,14 +515,13 @@ Requiere JWT.
 | Metodo | Ruta | Funcion |
 |---|---|---|
 | POST | `/api/ai-tasks` | Crear tarea IA y plan estructurado. |
-| GET | `/api/ai-tasks/{id}` | Ver tarea por ID. |
+| GET | `/api/ai-tasks/{id}` | Ver tarea por ID (incluye pasos en `AITaskDto`). |
 | PUT | `/api/ai-tasks/{id}/plan` | Editar pasos antes de aprobar. |
-| POST | `/api/ai-tasks/{id}/approve` | Aprobar plan y ejecutar. |
-| POST | `/api/ai-tasks/{id}/execute-next` | Ejecutar siguiente paso. |
+| POST | `/api/ai-tasks/{id}/approve` | Aprobar plan y ejecutar pasos pendientes. |
 | POST | `/api/ai-tasks/{id}/pause` | Pausar tarea. |
-| POST | `/api/ai-tasks/{id}/resume` | Reanudar tarea. |
+| POST | `/api/ai-tasks/{id}/resume` | Reanudar tarea y continuar pasos pendientes. |
 | POST | `/api/ai-tasks/{id}/cancel` | Cancelar tarea. |
-| GET | `/api/ai-tasks/chat/{chatId}` | Listar tareas de un chat. |
+| GET | `/api/ai-tasks/chat/{chatId}` | Listar tareas de un chat (cada item incluye pasos). |
 
 ### PlansController - `api/plans`
 
@@ -529,8 +529,7 @@ Requiere JWT.
 |---|---|---|---|
 | GET | `/api/plans` | Publico | Lista planes. |
 | POST | `/api/plans/{planId}/subscribe` | JWT | Suscripcion al plan Free. |
-| GET | `/api/plans/subscription/active` | JWT | Ver suscripcion activa. |
-| GET | `/api/plans/current` | JWT | Ver plan actual. |
+| GET | `/api/plans/current` | JWT | Ver plan efectivo (incluye Free por defecto si no hay suscripcion paga). |
 
 ### BillingController - `api/billing`
 
@@ -586,7 +585,7 @@ Esto separa usuarios comunes de abogados verificados. Permite restringir feature
 Usuario -> crea chat
 Usuario -> envia mensaje
 ChatService -> verifica que el chat pertenece al usuario
-ChatService -> carga skills activas del chat
+ChatService -> carga skills aplicadas al chat
 ChatDocumentContextService -> carga documentos del chat como contexto
 AIService -> envia prompt a Claude o devuelve fallback
 MessageRepository -> guarda mensaje del usuario y respuesta del asistente
@@ -623,15 +622,16 @@ Formatos soportados:
 ### Flujo 5: Custom skills
 
 ```text
-Abogado/Admin -> crea skill con instrucciones
-Skill -> queda activa por defecto
-Usuario -> aplica skill a un chat
-ChatService/AIService -> incluye instrucciones de skills activas en el prompt
+Abogado/Admin -> crea skill en su biblioteca (GET/POST /api/custom-skills)
+Abogado/Admin -> aplica skill a un chat con POST /api/custom-skills/apply
+Sistema -> crea registro ChatCustomSkill
+ChatService/AIService -> incluye instrucciones de skills aplicadas al chat en el prompt
+Abogado/Admin -> puede quitarla del chat con POST /api/custom-skills/remove
 ```
 
 Ejemplo:
 
-Una skill "Revision de contrato" puede indicar que la IA revise clausulas de rescision, penalidades, riesgos y formato de salida.
+Una skill "Revision de contrato" puede indicar que la IA revise clausulas de rescision, penalidades, riesgos y formato de salida. Solo afecta los chats donde fue aplicada.
 
 ### Flujo 6: Tareas IA por pasos
 
@@ -641,7 +641,7 @@ AITaskService -> pide a IA un plan estructurado JSON
 Sistema -> guarda AITask y AITaskStep
 Usuario -> puede editar titulos/descripciones de pasos
 Usuario -> aprueba el plan
-Sistema -> ejecuta paso por paso
+Sistema -> ejecuta los pasos pendientes (approve y resume continuan el pipeline hasta completar, pausar o fallar)
 Cada paso -> genera resultado y mensaje en el chat
 Usuario -> puede pausar, reanudar o cancelar
 ```
@@ -707,7 +707,7 @@ Los servicios validan que:
 
 - Un chat pertenezca al usuario antes de leerlo o enviar mensajes.
 - Un documento pertenezca a un chat del usuario.
-- Una carpeta pertenezca al perfil de abogado del usuario.
+- Una carpeta pertenezca al perfil de abogado del usuario (`FolderOwnershipValidator`).
 - Una custom skill pertenezca al perfil de abogado del usuario.
 - Una tarea IA pertenezca a un chat del usuario.
 
@@ -795,6 +795,7 @@ Ruta: `frontend`
 | `src/App.css` e `src/index.css` | Estilos. |
 | `public/icons.svg`, `public/favicon.svg` | Iconos publicos. |
 | `src/assets/` | Assets usados por el componente. |
+| `src/lib/api/skills.ts` | Cliente API de custom skills (`list`, `apply`, `remove`, CRUD). |
 
 ### Como explicarlo
 
@@ -868,6 +869,7 @@ Puntos defendibles:
 | Archivo | Por que importa |
 |---|---|
 | `backend/Application/Services/AuthService.cs` | Flujo de identidad completo. |
+| `backend/Application/Common/FolderOwnershipValidator.cs` | Validacion compartida de propiedad de carpetas. |
 | `backend/Application/Services/ChatService.cs` | Chat con IA y skills. |
 | `backend/Application/Services/DocumentService.cs` | Subida y analisis de documentos. |
 | `backend/Application/Services/AITaskService.cs` | Planes IA editables y ejecucion paso a paso. |
@@ -964,11 +966,11 @@ Los servicios validan propiedad: chat por `UserId`, documentos por chat del usua
 
 ### Como se conecta la IA?
 
-La interfaz `IAIService` esta en Application. La implementacion `AIService` en Infrastructure arma prompts y llama a Claude. Si no hay modo live/API key, puede devolver respuestas simuladas para desarrollo.
+La interfaz `IAIService` esta en Application. La implementacion `AIService` en Infrastructure arma prompts y llama a Claude. Si no hay modo live o API key, el mismo `AIService` devuelve respuestas simuladas internamente (no hay mock separado en DI).
 
 ### Que aportan las custom skills?
 
-Permiten que un abogado defina instrucciones reutilizables. Al aplicarlas a un chat, la IA recibe esas instrucciones como parte del prompt.
+Permiten que un abogado defina instrucciones reutilizables en su biblioteca. Al **aplicarlas** a un chat con `apply`, la IA recibe esas instrucciones como parte del prompt. Con `remove` se dejan de usar en ese chat. No hay toggle global activo/inactivo: o esta aplicada al chat o no.
 
 ### Por que las tareas IA tienen aprobacion?
 
@@ -1014,8 +1016,7 @@ Conviene decirlo de forma positiva, como evolucion futura:
 - El frontend React principal es una base inicial; la demostracion completa esta en `test.html`.
 - En produccion se deben configurar secretos reales: JWT, connection string PostgreSQL, Claude API key y Stripe keys.
 - El envio de email real puede reemplazar `LoggingEmailSender`.
-- La entidad `Audit` esta preparada/configurada, pero podria integrarse mas profundamente para trazabilidad de IA.
-- `PagedResult<T>` existe como base para paginacion futura.
+- La paginacion de listados (usuarios, chats, etc.) puede agregarse cuando el volumen lo requiera.
 
 Esto no invalida el proyecto: muestra que ya hay arquitectura preparada para evolucionar.
 

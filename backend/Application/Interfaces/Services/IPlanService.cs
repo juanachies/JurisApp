@@ -7,7 +7,6 @@ public interface IPlanService
 {
     Task<Result<IReadOnlyList<PlanDto>>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<Result<SubscriptionDto>> SubscribeAsync(Guid userId, Guid planId, CancellationToken cancellationToken = default);
-    Task<Result<SubscriptionDto>> GetActiveSubscriptionAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<Result<CurrentPlanDto>> GetCurrentPlanAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<Result<SubscriptionDto>> ActivatePaidSubscriptionAsync(
         Guid userId,

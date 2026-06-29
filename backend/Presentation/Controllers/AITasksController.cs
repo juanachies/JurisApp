@@ -60,14 +60,6 @@ public class AITasksController : ControllerBase
         return result.ToActionResult();
     }
 
-    [HttpPost("{id:guid}/execute-next")]
-    public async Task<IActionResult> ExecuteNext(Guid id, CancellationToken cancellationToken)
-    {
-        var userId = _currentUserService.UserId!.Value;
-        var result = await _aiTaskService.ExecuteNextStepAsync(userId, id, cancellationToken);
-        return result.ToActionResult();
-    }
-
     [HttpPost("{id:guid}/pause")]
     public async Task<IActionResult> Pause(Guid id, CancellationToken cancellationToken)
     {

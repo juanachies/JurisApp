@@ -10,14 +10,7 @@ public static class ResultExtensions
         if (result.IsSuccess)
             return new OkResult();
 
-        return result.Error.Code switch
-        {
-            "NotFound"     => new NotFoundObjectResult(new { result.Error.Code, result.Error.Message }),
-            "Unauthorized" => new UnauthorizedObjectResult(new { result.Error.Code, result.Error.Message }),
-            "Conflict"        => new ConflictObjectResult(new { result.Error.Code, result.Error.Message }),
-            "ExternalService" => new ObjectResult(new { result.Error.Code, result.Error.Message }) { StatusCode = 502 },
-            _                 => new BadRequestObjectResult(new { result.Error.Code, result.Error.Message })
-        };
+        return ToErrorActionResult(result.Error);
     }
 
     public static IActionResult ToActionResult<T>(this Result<T> result)
@@ -25,28 +18,15 @@ public static class ResultExtensions
         if (result.IsSuccess)
             return new OkObjectResult(result.Value);
 
-        return result.Error.Code switch
-        {
-            "NotFound"     => new NotFoundObjectResult(new { result.Error.Code, result.Error.Message }),
-            "Unauthorized" => new UnauthorizedObjectResult(new { result.Error.Code, result.Error.Message }),
-            "Conflict"        => new ConflictObjectResult(new { result.Error.Code, result.Error.Message }),
-            "ExternalService" => new ObjectResult(new { result.Error.Code, result.Error.Message }) { StatusCode = 502 },
-            _                 => new BadRequestObjectResult(new { result.Error.Code, result.Error.Message })
-        };
+        return ToErrorActionResult(result.Error);
     }
 
-    public static IActionResult ToCreatedResult<T>(this Result<T> result, string routeName, object routeValues)
+    private static IActionResult ToErrorActionResult(Error error) => error.Code switch
     {
-        if (result.IsSuccess)
-            return new CreatedAtRouteResult(routeName, routeValues, result.Value);
-
-        return result.Error.Code switch
-        {
-            "NotFound"     => new NotFoundObjectResult(new { result.Error.Code, result.Error.Message }),
-            "Unauthorized" => new UnauthorizedObjectResult(new { result.Error.Code, result.Error.Message }),
-            "Conflict"        => new ConflictObjectResult(new { result.Error.Code, result.Error.Message }),
-            "ExternalService" => new ObjectResult(new { result.Error.Code, result.Error.Message }) { StatusCode = 502 },
-            _                 => new BadRequestObjectResult(new { result.Error.Code, result.Error.Message })
-        };
-    }
+        "NotFound"        => new NotFoundObjectResult(new { error.Code, error.Message }),
+        "Unauthorized"    => new UnauthorizedObjectResult(new { error.Code, error.Message }),
+        "Conflict"        => new ConflictObjectResult(new { error.Code, error.Message }),
+        "ExternalService" => new ObjectResult(new { error.Code, error.Message }) { StatusCode = 502 },
+        _                 => new BadRequestObjectResult(new { error.Code, error.Message })
+    };
 }

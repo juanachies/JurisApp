@@ -22,7 +22,6 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("me")]
-    [ActionName("GetCurrentUser")]
     public async Task<IActionResult> GetCurrentUser(CancellationToken cancellationToken)
     {
         var userId = _currentUserService.UserId!.Value;

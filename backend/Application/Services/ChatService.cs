@@ -63,7 +63,8 @@ public class ChatService : IChatService
 
         if (request.FolderId.HasValue)
         {
-            var folderError = await ValidateFolderOwnershipAsync(userId, request.FolderId.Value, cancellationToken);
+            var folderError = await FolderOwnershipValidator.ValidateAsync(
+                userId, request.FolderId.Value, _folderRepository, _lawyerProfileRepository, cancellationToken);
             if (folderError is not null)
             {
                 return Result<ChatDto>.Failure(folderError);
@@ -101,7 +102,7 @@ public class ChatService : IChatService
             return Result<MessageDto>.Failure(ownershipError);
         }
 
-        var activeSkills = await _customSkillRepository.GetActiveByChatIdAsync(chatId, cancellationToken);
+        var activeSkills = await _customSkillRepository.GetAppliedByChatIdAsync(chatId, cancellationToken);
         var skillNames = activeSkills.Select(s => s.Name).ToList();
 
         var userMessage = new Message(
@@ -206,20 +207,4 @@ public class ChatService : IChatService
         return null;
     }
 
-    private async Task<Error?> ValidateFolderOwnershipAsync(Guid userId, Guid folderId, CancellationToken cancellationToken)
-    {
-        var folder = await _folderRepository.GetByIdAsync(folderId, cancellationToken);
-        if (folder is null)
-        {
-            return Error.NotFound("Carpeta no encontrada.");
-        }
-
-        var profile = await _lawyerProfileRepository.GetByUserIdAsync(userId, cancellationToken);
-        if (profile is null || folder.LawyerProfileId != profile.Id)
-        {
-            return Error.Unauthorized("No tenés acceso a esta carpeta.");
-        }
-
-        return null;
-    }
 }
