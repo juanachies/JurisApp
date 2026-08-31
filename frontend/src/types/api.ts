@@ -1,4 +1,23 @@
 export type UserRole = 'User' | 'Lawyer' | 'Admin'
+export type UserTheme = 'Bright' | 'Dark'
+export type MessageRole = 'User' | 'Assistant' | 'System'
+export type DocumentAnalysisType =
+  | 'Summary'
+  | 'RiskAnalysis'
+  | 'Recommendations'
+  | 'ContractReview'
+  | 'Custom'
+export type AITaskStatus =
+  | 'Pending'
+  | 'AwaitingApproval'
+  | 'InProgress'
+  | 'Completed'
+  | 'Failed'
+  | 'Cancelled'
+export type AITaskStepStatus = 'Pending' | 'InProgress' | 'Completed' | 'Failed' | 'Skipped'
+export type LawyerVerificationStatus = 'NotSubmitted' | 'Pending' | 'Verified' | 'Rejected'
+export type PlanType = 'Free' | 'Pro' | 'Max'
+export type SubscriptionStatus = 'Active' | 'Cancelled' | 'Expired'
 
 export interface UserDto {
   id: string
@@ -7,6 +26,8 @@ export interface UserDto {
   email: string
   role: UserRole
   isActive: boolean
+  isEmailVerified: boolean
+  theme: UserTheme
   createdAt: string
 }
 
@@ -27,16 +48,31 @@ export interface LoginRequest {
   password: string
 }
 
-export interface UpdateUserProfileRequest {
-  firstName: string
-  lastName: string
+export interface VerifyEmailRequest {
+  email: string
+  code: string
+}
+
+export interface ResendVerificationRequest {
   email: string
 }
 
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+export interface ResetPasswordRequest {
+  token: string
+  newPassword: string
+}
+
+export interface UpdateUserProfileRequest {
+  firstName: string
+  lastName: string
+  theme: UserTheme
+}
+
 export interface AdminUpdateUserRequest {
-  firstName?: string
-  lastName?: string
-  email?: string
   role?: UserRole
   isActive?: boolean
 }
@@ -53,15 +89,13 @@ export interface ChatAppliedSkillDto {
   name: string
 }
 
-export type MessageRole = 'User' | 'Assistant' | 'System'
-
 export interface MessageDto {
   id: string
   chatId: string
   role: MessageRole
   content: string
   date: string
-  skillsUsed?: string[]
+  skillsUsed: string[]
 }
 
 export interface ChatDto {
@@ -84,17 +118,17 @@ export interface SendMessageRequest {
 
 export interface DocumentDto {
   id: string
-  chatId: string
+  chatId?: string | null
   folderId?: string | null
   title: string
   url: string
 }
 
-export type DocumentAnalysisType = 'Summary' | 'RiskAnalysis' | 'ContractReview' | 'Custom'
-
 export interface AnalyzeDocumentRequest {
   documentId: string
-  type: DocumentAnalysisType
+  type?: DocumentAnalysisType
+  types?: DocumentAnalysisType[]
+  customSkillIds?: string[]
 }
 
 export interface DocumentAnalysisDto {
@@ -105,47 +139,6 @@ export interface DocumentAnalysisDto {
   risks: string
   recommendations: string
   references: string
-}
-
-export type AnalysisSeverity = 'low' | 'medium' | 'high' | 'critical' | 'neutral'
-
-export interface AnalyzeSegmentedRequest {
-  chatId: string
-  documentId?: string
-  input?: string
-}
-
-export interface DocumentAnalysisSegmentItemDto {
-  title: string
-  description: string
-  severity: AnalysisSeverity
-  recommendation: string
-}
-
-export interface DocumentAnalysisSegmentDto {
-  key: string
-  title: string
-  countable: boolean
-  itemsCount: number | null
-  severity: AnalysisSeverity
-  content: string
-  items: DocumentAnalysisSegmentItemDto[]
-}
-
-export interface SuggestedActionDto {
-  key: string
-  title: string
-}
-
-export interface SegmentedDocumentAnalysisDto {
-  id?: string | null
-  documentId?: string | null
-  categoryKey: string
-  displayName: string
-  confidence: number
-  mainFields: Record<string, unknown>
-  segments: DocumentAnalysisSegmentDto[]
-  suggestedActions: SuggestedActionDto[]
 }
 
 export interface FolderDto {
@@ -165,32 +158,6 @@ export interface UpdateFolderRequest {
   legalContext?: string
 }
 
-export interface LawyerProfileDto {
-  id: string
-  userId: string
-  licenseNumber: string
-  barAssociation: string
-  province: string
-  specialty: string
-  isVerified: boolean
-  verificationStatus: string
-  verifiedAt?: string | null
-}
-
-export interface CreateLawyerProfileRequest {
-  licenseNumber: string
-  barAssociation: string
-  province: string
-  specialty: string
-}
-
-export interface UpdateLawyerProfileRequest {
-  licenseNumber: string
-  barAssociation: string
-  province: string
-  specialty: string
-}
-
 export interface CustomSkillDto {
   id: string
   lawyerProfileId: string
@@ -200,6 +167,7 @@ export interface CustomSkillDto {
   examples: string
   redFlags: string
   outputFormat: string
+  isActive: boolean
 }
 
 export interface CreateCustomSkillRequest {
@@ -226,16 +194,6 @@ export interface ApplyCustomSkillToChatRequest {
   customSkillId: string
 }
 
-export type AITaskStatus =
-  | 'Pending'
-  | 'AwaitingApproval'
-  | 'InProgress'
-  | 'Completed'
-  | 'Failed'
-  | 'Cancelled'
-
-export type AITaskStepStatus = 'Pending' | 'InProgress' | 'Completed' | 'Failed' | 'Skipped'
-
 export interface TaskStepDto {
   id: string
   order: number
@@ -254,9 +212,6 @@ export interface AITaskDto {
   result?: string | null
   currentStepIndex: number
   isPaused: boolean
-}
-
-export interface AITaskDetailDto extends AITaskDto {
   steps: TaskStepDto[]
 }
 
@@ -265,17 +220,82 @@ export interface CreateAITaskRequest {
   description: string
 }
 
-export interface UpdateAITaskPlanStep {
+export interface UpdateTaskStepRequest {
   order: number
   title: string
   description: string
 }
 
 export interface UpdateAITaskPlanRequest {
-  steps: UpdateAITaskPlanStep[]
+  steps: UpdateTaskStepRequest[]
 }
 
-export type PlanType = 'Free' | 'Pro' | 'Max'
+export interface LawyerProfileDto {
+  id: string
+  userId: string
+  licenseNumber: string
+  barAssociation: string
+  province: string
+  specialty: string
+  isVerified: boolean
+  verificationStatus: LawyerVerificationStatus
+  rejectionReason?: string | null
+  verifiedAt?: string | null
+  resolvedAt?: string | null
+  licenseDocumentUrl?: string | null
+}
+
+export interface UpdateLawyerProfileRequest {
+  licenseNumber: string
+  barAssociation: string
+  province: string
+  specialty: string
+}
+
+export interface LawyerVerificationRequestSummaryDto {
+  id: string
+  userId: string
+  userFirstName: string
+  userLastName: string
+  userEmail: string
+  licenseNumber: string
+  barAssociation: string
+  province: string
+  specialty: string
+  verificationStatus: LawyerVerificationStatus
+  createdAt: string
+  verifiedAt?: string | null
+  resolvedAt?: string | null
+}
+
+export interface LawyerVerificationRequestDetailDto {
+  id: string
+  userId: string
+  userFirstName: string
+  userLastName: string
+  userEmail: string
+  licenseNumber: string
+  barAssociation: string
+  province: string
+  specialty: string
+  verificationStatus: LawyerVerificationStatus
+  isVerified: boolean
+  rejectionReason?: string | null
+  createdAt: string
+  verifiedAt?: string | null
+  resolvedAt?: string | null
+  licenseDocumentUrl?: string | null
+}
+
+export interface RejectLawyerRequest {
+  reason?: string
+}
+
+export interface PlanLimits {
+  chats?: number
+  documents?: number
+  aiTasks?: number
+}
 
 export interface PlanDto {
   id: string
@@ -292,8 +312,31 @@ export interface CurrentPlanDto {
   price: number
   limitsJson: string
   hasActiveSubscription: boolean
-  subscriptionStatus?: string | null
+  subscriptionStatus?: SubscriptionStatus | null
   startDate?: string | null
+}
+
+export interface SubscriptionDto {
+  id: string
+  userId: string
+  planId: string
+  startDate: string
+  endDate?: string | null
+  status: SubscriptionStatus
+}
+
+export interface CreatePlanRequest {
+  name: string
+  type: PlanType
+  price: number
+  limitsJson: string
+}
+
+export interface UpdatePlanRequest {
+  name: string
+  type: PlanType
+  price: number
+  limitsJson: string
 }
 
 export interface CreateCheckoutSessionRequest {
@@ -304,8 +347,7 @@ export interface CreateCheckoutSessionResponse {
   url: string
 }
 
-export interface ApiError {
-  message: string
-  status: number
-  data?: unknown
+export interface ApiErrorBody {
+  code?: string
+  message?: string
 }
