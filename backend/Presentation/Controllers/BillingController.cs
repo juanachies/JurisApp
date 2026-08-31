@@ -50,7 +50,7 @@ public class BillingController : ControllerBase
         [FromBody] CreateCheckoutSessionRequest request,
         CancellationToken cancellationToken)
     {
-        if (!_environment.IsDevelopment())
+        if (!_environment.IsDevelopment() && !_environment.IsEnvironment("Testing"))
         {
             return BadRequest(new
             {

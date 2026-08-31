@@ -23,6 +23,7 @@ public class AppDbContext : DbContext
     public DbSet<AITaskStep> AITaskSteps => Set<AITaskStep>();
     public DbSet<Plan> Plans => Set<Plan>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<ChatAudit> ChatAudits => Set<ChatAudit>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

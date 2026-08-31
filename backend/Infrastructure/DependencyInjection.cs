@@ -3,6 +3,7 @@ using JurisApp.Application.Interfaces.Auth;
 using JurisApp.Application.Interfaces.Files;
 using JurisApp.Application.Interfaces.Payments;
 using JurisApp.Application.Interfaces.Persistence;
+using JurisApp.Application.Interfaces.Services;
 using JurisApp.Infrastructure.AI;
 using JurisApp.Infrastructure.Auth;
 using JurisApp.Infrastructure.Files;
@@ -47,7 +48,7 @@ public static class DependencyInjection
 
         services.AddDbContext<AppDbContext>(options =>
         {
-            if (environment.IsDevelopment() &&
+            if ((environment.IsDevelopment() || environment.IsEnvironment("Testing")) &&
                 string.Equals(provider, "Sqlite", StringComparison.OrdinalIgnoreCase))
             {
                 options.UseSqlite(connectionString);
@@ -78,6 +79,7 @@ public static class DependencyInjection
         services.AddScoped<IAITaskRepository, AITaskRepository>();
         services.AddScoped<IPlanRepository, PlanRepository>();
         services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
+        services.AddScoped<IChatAuditRepository, ChatAuditRepository>();
 
         return services;
     }
@@ -97,32 +99,36 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddOptions<ClaudeOptions>()
-            .Bind(configuration.GetSection(ClaudeOptions.SectionName))
+        services.AddOptions<DeepSeekOptions>()
+            .Bind(configuration.GetSection(DeepSeekOptions.SectionName))
             .PostConfigure(options =>
             {
                 if (configuration.GetValue<bool>("AI:UseMock"))
                     options.Enabled = false;
 
                 if (string.IsNullOrWhiteSpace(options.BaseUrl))
-                    options.BaseUrl = "https://api.anthropic.com";
+                    options.BaseUrl = "https://api.deepseek.com";
 
                 if (string.IsNullOrWhiteSpace(options.Model))
-                    options.Model = configuration["AI:Model"] ?? "claude-sonnet-4-6";
+                    options.Model = configuration["AI:Model"] ?? "deepseek-v4-pro";
 
-                options.ApiKey ??= configuration["AI:Claude:ApiKey"];
+                options.ApiKey ??= configuration["AI:DeepSeek:ApiKey"];
             });
 
-        services.AddHttpClient<IAIService, AIService>((sp, client) =>
+        services.AddHttpClient<DeepSeekMessageClient>((sp, client) =>
         {
-            var options = sp.GetRequiredService<IOptions<ClaudeOptions>>().Value;
+            var options = sp.GetRequiredService<IOptions<DeepSeekOptions>>().Value;
             client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(Math.Max(30, options.HttpTimeoutSeconds));
 
             if (!string.IsNullOrWhiteSpace(options.ApiKey))
-                client.DefaultRequestHeaders.Add("x-api-key", options.ApiKey);
-
-            client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", options.ApiKey);
         });
+
+        services.AddScoped<IAIService, AIService>();
+        services.AddSingleton<IAITaskExecutionQueue, AITaskExecutionQueue>();
+        services.AddHostedService<AITaskExecutionHostedService>();
 
         return services;
     }
@@ -143,7 +149,7 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(StripeOptions.SectionName))
             .PostConfigure(options =>
             {
-                if (!environment.IsDevelopment())
+                if (!environment.IsDevelopment() && !environment.IsEnvironment("Testing"))
                     return;
 
                 var useMockSetting = configuration[$"{StripeOptions.SectionName}:UseMock"];

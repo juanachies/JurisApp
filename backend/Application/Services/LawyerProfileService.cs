@@ -1,5 +1,6 @@
 using JurisApp.Application.Common;
 using JurisApp.Application.DTOs.LawyerProfiles;
+using JurisApp.Application.Interfaces.Files;
 using JurisApp.Application.Interfaces.Persistence;
 using JurisApp.Application.Mappings;
 using JurisApp.Application.Interfaces.Services;
@@ -10,23 +11,45 @@ namespace JurisApp.Application.Services;
 
 public class LawyerProfileService : ILawyerProfileService
 {
+    private static readonly HashSet<string> AllowedLicenseContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "application/pdf"
+    };
+
+    private const long MaxLicenseFileBytes = 5 * 1024 * 1024;
+
     private readonly IUserRepository _userRepository;
     private readonly ILawyerProfileRepository _lawyerProfileRepository;
+    private readonly ISubscriptionRepository _subscriptionRepository;
+    private readonly IPlanRepository _planRepository;
+    private readonly IFileStorageService _fileStorageService;
     private readonly IUnitOfWork _unitOfWork;
 
     public LawyerProfileService(
         IUserRepository userRepository,
         ILawyerProfileRepository lawyerProfileRepository,
+        ISubscriptionRepository subscriptionRepository,
+        IPlanRepository planRepository,
+        IFileStorageService fileStorageService,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _lawyerProfileRepository = lawyerProfileRepository;
+        _subscriptionRepository = subscriptionRepository;
+        _planRepository = planRepository;
+        _fileStorageService = fileStorageService;
         _unitOfWork = unitOfWork;
     }
 
     public async Task<Result<LawyerProfileDto>> CreateVerificationRequestAsync(
         Guid userId,
         CreateLawyerProfileRequest request,
+        Stream? licenseDocument,
+        string? fileName,
+        string? contentType,
         CancellationToken cancellationToken = default)
     {
         var validationError = ValidateProfessionalData(request.LicenseNumber, request.BarAssociation, request.Province, request.Specialty);
@@ -37,6 +60,14 @@ public class LawyerProfileService : ILawyerProfileService
         if (user is null)
             return Result<LawyerProfileDto>.Failure(Error.NotFound("Usuario no encontrado."));
 
+        var planError = await EnsureProOrMaxAsync(userId, cancellationToken);
+        if (planError is not null)
+            return Result<LawyerProfileDto>.Failure(planError);
+
+        var fileError = ValidateLicenseFile(licenseDocument, fileName, contentType);
+        if (fileError is not null)
+            return Result<LawyerProfileDto>.Failure(fileError);
+
         var existingProfile = await _lawyerProfileRepository.GetByUserIdWithDetailsAsync(userId, cancellationToken);
 
         if (existingProfile?.IsVerifiedLawyer == true)
@@ -44,6 +75,12 @@ public class LawyerProfileService : ILawyerProfileService
 
         if (existingProfile?.IsPending == true)
             return Result<LawyerProfileDto>.Failure(Error.Conflict("Ya tenés una solicitud de verificación pendiente."));
+
+        var licenseUrl = await _fileStorageService.SaveFileAsync(
+            licenseDocument!,
+            fileName!,
+            contentType ?? "application/octet-stream",
+            cancellationToken);
 
         LawyerProfile profile;
 
@@ -71,6 +108,7 @@ public class LawyerProfileService : ILawyerProfileService
                 return Result<LawyerProfileDto>.Failure(Error.Conflict("No podés enviar una nueva solicitud en este momento."));
             }
 
+            existingProfile.SetLicenseDocumentUrl(licenseUrl);
             profile = existingProfile;
             _lawyerProfileRepository.Update(profile);
         }
@@ -83,6 +121,7 @@ public class LawyerProfileService : ILawyerProfileService
                 request.BarAssociation,
                 request.Province,
                 request.Specialty);
+            profile.SetLicenseDocumentUrl(licenseUrl);
 
             await _lawyerProfileRepository.AddAsync(profile, cancellationToken);
         }
@@ -92,6 +131,7 @@ public class LawyerProfileService : ILawyerProfileService
         var savedProfile = await _lawyerProfileRepository.GetByUserIdWithDetailsAsync(userId, cancellationToken);
         return Result<LawyerProfileDto>.Success(savedProfile!.ToDto());
     }
+
 
     public async Task<Result<LawyerProfileDto>> UpdateAsync(
         Guid userId,
@@ -230,4 +270,30 @@ public class LawyerProfileService : ILawyerProfileService
         return null;
     }
 
+    private async Task<Error?> EnsureProOrMaxAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var subscription = await _subscriptionRepository.GetActiveByUserIdAsync(userId, cancellationToken);
+        if (subscription is null)
+            return Error.Validation("Necesitás un plan Pro activo antes de solicitar la verificación como abogado.");
+
+        var plan = await _planRepository.GetByIdAsync(subscription.PlanId, cancellationToken);
+        if (plan is null || (plan.Type != PlanType.Pro && plan.Type != PlanType.Max))
+            return Error.Validation("Necesitás un plan Pro activo antes de solicitar la verificación como abogado.");
+
+        return null;
+    }
+
+    private static Error? ValidateLicenseFile(Stream? stream, string? fileName, string? contentType)
+    {
+        if (stream is null || stream == Stream.Null || string.IsNullOrWhiteSpace(fileName))
+            return Error.Validation("La foto o el documento de matrícula es obligatorio.");
+
+        if (!string.IsNullOrWhiteSpace(contentType) && !AllowedLicenseContentTypes.Contains(contentType))
+            return Error.Validation("El documento de matrícula debe ser JPG, PNG o PDF.");
+
+        if (stream.CanSeek && stream.Length > MaxLicenseFileBytes)
+            return Error.Validation("El documento de matrícula no puede superar los 5 MB.");
+
+        return null;
+    }
 }

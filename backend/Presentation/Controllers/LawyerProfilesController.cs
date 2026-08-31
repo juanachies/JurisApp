@@ -25,12 +25,35 @@ public class LawyerProfilesController : ControllerBase
     }
 
     [HttpPost]
+    [Consumes("multipart/form-data")]
     public async Task<IActionResult> CreateVerificationRequest(
-        [FromBody] CreateLawyerProfileRequest request,
+        [FromForm] string licenseNumber,
+        [FromForm] string barAssociation,
+        [FromForm] string province,
+        [FromForm] string specialty,
+        IFormFile? licenseDocument,
         CancellationToken cancellationToken)
     {
         var userId = _currentUserService.UserId!.Value;
-        var result = await _lawyerProfileService.CreateVerificationRequestAsync(userId, request, cancellationToken);
+        var request = new CreateLawyerProfileRequest
+        {
+            LicenseNumber = licenseNumber,
+            BarAssociation = barAssociation,
+            Province = province,
+            Specialty = specialty
+        };
+
+        Stream? stream = null;
+        if (licenseDocument is not null && licenseDocument.Length > 0)
+            stream = licenseDocument.OpenReadStream();
+
+        var result = await _lawyerProfileService.CreateVerificationRequestAsync(
+            userId,
+            request,
+            stream,
+            licenseDocument?.FileName,
+            licenseDocument?.ContentType,
+            cancellationToken);
         return result.ToActionResult();
     }
 

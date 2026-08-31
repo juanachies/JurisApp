@@ -39,4 +39,7 @@ public class SubscriptionRepository : ISubscriptionRepository
 
     public void Update(Subscription subscription)
         => _context.Subscriptions.Update(subscription);
+
+    public async Task<bool> AnyByPlanIdAsync(Guid planId, CancellationToken cancellationToken = default)
+        => await _context.Subscriptions.AnyAsync(s => s.PlanId == planId, cancellationToken);
 }

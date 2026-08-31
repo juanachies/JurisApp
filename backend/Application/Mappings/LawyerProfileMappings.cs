@@ -17,7 +17,8 @@ public static class LawyerProfileMappings
         VerificationStatus = profile.VerificationStatus,
         RejectionReason = profile.RejectionReason,
         VerifiedAt = profile.VerifiedAt,
-        ResolvedAt = profile.ResolvedAt
+        ResolvedAt = profile.ResolvedAt,
+        LicenseDocumentUrl = profile.LicenseDocumentUrl
     };
 
     public static LawyerVerificationRequestSummaryDto ToSummaryDto(this LawyerProfile profile) => new()
@@ -53,6 +54,7 @@ public static class LawyerProfileMappings
         RejectionReason = profile.RejectionReason,
         CreatedAt = profile.CreatedAt,
         VerifiedAt = profile.VerifiedAt,
-        ResolvedAt = profile.ResolvedAt
+        ResolvedAt = profile.ResolvedAt,
+        LicenseDocumentUrl = profile.LicenseDocumentUrl
     };
 }

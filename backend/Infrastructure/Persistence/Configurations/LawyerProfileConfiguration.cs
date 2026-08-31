@@ -38,5 +38,8 @@ public class LawyerProfileConfiguration : IEntityTypeConfiguration<LawyerProfile
             .WithOne(u => u.LawyerProfile)
             .HasForeignKey<LawyerProfile>(lp => lp.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Property(lp => lp.LicenseDocumentUrl)
+            .HasMaxLength(500);
     }
 }

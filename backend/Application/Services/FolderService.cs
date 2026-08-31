@@ -30,6 +30,11 @@ public class FolderService : IFolderService
             return Result<FolderDto>.Failure(Error.Validation("El nombre de la carpeta es obligatorio."));
         }
 
+        var verifiedError = await FolderOwnershipValidator.EnsureVerifiedLawyerAsync(
+            userId, _lawyerProfileRepository, cancellationToken);
+        if (verifiedError is not null)
+            return Result<FolderDto>.Failure(verifiedError);
+
         var profile = await _lawyerProfileRepository.GetByUserIdAsync(userId, cancellationToken);
         if (profile is null)
         {
@@ -61,7 +66,7 @@ public class FolderService : IFolderService
         }
 
         var profile = await _lawyerProfileRepository.GetByUserIdAsync(userId, cancellationToken);
-        if (profile is null || folder.LawyerProfileId != profile.Id)
+        if (profile is null || !profile.IsVerifiedLawyer || folder.LawyerProfileId != profile.Id)
         {
             return Result<FolderDto>.Failure(Error.Unauthorized("No tenés acceso a esta carpeta."));
         }
@@ -75,6 +80,11 @@ public class FolderService : IFolderService
 
     public async Task<Result<IReadOnlyList<FolderDto>>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
+        var verifiedError = await FolderOwnershipValidator.EnsureVerifiedLawyerAsync(
+            userId, _lawyerProfileRepository, cancellationToken);
+        if (verifiedError is not null)
+            return Result<IReadOnlyList<FolderDto>>.Failure(verifiedError);
+
         var profile = await _lawyerProfileRepository.GetByUserIdAsync(userId, cancellationToken);
         if (profile is null)
         {
@@ -95,7 +105,7 @@ public class FolderService : IFolderService
         }
 
         var profile = await _lawyerProfileRepository.GetByUserIdAsync(userId, cancellationToken);
-        if (profile is null || folder.LawyerProfileId != profile.Id)
+        if (profile is null || !profile.IsVerifiedLawyer || folder.LawyerProfileId != profile.Id)
         {
             return Result.Failure(Error.Unauthorized("No tenés acceso a esta carpeta."));
         }

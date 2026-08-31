@@ -27,7 +27,7 @@ public class DocumentsController : ControllerBase
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> Upload(
         IFormFile file,
-        [FromForm] Guid chatId,
+        [FromForm] Guid? chatId,
         [FromForm] Guid? folderId,
         CancellationToken cancellationToken)
     {
@@ -69,6 +69,14 @@ public class DocumentsController : ControllerBase
     {
         var userId = _currentUserService.UserId!.Value;
         var result = await _documentService.GetByChatIdAsync(userId, chatId, cancellationToken);
+        return result.ToActionResult();
+    }
+
+    [HttpGet("folder/{folderId:guid}")]
+    public async Task<IActionResult> GetByFolder(Guid folderId, CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService.UserId!.Value;
+        var result = await _documentService.GetByFolderIdAsync(userId, folderId, cancellationToken);
         return result.ToActionResult();
     }
 

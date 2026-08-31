@@ -14,6 +14,7 @@ public static class CustomSkillMappings
         Instructions = skill.Instructions,
         Examples = skill.Examples,
         RedFlags = skill.RedFlags,
-        OutputFormat = skill.OutputFormat
+        OutputFormat = skill.OutputFormat,
+        IsActive = skill.IsActive
     };
 }

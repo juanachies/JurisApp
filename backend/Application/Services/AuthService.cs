@@ -42,26 +42,26 @@ public class AuthService : IAuthService
         _configuration = configuration;
     }
 
-    public async Task<Result<RegisterResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+    public async Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.FirstName) ||
             string.IsNullOrWhiteSpace(request.LastName))
         {
-            return Result<RegisterResponse>.Failure(Error.Validation("Nombre y apellido son obligatorios."));
+            return Result<AuthResponse>.Failure(Error.Validation("Nombre y apellido son obligatorios."));
         }
 
         var emailError = AuthValidators.ValidateEmail(request.Email);
         if (emailError is not null)
-            return Result<RegisterResponse>.Failure(emailError);
+            return Result<AuthResponse>.Failure(emailError);
 
         var passwordError = AuthValidators.ValidatePassword(request.Password);
         if (passwordError is not null)
-            return Result<RegisterResponse>.Failure(passwordError);
+            return Result<AuthResponse>.Failure(passwordError);
 
         var normalizedEmail = AuthValidators.NormalizeEmail(request.Email);
         if (await _userRepository.EmailExistsAsync(normalizedEmail, cancellationToken))
         {
-            return Result<RegisterResponse>.Failure(Error.Conflict("El email ya está registrado."));
+            return Result<AuthResponse>.Failure(Error.Conflict("El email ya está registrado."));
         }
 
         var passwordHash = _passwordHasher.HashPassword(request.Password);
@@ -78,9 +78,9 @@ public class AuthService : IAuthService
 
         await SendVerificationEmailAsync(user, cancellationToken);
 
-        return Result<RegisterResponse>.Success(new RegisterResponse
+        return Result<AuthResponse>.Success(new AuthResponse
         {
-            Message = "Te enviamos un código de 6 dígitos a tu email. Ingresalo en la web para verificar tu cuenta.",
+            Token = _jwtTokenGenerator.GenerateToken(user),
             User = user.ToDto()
         });
     }
@@ -103,11 +103,6 @@ public class AuthService : IAuthService
         if (!user.IsActive)
         {
             return Result<AuthResponse>.Failure(Error.Unauthorized("Cuenta desactivada."));
-        }
-
-        if (!user.IsEmailVerified)
-        {
-            return Result<AuthResponse>.Failure(Error.Unauthorized("Debes verificar tu email antes de iniciar sesión."));
         }
 
         return Result<AuthResponse>.Success(new AuthResponse

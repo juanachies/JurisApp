@@ -4,6 +4,7 @@ public enum DocumentAnalysisType
 {
     Summary,
     RiskAnalysis,
+    Recommendations,
     ContractReview,
     Custom
 }

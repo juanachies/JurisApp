@@ -19,6 +19,8 @@ public class ChatService : IChatService
     private readonly ICustomSkillRepository _customSkillRepository;
     private readonly IChatDocumentContextService _chatDocumentContextService;
     private readonly IAIService _aiService;
+    private readonly IPlanLimitService _planLimitService;
+    private readonly IChatAuditService _chatAuditService;
     private readonly IUnitOfWork _unitOfWork;
 
     public ChatService(
@@ -30,6 +32,8 @@ public class ChatService : IChatService
         ICustomSkillRepository customSkillRepository,
         IChatDocumentContextService chatDocumentContextService,
         IAIService aiService,
+        IPlanLimitService planLimitService,
+        IChatAuditService chatAuditService,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
@@ -40,6 +44,8 @@ public class ChatService : IChatService
         _customSkillRepository = customSkillRepository;
         _chatDocumentContextService = chatDocumentContextService;
         _aiService = aiService;
+        _planLimitService = planLimitService;
+        _chatAuditService = chatAuditService;
         _unitOfWork = unitOfWork;
     }
 
@@ -60,6 +66,10 @@ public class ChatService : IChatService
         {
             return Result<ChatDto>.Failure(Error.NotFound("Usuario no encontrado."));
         }
+
+        var limit = await _planLimitService.EnsureCanCreateChatAsync(userId, cancellationToken);
+        if (!limit.IsSuccess)
+            return Result<ChatDto>.Failure(limit.Error);
 
         if (request.FolderId.HasValue)
         {
@@ -105,6 +115,9 @@ public class ChatService : IChatService
         var activeSkills = await _customSkillRepository.GetAppliedByChatIdAsync(chatId, cancellationToken);
         var skillNames = activeSkills.Select(s => s.Name).ToList();
 
+        var previousMessages = await _messageRepository.GetByChatIdAsync(chatId, cancellationToken);
+        var chatDocuments = await _chatDocumentContextService.BuildForChatAsync(chatId, cancellationToken);
+
         var userMessage = new Message(
             Guid.NewGuid(),
             chatId,
@@ -114,9 +127,6 @@ public class ChatService : IChatService
         userMessage.SetSkillsUsed(skillNames);
 
         await _messageRepository.AddAsync(userMessage, cancellationToken);
-
-        var previousMessages = await _messageRepository.GetByChatIdAsync(chatId, cancellationToken);
-        var chatDocuments = await _chatDocumentContextService.BuildForChatAsync(chatId, cancellationToken);
 
         string aiReply;
         try
@@ -132,6 +142,8 @@ public class ChatService : IChatService
         {
             return Result<MessageDto>.Failure(Error.ExternalService(ex.Message));
         }
+
+        await _chatAuditService.RecordAsync(chatId, cancellationToken);
 
         var assistantMessage = new Message(
             Guid.NewGuid(),

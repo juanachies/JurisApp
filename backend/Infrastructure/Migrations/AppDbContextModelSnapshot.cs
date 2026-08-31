@@ -138,6 +138,39 @@ namespace Infrastructure.Migrations
                     b.ToTable("Chats");
                 });
 
+            modelBuilder.Entity("JurisApp.Domain.Entities.ChatAudit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ChatId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PromptVersion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChatId")
+                        .IsUnique();
+
+                    b.ToTable("Audits", (string)null);
+                });
+
             modelBuilder.Entity("JurisApp.Domain.Entities.ChatCustomSkill", b =>
                 {
                     b.Property<Guid>("Id")
@@ -186,6 +219,11 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
                     b.Property<Guid>("LawyerProfileId")
                         .HasColumnType("TEXT");
 
@@ -222,7 +260,7 @@ namespace Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("ChatId")
+                    b.Property<Guid?>("ChatId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -378,6 +416,10 @@ namespace Infrastructure.Migrations
 
                     b.Property<bool>("IsVerified")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("LicenseDocumentUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("LicenseNumber")
                         .IsRequired()
@@ -577,7 +619,9 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("PlanId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("Status = 'Active'");
 
                     b.ToTable("Subscriptions");
                 });
@@ -681,6 +725,17 @@ namespace Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("JurisApp.Domain.Entities.ChatAudit", b =>
+                {
+                    b.HasOne("JurisApp.Domain.Entities.Chat", "Chat")
+                        .WithOne("Audit")
+                        .HasForeignKey("JurisApp.Domain.Entities.ChatAudit", "ChatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Chat");
+                });
+
             modelBuilder.Entity("JurisApp.Domain.Entities.ChatCustomSkill", b =>
                 {
                     b.HasOne("JurisApp.Domain.Entities.Chat", "Chat")
@@ -716,8 +771,7 @@ namespace Infrastructure.Migrations
                     b.HasOne("JurisApp.Domain.Entities.Chat", "Chat")
                         .WithMany("Documents")
                         .HasForeignKey("ChatId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("JurisApp.Domain.Entities.Folder", "Folder")
                         .WithMany("Documents")
@@ -822,6 +876,8 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("JurisApp.Domain.Entities.Chat", b =>
                 {
                     b.Navigation("AppliedSkills");
+
+                    b.Navigation("Audit");
 
                     b.Navigation("Documents");
 

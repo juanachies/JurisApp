@@ -10,4 +10,5 @@ public interface IPlanRepository
     Task<IReadOnlyList<Plan>> GetAllAsync(CancellationToken cancellationToken = default);
     Task AddAsync(Plan plan, CancellationToken cancellationToken = default);
     void Update(Plan plan);
+    void Delete(Plan plan);
 }

@@ -21,7 +21,8 @@ public class DocumentConfiguration : IEntityTypeConfiguration<Document>
         builder.HasOne(d => d.Chat)
             .WithMany(c => c.Documents)
             .HasForeignKey(d => d.ChatId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Cascade)
+            .IsRequired(false);
 
         builder.HasOne(d => d.Folder)
             .WithMany(f => f.Documents)

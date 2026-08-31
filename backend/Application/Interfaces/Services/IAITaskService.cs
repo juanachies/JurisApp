@@ -13,4 +13,5 @@ public interface IAITaskService
     Task<Result<AITaskDto>> PauseAsync(Guid userId, Guid taskId, CancellationToken cancellationToken = default);
     Task<Result<AITaskDto>> ResumeAsync(Guid userId, Guid taskId, CancellationToken cancellationToken = default);
     Task<Result<AITaskDto>> CancelAsync(Guid userId, Guid taskId, CancellationToken cancellationToken = default);
+    Task RunQueuedPipelineAsync(Guid userId, Guid taskId, CancellationToken cancellationToken = default);
 }

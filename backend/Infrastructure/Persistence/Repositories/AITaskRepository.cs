@@ -38,4 +38,9 @@ public class AITaskRepository : IAITaskRepository
 
     public void Update(AITask aiTask)
         => _context.AITasks.Update(aiTask);
+
+    public async Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        => await _context.AITasks
+            .Where(t => t.Chat.UserId == userId)
+            .CountAsync(cancellationToken);
 }

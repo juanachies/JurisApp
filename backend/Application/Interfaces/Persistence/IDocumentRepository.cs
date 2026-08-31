@@ -10,4 +10,5 @@ public interface IDocumentRepository
     Task AddAsync(Document document, CancellationToken cancellationToken = default);
     void Update(Document document);
     void Delete(Document document);
+    Task<int> CountOwnedByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 }

@@ -1,12 +1,9 @@
-using System.Net.Http.Json;
 using System.Text.Json;
-using JurisApp.Application.Common;
 using JurisApp.Application.DTOs.AITasks;
 using JurisApp.Application.Interfaces.AI;
 using JurisApp.Domain.Entities;
 using JurisApp.Domain.Enums;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 
 namespace JurisApp.Infrastructure.AI;
 
@@ -14,18 +11,13 @@ public class AIService : IAIService
 {
     private const string DevFallbackReply = "Respuesta simulada de IA en modo desarrollo.";
 
-    private readonly HttpClient _httpClient;
-    private readonly ClaudeOptions _options;
-    private readonly ILogger<AIService> _logger;
+    private readonly DeepSeekMessageClient _client;
+    private readonly IConfiguration _configuration;
 
-    public AIService(
-        HttpClient httpClient,
-        IOptions<ClaudeOptions> options,
-        ILogger<AIService> logger)
+    public AIService(DeepSeekMessageClient client, IConfiguration configuration)
     {
-        _httpClient = httpClient;
-        _options = options.Value;
-        _logger = logger;
+        _client = client;
+        _configuration = configuration;
     }
 
     public async Task<string> SendChatMessageAsync(
@@ -35,12 +27,12 @@ public class AIService : IAIService
         IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
         CancellationToken cancellationToken = default)
     {
-        if (!IsLiveMode())
+        if (!_client.IsLiveMode())
             return DevFallbackReply;
 
         var systemPrompt = BuildChatSystemPrompt(activeSkills, chatDocuments);
         var messages = BuildMessageHistory(previousMessages, userMessage);
-        return await SendRequestAsync(systemPrompt, messages, cancellationToken);
+        return await _client.SendAsync(systemPrompt, messages, cancellationToken: cancellationToken);
     }
 
     public async Task<DocumentAnalysisResult> AnalyzeDocumentAsync(
@@ -49,14 +41,14 @@ public class AIService : IAIService
         IReadOnlyList<CustomSkill> activeSkills,
         CancellationToken cancellationToken = default)
     {
-        if (!IsLiveMode())
+        if (!_client.IsLiveMode())
         {
             return new DocumentAnalysisResult
             {
-                Summary = DevFallbackReply,
-                Risks = string.Empty,
-                Recommendations = string.Empty,
-                References = string.Empty
+                Summary = "Resumen simulado del documento.",
+                Risks = "Riesgos simulados del documento.",
+                Recommendations = "Recomendaciones simuladas del documento.",
+                References = "Referencias simuladas."
             };
         }
 
@@ -66,7 +58,7 @@ public class AIService : IAIService
             new { role = "user", content = $"Analyze the following document:\n\n{documentText}" }
         };
 
-        var raw = await SendRequestAsync(systemPrompt, messages, cancellationToken);
+        var raw = await _client.SendAsync(systemPrompt, messages, cancellationToken: cancellationToken);
         return ParseAnalysisResult(raw);
     }
 
@@ -77,7 +69,7 @@ public class AIService : IAIService
         IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
         CancellationToken cancellationToken = default)
     {
-        if (!IsLiveMode())
+        if (!_client.IsLiveMode())
             return TaskPlanParser.BuildMockPlan(description);
 
         var systemPrompt =
@@ -93,7 +85,7 @@ public class AIService : IAIService
             $"{contextBlock}\n\nEncargo del abogado:\n{description}";
 
         var messages = new[] { new { role = "user", content = userContent } };
-        var raw = await SendRequestAsync(systemPrompt, messages, cancellationToken);
+        var raw = await _client.SendAsync(systemPrompt, messages, cancellationToken: cancellationToken);
         return TaskPlanParser.Parse(raw, description);
     }
 
@@ -106,11 +98,16 @@ public class AIService : IAIService
         IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
         CancellationToken cancellationToken = default)
     {
-        if (!IsLiveMode())
+        if (!_client.IsLiveMode())
         {
+            var delayMs = 0;
+            int.TryParse(_configuration["AI:TaskStepDelayMilliseconds"], out delayMs);
+            if (delayMs > 0)
+                await Task.Delay(delayMs, cancellationToken);
+
             return $"[Paso {step.Order} simulado: {step.Title}]\n\n" +
                    $"Resultado de desarrollo para: {step.Description}\n\n" +
-                   "Configurá AI:UseMock=false y una API key real para ejecutar con Claude.";
+                   "Configurá AI:UseMock=false y una API key real para ejecutar con DeepSeek.";
         }
 
         var systemPrompt =
@@ -131,7 +128,7 @@ public class AIService : IAIService
             $"Instrucción del paso: {step.Description}";
 
         var messages = new[] { new { role = "user", content = userContent } };
-        return await SendRequestAsync(systemPrompt, messages, cancellationToken);
+        return await _client.SendAsync(systemPrompt, messages, cancellationToken: cancellationToken);
     }
 
     private static string BuildTaskContextBlock(
@@ -154,70 +151,6 @@ public class AIService : IAIService
         }
 
         return parts.Count == 0 ? string.Empty : string.Join("\n\n", parts);
-    }
-
-    private bool IsLiveMode() =>
-        _options.Enabled && !string.IsNullOrWhiteSpace(_options.ApiKey);
-
-    private async Task<string> SendRequestAsync(
-        string systemPrompt,
-        object messages,
-        CancellationToken cancellationToken)
-    {
-        var requestUrl = $"{_options.BaseUrl.TrimEnd('/')}/v1/messages";
-
-        var body = new
-        {
-            model = _options.Model,
-            max_tokens = _options.MaxTokens,
-            system = systemPrompt,
-            messages
-        };
-
-        _logger.LogInformation(
-            "Claude request → URL: {Url}, Model: {Model}",
-            requestUrl,
-            _options.Model);
-
-        HttpResponseMessage response;
-        try
-        {
-            response = await _httpClient.PostAsJsonAsync("/v1/messages", body, cancellationToken);
-        }
-        catch (Exception ex) when (ex is not AIServiceException)
-        {
-            _logger.LogError(ex, "Error de red al llamar a Claude en {Url}", requestUrl);
-            throw new AIServiceException("No se pudo conectar con el servicio de IA.", ex);
-        }
-
-        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            _logger.LogError(
-                "Claude error → Status: {StatusCode}, URL: {Url}, Model: {Model}, Body: {Body}",
-                (int)response.StatusCode,
-                requestUrl,
-                _options.Model,
-                responseBody);
-
-            throw new AIServiceException(
-                $"El servicio de IA respondió con error {(int)response.StatusCode}.");
-        }
-
-        try
-        {
-            using var doc = JsonDocument.Parse(responseBody);
-            return doc.RootElement
-                .GetProperty("content")[0]
-                .GetProperty("text")
-                .GetString() ?? string.Empty;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Respuesta inesperada de Claude: {Body}", responseBody);
-            throw new AIServiceException("La respuesta del servicio de IA no tiene el formato esperado.", ex);
-        }
     }
 
     private static string BuildChatSystemPrompt(
@@ -268,6 +201,8 @@ public class AIService : IAIService
                 "Provide a structured summary of the document.",
             DocumentAnalysisType.RiskAnalysis =>
                 "Identify and explain all legal risks present in the document.",
+            DocumentAnalysisType.Recommendations =>
+                "Provide actionable legal recommendations based on the document.",
             DocumentAnalysisType.ContractReview =>
                 "Review the contract and highlight key clauses, obligations, and concerns.",
             DocumentAnalysisType.Custom =>

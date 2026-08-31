@@ -28,4 +28,7 @@ public class PlanRepository : IPlanRepository
 
     public void Update(Plan plan)
         => _context.Plans.Update(plan);
+
+    public void Delete(Plan plan)
+        => _context.Plans.Remove(plan);
 }

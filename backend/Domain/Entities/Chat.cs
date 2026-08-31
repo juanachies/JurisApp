@@ -14,6 +14,7 @@ public class Chat : BaseEntity
     public ICollection<Document> Documents { get; private set; } = new List<Document>();
     public ICollection<AITask> Tasks { get; private set; } = new List<AITask>();
     public ICollection<ChatCustomSkill> AppliedSkills { get; private set; } = new List<ChatCustomSkill>();
+    public ChatAudit? Audit { get; private set; }
 
     protected Chat() { }
 

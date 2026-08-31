@@ -5,7 +5,7 @@ namespace JurisApp.Application.Interfaces.Services;
 
 public interface IAuthService
 {
-    Task<Result<RegisterResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
+    Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
     Task<Result<AuthResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
     Task<Result<AuthResponse>> VerifyEmailAsync(VerifyEmailRequest request, CancellationToken cancellationToken = default);
     Task<Result> ResendVerificationAsync(ResendVerificationRequest request, CancellationToken cancellationToken = default);

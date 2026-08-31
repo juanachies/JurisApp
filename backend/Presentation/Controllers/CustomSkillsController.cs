@@ -72,6 +72,22 @@ public class CustomSkillsController : ControllerBase
         return result.ToActionResult();
     }
 
+    [HttpPost("{id:guid}/activate")]
+    public async Task<IActionResult> Activate(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService.UserId!.Value;
+        var result = await _customSkillService.SetActiveAsync(userId, id, true, cancellationToken);
+        return result.ToActionResult();
+    }
+
+    [HttpPost("{id:guid}/deactivate")]
+    public async Task<IActionResult> Deactivate(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService.UserId!.Value;
+        var result = await _customSkillService.SetActiveAsync(userId, id, false, cancellationToken);
+        return result.ToActionResult();
+    }
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {

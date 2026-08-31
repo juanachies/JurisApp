@@ -29,5 +29,9 @@ public class SubscriptionConfiguration : IEntityTypeConfiguration<Subscription>
             .WithMany(p => p.Subscriptions)
             .HasForeignKey(s => s.PlanId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(s => s.UserId)
+            .IsUnique()
+            .HasFilter("Status = 'Active'");
     }
 }

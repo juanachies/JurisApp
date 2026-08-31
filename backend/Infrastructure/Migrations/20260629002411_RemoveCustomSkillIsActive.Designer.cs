@@ -222,9 +222,6 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
-
                     b.Property<Guid>("LawyerProfileId")
                         .HasColumnType("TEXT");
 

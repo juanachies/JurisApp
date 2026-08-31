@@ -1,11 +1,14 @@
 using System;
+using JurisApp.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace Infrastructure.Migrations
 {
-    /// <inheritdoc />
+    [DbContext(typeof(AppDbContext))]
+    [Migration("20260616240000_RemoveLawyerVerificationDocuments")]
     public partial class RemoveLawyerVerificationDocuments : Migration
     {
         /// <inheritdoc />

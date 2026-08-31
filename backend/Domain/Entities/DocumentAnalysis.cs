@@ -33,4 +33,23 @@ public class DocumentAnalysis : BaseEntity
         References = references;
         Type = type;
     }
+
+    public void ApplyPartial(
+        DocumentAnalysisType type,
+        string? summary,
+        string? risks,
+        string? recommendations,
+        string? references)
+    {
+        Type = type;
+        if (summary is not null)
+            Summary = summary;
+        if (risks is not null)
+            Risks = risks;
+        if (recommendations is not null)
+            Recommendations = recommendations;
+        if (references is not null)
+            References = references;
+        Touch();
+    }
 }

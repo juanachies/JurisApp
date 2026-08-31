@@ -17,6 +17,9 @@ public class AITaskService : IAITaskService
     private readonly ICustomSkillRepository _customSkillRepository;
     private readonly IChatDocumentContextService _chatDocumentContextService;
     private readonly IAIService _aiService;
+    private readonly IPlanLimitService _planLimitService;
+    private readonly IChatAuditService _chatAuditService;
+    private readonly IAITaskExecutionQueue _executionQueue;
     private readonly IUnitOfWork _unitOfWork;
 
     public AITaskService(
@@ -26,6 +29,9 @@ public class AITaskService : IAITaskService
         ICustomSkillRepository customSkillRepository,
         IChatDocumentContextService chatDocumentContextService,
         IAIService aiService,
+        IPlanLimitService planLimitService,
+        IChatAuditService chatAuditService,
+        IAITaskExecutionQueue executionQueue,
         IUnitOfWork unitOfWork)
     {
         _chatRepository = chatRepository;
@@ -34,6 +40,9 @@ public class AITaskService : IAITaskService
         _customSkillRepository = customSkillRepository;
         _chatDocumentContextService = chatDocumentContextService;
         _aiService = aiService;
+        _planLimitService = planLimitService;
+        _chatAuditService = chatAuditService;
+        _executionQueue = executionQueue;
         _unitOfWork = unitOfWork;
     }
 
@@ -52,6 +61,10 @@ public class AITaskService : IAITaskService
         if (chat.UserId != userId)
             return Result<AITaskDto>.Failure(Error.Unauthorized("No tenés acceso a este chat."));
 
+        var limit = await _planLimitService.EnsureCanCreateAiTaskAsync(userId, cancellationToken);
+        if (!limit.IsSuccess)
+            return Result<AITaskDto>.Failure(limit.Error);
+
         var activeSkills = await _customSkillRepository.GetAppliedByChatIdAsync(request.ChatId, cancellationToken);
         var skillNames = activeSkills.Select(s => s.Name).ToList();
         var previousMessages = await _messageRepository.GetByChatIdAsync(request.ChatId, cancellationToken);
@@ -66,12 +79,22 @@ public class AITaskService : IAITaskService
         userMessage.SetSkillsUsed(skillNames);
         await _messageRepository.AddAsync(userMessage, cancellationToken);
 
-        var structuredPlan = await _aiService.CreateStructuredTaskPlanAsync(
-            request.Description,
-            previousMessages,
-            activeSkills,
-            chatDocuments,
-            cancellationToken);
+        StructuredTaskPlan structuredPlan;
+        try
+        {
+            structuredPlan = await _aiService.CreateStructuredTaskPlanAsync(
+                request.Description,
+                previousMessages,
+                activeSkills,
+                chatDocuments,
+                cancellationToken);
+        }
+        catch (AIServiceException ex)
+        {
+            return Result<AITaskDto>.Failure(Error.ExternalService(ex.Message));
+        }
+
+        await _chatAuditService.RecordAsync(request.ChatId, cancellationToken);
 
         var planSummary = string.IsNullOrWhiteSpace(structuredPlan.Summary)
             ? structuredPlan.Objective
@@ -191,8 +214,10 @@ public class AITaskService : IAITaskService
         task.ApprovePlan();
         _aiTaskRepository.Update(task);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _executionQueue.EnqueueAsync(userId, taskId, cancellationToken);
 
-        return await RunPipelineAsync(userId, taskId, cancellationToken);
+        var queued = await _aiTaskRepository.GetByIdWithStepsAsync(taskId, cancellationToken);
+        return Result<AITaskDto>.Success(queued!.ToDto());
     }
 
     public async Task<Result<AITaskDto>> PauseAsync(
@@ -240,8 +265,10 @@ public class AITaskService : IAITaskService
         task.Resume();
         _aiTaskRepository.Update(task);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _executionQueue.EnqueueAsync(userId, taskId, cancellationToken);
 
-        return await RunPipelineAsync(userId, taskId, cancellationToken);
+        var queued = await _aiTaskRepository.GetByIdWithStepsAsync(taskId, cancellationToken);
+        return Result<AITaskDto>.Success(queued!.ToDto());
     }
 
     public async Task<Result<AITaskDto>> CancelAsync(
@@ -266,6 +293,9 @@ public class AITaskService : IAITaskService
 
         return Result<AITaskDto>.Success(task.ToDto());
     }
+
+    public Task RunQueuedPipelineAsync(Guid userId, Guid taskId, CancellationToken cancellationToken = default)
+        => RunPipelineAsync(userId, taskId, cancellationToken);
 
     private async Task<Result<AITaskDto>> RunPipelineAsync(
         Guid userId,
@@ -346,6 +376,7 @@ public class AITaskService : IAITaskService
                 $"**Tarea IA — Paso {currentStep.Order}: {currentStep.Title}**\n\n{stepResult}");
             assistantMessage.SetSkillsUsed(activeSkills.Select(s => s.Name));
             await _messageRepository.AddAsync(assistantMessage, cancellationToken);
+            await _chatAuditService.RecordAsync(task.ChatId, cancellationToken);
 
             var nextStep = task.Steps
                 .Where(s => s.Order > currentStep.Order && s.Status == AITaskStepStatus.Pending)

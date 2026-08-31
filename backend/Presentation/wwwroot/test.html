@@ -172,7 +172,7 @@
 
         <div class="auth-block">
           <h3>1. Registrarse</h3>
-          <p class="hint">Crea cuenta y envía un código de 6 dígitos por email. El código aparece en los logs del servidor (<code>dotnet run</code>). Sin verificar → login 401.</p>
+          <p class="hint">Crea cuenta y deja la sesión activa (JWT). La verificación de email es opcional y no bloquea el acceso.</p>
           <input id="regFirstName" placeholder="Nombre" value="Juan">
           <input id="regLastName" placeholder="Apellido" value="Pérez">
           <input id="regEmail" placeholder="Email (único)" value="">
@@ -195,7 +195,7 @@
 
         <div class="auth-block">
           <h3>2. Iniciar sesión</h3>
-          <p class="hint">Valida credenciales. Email no verificado → 401. Usuario inactivo → 401 "Cuenta desactivada".</p>
+          <p class="hint">Valida credenciales. Usuario inactivo → 401 "Cuenta desactivada". La verificación de email es opcional.</p>
           <input id="loginEmail" placeholder="Email" value="">
           <input id="loginPassword" type="password" placeholder="Password" value="Test1234!">
           <button type="button" onclick="login()">Login</button>
@@ -258,11 +258,12 @@
 
       <section>
         <h2>Solicitud de verificación de abogado</h2>
-        <p class="chat-hint">Completá tus datos profesionales. Un administrador debe aprobar la solicitud antes de obtener el rol Lawyer.</p>
+        <p class="chat-hint">Requiere plan Pro o Max activo y foto/PDF de matrícula. Un administrador aprueba la solicitud.</p>
         <input id="licenseNumber" value="MAT-12345">
         <input id="barAssociation" value="Colegio de Abogados de CABA">
         <input id="province" value="Buenos Aires">
         <input id="specialty" value="Civil">
+        <input type="file" id="licenseDocument" accept="image/jpeg,image/png,application/pdf">
         <button type="button" onclick="createLawyerVerificationRequest()">Enviar solicitud</button>
         <button type="button" onclick="getLawyerProfile()">Ver mi solicitud</button>
       </section>
@@ -285,8 +286,8 @@
       </section>
 
       <section>
-        <h2>Chats (consultas con Claude)</h2>
-        <p class="chat-hint">Creá un chat, escribí tu consulta y enviá. La respuesta viene de Claude vía la API.</p>
+        <h2>Chats (consultas con DeepSeek)</h2>
+        <p class="chat-hint">Creá un chat, escribí tu consulta y enviá. La respuesta viene de DeepSeek vía la API.</p>
         <input id="chatTitle" placeholder="Título del chat" value="Consulta laboral">
         <button type="button" onclick="createChat()">Crear chat</button>
         <button type="button" onclick="listChats()">Listar chats</button>
@@ -338,23 +339,28 @@
             <button type="button" id="chatSendBtn" onclick="handleChatSend()">Enviar mensaje</button>
             <button type="button" onclick="deleteChat()">Eliminar chat</button>
           </div>
-          <p class="chat-hint" id="chatModeHint">Modo normal: respuesta directa de Claude. Modo Tarea IA: genera un plan de trabajo paso a paso.</p>
+          <p class="chat-hint" id="chatModeHint">Modo normal: respuesta directa de DeepSeek. Modo Tarea IA: genera un plan de trabajo paso a paso.</p>
         </div>
       </section>
 
       <section>
         <h2>Carpetas</h2>
         <input id="folderName" placeholder="Nombre" value="Expediente 2026">
+        <input id="folderId" placeholder="Folder ID (para docs XOR)">
         <button type="button" onclick="createFolder()">Crear carpeta</button>
         <button type="button" onclick="listFolders()">Listar carpetas</button>
+        <button type="button" onclick="listFolderDocuments()">Listar docs de carpeta</button>
       </section>
 
       <section>
         <h2>Custom Skills</h2>
         <input id="skillName" placeholder="Nombre" value="Revisión de contrato">
         <textarea id="skillInstructions" rows="3">Revisar cláusulas de rescisión y penalidades.</textarea>
+        <input id="skillId" placeholder="Skill ID">
         <button type="button" onclick="createSkill()">Crear skill</button>
         <button type="button" onclick="listSkills()">Listar skills</button>
+        <button type="button" onclick="activateSkill()">Activar skill</button>
+        <button type="button" onclick="deactivateSkill()">Desactivar skill</button>
       </section>
 
       <section>
@@ -365,13 +371,23 @@
 
       <section>
         <h2>Planes</h2>
-        <p style="font-size:0.85rem;color:#666;margin:0 0 0.5rem;">Listá planes, elegí Pro o Max. Con <code>Stripe:UseMock=true</code> usá simular compra.</p>
-        <input id="planId" placeholder="Plan ID (GUID de Pro o Max)">
+        <p style="font-size:0.85rem;color:#666;margin:0 0 0.5rem;">Listá planes, suscribite, cambiá o cancelá. Admin puede crear/editar/borrar.</p>
+        <input id="planId" placeholder="Plan ID (GUID)">
         <button type="button" onclick="listPlans()">Listar planes</button>
+        <button type="button" onclick="subscribeFreePlan()">Suscribir Free</button>
+        <button type="button" onclick="changePlan()">Cambiar de plan</button>
+        <button type="button" onclick="cancelCurrentPlan()">Cancelar suscripción</button>
         <button type="button" onclick="simulatePurchase()">Simular compra (sin Stripe)</button>
         <button type="button" onclick="createCheckoutSession()">Crear checkout Stripe</button>
         <button type="button" onclick="openLastCheckoutUrl()">Abrir checkout</button>
         <button type="button" onclick="getCurrentPlan()">Ver mi plan actual</button>
+        <h3>Admin planes</h3>
+        <input id="adminPlanName" placeholder="Nombre" value="Extra">
+        <input id="adminPlanPrice" placeholder="Precio" value="10">
+        <select id="adminPlanType"><option>Pro</option><option>Max</option><option>Free</option></select>
+        <button type="button" onclick="adminCreatePlan()">Crear plan</button>
+        <button type="button" onclick="adminUpdatePlan()">Editar plan</button>
+        <button type="button" onclick="adminDeletePlan()">Eliminar plan</button>
       </section>
     </main>
 
@@ -704,7 +720,7 @@
       const sorted = [...messages].sort((a, b) => new Date(a.date) - new Date(b.date));
       el.innerHTML = sorted.map(m => {
         const role = (m.role || "").toLowerCase();
-        const label = role === "user" ? "Vos" : role === "assistant" ? "JurisApp (Claude)" : m.role;
+        const label = role === "user" ? "Vos" : role === "assistant" ? "JurisApp (DeepSeek)" : m.role;
         const msgId = m.id || m.Id;
         const skillsUsed = m.skillsUsed || m.SkillsUsed || messageSkillsDebug[msgId];
         const debugHtml = skillsUsed?.length
@@ -737,7 +753,7 @@
           if (res.status === 401) hint = "No autorizado. Hacé Login.";
           if (res.status === 403) hint = "Sin permiso para esta acción.";
           if (res.status === 404) hint = "No encontrado. ¿Reiniciaste dotnet run después de los cambios?";
-          if (res.status === 500) hint = "Error del servidor. Revisá logs de dotnet run (ej. API key Claude).";
+          if (res.status === 500) hint = "Error del servidor. Revisá logs de dotnet run (ej. API key DeepSeek).";
           show(action, data, res.status, hint, true);
           setStatus(`${action} — error ${res.status}`);
           return { ok: false, status: res.status, data };
@@ -767,9 +783,13 @@
         document.getElementById("loginEmail").value = email;
         document.getElementById("resendEmail").value = email;
         document.getElementById("verifyEmail").value = email;
-        show("Register", result.data, result.status,
-          "Revisá la consola del servidor (dotnet run) para copiar el código de 6 dígitos.", false);
-        setStatus("Register — OK. Verificá el email antes de hacer login.");
+        const jwt = pickToken(result.data);
+        const user = pickUser(result.data);
+        if (jwt) {
+          setToken(jwt);
+          if (user) rememberUser(user);
+        }
+        setStatus("Register — OK. Sesión iniciada.");
       }
     }
 
@@ -938,14 +958,16 @@
 
     async function createLawyerVerificationRequest() {
       if (!requireToken("Enviar solicitud de verificación")) return;
+      const fileInput = document.getElementById("licenseDocument");
+      const form = new FormData();
+      form.append("licenseNumber", document.getElementById("licenseNumber").value);
+      form.append("barAssociation", document.getElementById("barAssociation").value);
+      form.append("province", document.getElementById("province").value);
+      form.append("specialty", document.getElementById("specialty").value);
+      if (fileInput.files.length) form.append("licenseDocument", fileInput.files[0]);
       const result = await api("Enviar solicitud de verificación", "/api/lawyer-profiles", {
         method: "POST",
-        body: JSON.stringify({
-          licenseNumber: document.getElementById("licenseNumber").value,
-          barAssociation: document.getElementById("barAssociation").value,
-          province: document.getElementById("province").value,
-          specialty: document.getElementById("specialty").value
-        })
+        body: form
       });
       if (result.ok && result.data?.id) {
         lawyerProfileId = result.data.id;
@@ -1043,7 +1065,7 @@
         textarea.placeholder = "Describí el encargo legal completo (caso, documentación, objetivos)...";
       } else {
         btn.textContent = "Enviar mensaje";
-        hint.textContent = "Modo normal: respuesta directa de Claude. Ctrl+Enter para enviar.";
+        hint.textContent = "Modo normal: respuesta directa de DeepSeek. Ctrl+Enter para enviar.";
         textarea.placeholder = "Escribí tu consulta legal aquí...";
       }
     }
@@ -1076,7 +1098,7 @@
       if (!chatId) { showLocal("Enviar mensaje", "Creá o cargá un chat primero.", true); return; }
       if (!content) { showLocal("Enviar mensaje", "Escribí un mensaje.", true); return; }
 
-      const result = await api("Enviar mensaje (Claude)", "/api/chats/" + chatId + "/messages", {
+      const result = await api("Enviar mensaje (DeepSeek)", "/api/chats/" + chatId + "/messages", {
         method: "POST",
         body: JSON.stringify({ content })
       });
@@ -1273,15 +1295,37 @@
 
     async function createFolder() {
       if (!requireToken("Crear carpeta")) return;
-      await api("Crear carpeta", "/api/folders", {
+      const result = await api("Crear carpeta", "/api/folders", {
         method: "POST",
         body: JSON.stringify({ name: document.getElementById("folderName").value, legalContext: "Contexto de prueba" })
       });
+      if (result.ok && result.data?.id) document.getElementById("folderId").value = result.data.id;
     }
 
     async function listFolders() {
       if (!requireToken("Listar carpetas")) return;
       await api("Listar carpetas", "/api/folders");
+    }
+
+    async function listFolderDocuments() {
+      if (!requireToken("Docs de carpeta")) return;
+      const folderId = document.getElementById("folderId").value.trim();
+      if (!folderId) { showLocal("Docs de carpeta", "Ingresá un Folder ID.", true); return; }
+      await api("Docs de carpeta", "/api/documents/folder/" + folderId);
+    }
+
+    async function activateSkill() {
+      if (!requireToken("Activar skill")) return;
+      const id = document.getElementById("skillId").value.trim();
+      if (!id) { showLocal("Activar skill", "Ingresá un Skill ID.", true); return; }
+      await api("Activar skill", "/api/custom-skills/" + id + "/activate", { method: "POST" });
+    }
+
+    async function deactivateSkill() {
+      if (!requireToken("Desactivar skill")) return;
+      const id = document.getElementById("skillId").value.trim();
+      if (!id) { showLocal("Desactivar skill", "Ingresá un Skill ID.", true); return; }
+      await api("Desactivar skill", "/api/custom-skills/" + id + "/deactivate", { method: "POST" });
     }
 
     async function createSkill() {
@@ -1296,7 +1340,10 @@
           examples: "Ejemplo", redFlags: "Penalidades", outputFormat: "Lista"
         })
       });
-      if (result.ok) await loadSkillsForChat();
+      if (result.ok) {
+        await loadSkillsForChat();
+        if (result.data?.id) document.getElementById("skillId").value = result.data.id;
+      }
     }
 
     async function listSkills() {
@@ -1309,18 +1356,20 @@
       if (!requireToken("Subir documento")) return;
       const fileInput = document.getElementById("docFile");
       const chatId = getChatId();
-      if (!chatId) {
-        showLocal("Subir documento", "Creá o cargá un chat primero.", true);
+      const folderId = (document.getElementById("folderId")?.value || "").trim();
+      if (!fileInput.files.length) return;
+      if (!chatId && !folderId) {
+        showLocal("Subir documento", "Elegí un chat o una carpeta como destino.", true);
         fileInput.value = "";
         return;
       }
-      if (!fileInput.files.length) return;
       const form = new FormData();
       form.append("file", fileInput.files[0]);
-      form.append("chatId", chatId);
+      if (chatId) form.append("chatId", chatId);
+      else form.append("folderId", folderId);
       const result = await api("Subir documento", "/api/documents/upload", { method: "POST", body: form });
       fileInput.value = "";
-      if (result.ok) await loadChatDocuments(true);
+      if (result.ok && chatId) await loadChatDocuments(true);
     }
 
     async function analyzeDocument(documentId) {
@@ -1328,7 +1377,7 @@
       if (!documentId) { showLocal("Analizar documento", "Sin Document ID.", true); return; }
       await api("Analizar documento", "/api/documents/analyze", {
         method: "POST",
-        body: JSON.stringify({ documentId, type: "Summary" })
+        body: JSON.stringify({ documentId, types: ["Summary", "RiskAnalysis", "Recommendations"] })
       });
     }
 
@@ -1359,6 +1408,61 @@
           price: p.price ?? p.Price
         })), false);
       }
+    }
+
+    async function subscribeFreePlan() {
+      if (!requireToken("Suscribir Free")) return;
+      const plans = cachedPlans.length ? cachedPlans : (await api("Listar planes", "/api/plans")).data || [];
+      const free = (plans || []).find(p => (p.type ?? p.Type) === "Free");
+      if (!free) { showLocal("Suscribir Free", "No hay plan Free.", true); return; }
+      await api("Suscribir Free", "/api/plans/" + (free.id ?? free.Id) + "/subscribe", { method: "POST" });
+    }
+
+    async function changePlan() {
+      if (!requireToken("Cambiar de plan")) return;
+      const planId = document.getElementById("planId").value.trim();
+      if (!planId) { showLocal("Cambiar de plan", "Ingresá un Plan ID.", true); return; }
+      await api("Cambiar de plan", "/api/plans/" + planId + "/change", { method: "POST" });
+    }
+
+    async function cancelCurrentPlan() {
+      if (!requireToken("Cancelar suscripción")) return;
+      await api("Cancelar suscripción", "/api/plans/current/cancel", { method: "POST" });
+    }
+
+    async function adminCreatePlan() {
+      if (!requireToken("Crear plan (Admin)")) return;
+      await api("Crear plan (Admin)", "/api/plans", {
+        method: "POST",
+        body: JSON.stringify({
+          name: document.getElementById("adminPlanName").value,
+          type: document.getElementById("adminPlanType").value,
+          price: Number(document.getElementById("adminPlanPrice").value || 0),
+          limitsJson: "{\"chats\":10,\"documents\":10,\"aiTasks\":10}"
+        })
+      });
+    }
+
+    async function adminUpdatePlan() {
+      if (!requireToken("Editar plan (Admin)")) return;
+      const planId = document.getElementById("planId").value.trim();
+      if (!planId) { showLocal("Editar plan", "Ingresá un Plan ID.", true); return; }
+      await api("Editar plan (Admin)", "/api/plans/" + planId, {
+        method: "PUT",
+        body: JSON.stringify({
+          name: document.getElementById("adminPlanName").value,
+          type: document.getElementById("adminPlanType").value,
+          price: Number(document.getElementById("adminPlanPrice").value || 0),
+          limitsJson: "{\"chats\":10,\"documents\":10,\"aiTasks\":10}"
+        })
+      });
+    }
+
+    async function adminDeletePlan() {
+      if (!requireToken("Eliminar plan (Admin)")) return;
+      const planId = document.getElementById("planId").value.trim();
+      if (!planId) { showLocal("Eliminar plan", "Ingresá un Plan ID.", true); return; }
+      await api("Eliminar plan (Admin)", "/api/plans/" + planId, { method: "DELETE" });
     }
 
     async function simulatePurchase() {
@@ -1421,7 +1525,7 @@
     (function init() {
       updateChatModeUi();
       const token = getToken();
-      setStatus(token ? "Token cargado. Probá el módulo de autenticación o chateá con Claude." : "Sin token. Registrate o hacé login primero.");
+      setStatus(token ? "Token cargado. Probá el módulo de autenticación o chateá con DeepSeek." : "Sin token. Registrate o hacé login primero.");
       if (token) document.getElementById("tokenDisplay").textContent = token.substring(0, 40) + "...";
       suggestEmail(true);
       if (token) getMe();

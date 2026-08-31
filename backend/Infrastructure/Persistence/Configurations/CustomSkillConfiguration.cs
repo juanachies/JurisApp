@@ -20,6 +20,10 @@ public class CustomSkillConfiguration : IEntityTypeConfiguration<CustomSkill>
         builder.Property(s => s.RedFlags).IsRequired();
         builder.Property(s => s.OutputFormat).IsRequired();
 
+        builder.Property(s => s.IsActive)
+            .IsRequired()
+            .HasDefaultValue(true);
+
         builder.HasOne(s => s.LawyerProfile)
             .WithMany(lp => lp.CustomSkills)
             .HasForeignKey(s => s.LawyerProfileId)

@@ -9,4 +9,5 @@ public interface IDocumentService
     Task<Result<DocumentAnalysisDto>> AnalyzeAsync(Guid userId, AnalyzeDocumentRequest request, CancellationToken cancellationToken = default);
     Task<Result<DocumentDto>> GetByIdAsync(Guid userId, Guid documentId, CancellationToken cancellationToken = default);
     Task<Result<IReadOnlyList<DocumentDto>>> GetByChatIdAsync(Guid userId, Guid chatId, CancellationToken cancellationToken = default);
+    Task<Result<IReadOnlyList<DocumentDto>>> GetByFolderIdAsync(Guid userId, Guid folderId, CancellationToken cancellationToken = default);
 }

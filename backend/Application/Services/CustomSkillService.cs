@@ -28,7 +28,7 @@ public class CustomSkillService : ICustomSkillService
 
     public async Task<Result<CustomSkillDto>> CreateAsync(Guid userId, CreateCustomSkillRequest request, CancellationToken cancellationToken = default)
     {
-        var ownershipError = await EnsureLawyerProfileOwnershipAsync(userId, request.LawyerProfileId, cancellationToken);
+        var ownershipError = await EnsureVerifiedLawyerOwnershipAsync(userId, request.LawyerProfileId, cancellationToken);
         if (ownershipError is not null)
         {
             return Result<CustomSkillDto>.Failure(ownershipError);
@@ -63,7 +63,7 @@ public class CustomSkillService : ICustomSkillService
             return Result<CustomSkillDto>.Failure(Error.NotFound("Custom skill no encontrada."));
         }
 
-        var ownershipError = await EnsureLawyerProfileOwnershipAsync(userId, skill.LawyerProfileId, cancellationToken);
+        var ownershipError = await EnsureVerifiedLawyerOwnershipAsync(userId, skill.LawyerProfileId, cancellationToken);
         if (ownershipError is not null)
         {
             return Result<CustomSkillDto>.Failure(ownershipError);
@@ -92,6 +92,11 @@ public class CustomSkillService : ICustomSkillService
         Guid userId,
         CancellationToken cancellationToken = default)
     {
+        var verifiedError = await FolderOwnershipValidator.EnsureVerifiedLawyerAsync(
+            userId, _lawyerProfileRepository, cancellationToken);
+        if (verifiedError is not null)
+            return Result<IReadOnlyList<CustomSkillDto>>.Failure(verifiedError);
+
         var profile = await _lawyerProfileRepository.GetByUserIdAsync(userId, cancellationToken);
         if (profile is null)
             return Result<IReadOnlyList<CustomSkillDto>>.Failure(Error.NotFound("Perfil de abogado no encontrado."));
@@ -121,7 +126,7 @@ public class CustomSkillService : ICustomSkillService
             return Result.Failure(Error.NotFound("Custom skill no encontrada."));
         }
 
-        var ownershipError = await EnsureLawyerProfileOwnershipAsync(userId, skill.LawyerProfileId, cancellationToken);
+        var ownershipError = await EnsureVerifiedLawyerOwnershipAsync(userId, skill.LawyerProfileId, cancellationToken);
         if (ownershipError is not null)
         {
             return Result.Failure(ownershipError);
@@ -131,6 +136,30 @@ public class CustomSkillService : ICustomSkillService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();
+    }
+
+    public async Task<Result<CustomSkillDto>> SetActiveAsync(
+        Guid userId,
+        Guid customSkillId,
+        bool isActive,
+        CancellationToken cancellationToken = default)
+    {
+        var skill = await _customSkillRepository.GetByIdAsync(customSkillId, cancellationToken);
+        if (skill is null)
+            return Result<CustomSkillDto>.Failure(Error.NotFound("Custom skill no encontrada."));
+
+        var ownershipError = await EnsureVerifiedLawyerOwnershipAsync(userId, skill.LawyerProfileId, cancellationToken);
+        if (ownershipError is not null)
+            return Result<CustomSkillDto>.Failure(ownershipError);
+
+        if (isActive)
+            skill.Activate();
+        else
+            skill.Deactivate();
+
+        _customSkillRepository.Update(skill);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return Result<CustomSkillDto>.Success(skill.ToDto());
     }
 
     private async Task<Error?> ApplyOrRemoveSkillAsync(
@@ -161,11 +190,14 @@ public class CustomSkillService : ICustomSkillService
             return Error.NotFound("Custom skill no encontrada.");
         }
 
-        var ownershipError = await EnsureLawyerProfileOwnershipAsync(userId, skill.LawyerProfileId, cancellationToken);
+        var ownershipError = await EnsureVerifiedLawyerOwnershipAsync(userId, skill.LawyerProfileId, cancellationToken);
         if (ownershipError is not null)
         {
             return ownershipError;
         }
+
+        if (apply && !skill.IsActive)
+            return Error.Validation("La skill está desactivada.");
 
         if (apply)
             await _customSkillRepository.ApplyToChatAsync(request.ChatId, request.CustomSkillId, cancellationToken);
@@ -177,7 +209,7 @@ public class CustomSkillService : ICustomSkillService
         return null;
     }
 
-    private async Task<Error?> EnsureLawyerProfileOwnershipAsync(Guid userId, Guid lawyerProfileId, CancellationToken cancellationToken)
+    private async Task<Error?> EnsureVerifiedLawyerOwnershipAsync(Guid userId, Guid lawyerProfileId, CancellationToken cancellationToken)
     {
         if (lawyerProfileId == Guid.Empty || userId == Guid.Empty)
         {
@@ -189,6 +221,9 @@ public class CustomSkillService : ICustomSkillService
         {
             return Error.Unauthorized("No tenés acceso a este perfil de abogado.");
         }
+
+        if (!profile.IsVerifiedLawyer)
+            return Error.Unauthorized("Solo los abogados verificados pueden gestionar skills.");
 
         return null;
     }

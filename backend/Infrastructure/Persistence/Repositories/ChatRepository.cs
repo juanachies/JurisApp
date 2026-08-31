@@ -41,4 +41,7 @@ public class ChatRepository : IChatRepository
 
     public void Delete(Chat chat)
         => _context.Chats.Remove(chat);
+
+    public async Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        => await _context.Chats.CountAsync(c => c.UserId == userId, cancellationToken);
 }

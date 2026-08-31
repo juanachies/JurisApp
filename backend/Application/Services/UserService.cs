@@ -10,11 +10,16 @@ namespace JurisApp.Application.Services;
 public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
+    private readonly ILawyerProfileRepository _lawyerProfileRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public UserService(IUserRepository userRepository, IUnitOfWork unitOfWork)
+    public UserService(
+        IUserRepository userRepository,
+        ILawyerProfileRepository lawyerProfileRepository,
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
+        _lawyerProfileRepository = lawyerProfileRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -76,6 +81,16 @@ public class UserService : IUserService
         var user = await _userRepository.GetByIdAsync(targetUserId, cancellationToken);
         if (user is null)
             return Result<UserDto>.Failure(Error.NotFound("Usuario no encontrado."));
+
+        if (request.Role is UserRole.Lawyer)
+        {
+            var profile = await _lawyerProfileRepository.GetByUserIdAsync(targetUserId, cancellationToken);
+            if (profile is null || !profile.IsVerifiedLawyer)
+            {
+                return Result<UserDto>.Failure(Error.Validation(
+                    "No se puede asignar el rol de abogado sin un perfil verificado."));
+            }
+        }
 
         if (request.Role is not null)
             user.ChangeRole(request.Role.Value);

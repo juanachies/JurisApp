@@ -31,4 +31,13 @@ public class Plan : BaseEntity
         StripePriceId = priceId;
         Touch();
     }
+
+    public void Update(string name, PlanType type, decimal price, string limitsJson)
+    {
+        Name = name;
+        Type = type;
+        Price = price;
+        LimitsJson = limitsJson;
+        Touch();
+    }
 }

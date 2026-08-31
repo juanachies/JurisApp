@@ -9,6 +9,9 @@ public interface ILawyerProfileService
     Task<Result<LawyerProfileDto>> CreateVerificationRequestAsync(
         Guid userId,
         CreateLawyerProfileRequest request,
+        Stream? licenseDocument,
+        string? fileName,
+        string? contentType,
         CancellationToken cancellationToken = default);
 
     Task<Result<LawyerProfileDto>> UpdateAsync(

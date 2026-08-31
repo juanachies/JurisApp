@@ -7,6 +7,7 @@ public interface ICustomSkillRepository
     Task<CustomSkill?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CustomSkill>> GetByLawyerProfileIdAsync(Guid lawyerProfileId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CustomSkill>> GetAppliedByChatIdAsync(Guid chatId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomSkill>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default);
     Task<bool> IsAppliedToChatAsync(Guid chatId, Guid customSkillId, CancellationToken cancellationToken = default);
     Task ApplyToChatAsync(Guid chatId, Guid customSkillId, CancellationToken cancellationToken = default);
     Task RemoveFromChatAsync(Guid chatId, Guid customSkillId, CancellationToken cancellationToken = default);

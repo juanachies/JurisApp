@@ -10,4 +10,5 @@ public class CustomSkillDto
     public string Examples { get; set; } = string.Empty;
     public string RedFlags { get; set; } = string.Empty;
     public string OutputFormat { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
 }

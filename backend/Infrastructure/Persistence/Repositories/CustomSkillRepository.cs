@@ -23,9 +23,21 @@ public class CustomSkillRepository : ICustomSkillRepository
 
     public async Task<IReadOnlyList<CustomSkill>> GetAppliedByChatIdAsync(Guid chatId, CancellationToken cancellationToken = default)
         => await _context.ChatCustomSkills
-            .Where(cs => cs.ChatId == chatId)
+            .Where(cs => cs.ChatId == chatId && cs.CustomSkill.IsActive)
             .Select(cs => cs.CustomSkill)
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<CustomSkill>> GetByIdsAsync(
+        IReadOnlyCollection<Guid> ids,
+        CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0)
+            return Array.Empty<CustomSkill>();
+
+        return await _context.CustomSkills
+            .Where(s => ids.Contains(s.Id) && s.IsActive)
+            .ToListAsync(cancellationToken);
+    }
 
     public async Task<bool> IsAppliedToChatAsync(
         Guid chatId,

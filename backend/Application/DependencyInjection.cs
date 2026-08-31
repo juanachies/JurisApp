@@ -18,6 +18,8 @@ public static class DependencyInjection
         services.AddScoped<IAITaskService, AITaskService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IPlanService, PlanService>();
+        services.AddScoped<IPlanLimitService, PlanLimitService>();
+        services.AddScoped<IChatAuditService, ChatAuditService>();
 
         return services;
     }

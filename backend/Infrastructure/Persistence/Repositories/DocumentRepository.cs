@@ -37,4 +37,10 @@ public class DocumentRepository : IDocumentRepository
 
     public void Delete(Document document)
         => _context.Documents.Remove(document);
+
+    public async Task<int> CountOwnedByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        => await _context.Documents.CountAsync(
+            d => (d.Chat != null && d.Chat.UserId == userId)
+                 || (d.Folder != null && d.Folder.LawyerProfile.UserId == userId),
+            cancellationToken);
 }

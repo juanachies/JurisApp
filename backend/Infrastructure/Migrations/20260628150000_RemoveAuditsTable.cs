@@ -1,10 +1,13 @@
+using JurisApp.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace Infrastructure.Migrations
 {
-    /// <inheritdoc />
+    [DbContext(typeof(AppDbContext))]
+    [Migration("20260628150000_RemoveAuditsTable")]
     public partial class RemoveAuditsTable : Migration
     {
         /// <inheritdoc />

@@ -10,4 +10,5 @@ public interface IChatRepository
     Task AddAsync(Chat chat, CancellationToken cancellationToken = default);
     void Update(Chat chat);
     void Delete(Chat chat);
+    Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 }

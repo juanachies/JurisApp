@@ -100,32 +100,32 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-var claudeOpts = builder.Configuration.GetSection(ClaudeOptions.SectionName).Get<ClaudeOptions>()
-    ?? new ClaudeOptions();
+var deepSeekOpts = builder.Configuration.GetSection(DeepSeekOptions.SectionName).Get<DeepSeekOptions>()
+    ?? new DeepSeekOptions();
 if (builder.Configuration.GetValue<bool>("AI:UseMock"))
-    claudeOpts.Enabled = false;
+    deepSeekOpts.Enabled = false;
 
-if (claudeOpts.Enabled && string.IsNullOrWhiteSpace(claudeOpts.ApiKey))
+if (deepSeekOpts.Enabled && string.IsNullOrWhiteSpace(deepSeekOpts.ApiKey))
 {
     app.Logger.LogWarning(
-        "AI:Claude:Enabled=true pero falta AI:Claude:ApiKey. Se usará respuesta simulada.");
+        "AI:DeepSeek:Enabled=true pero falta AI:DeepSeek:ApiKey. Se usará respuesta simulada.");
 }
-else if (!claudeOpts.Enabled)
+else if (!deepSeekOpts.Enabled)
 {
-    app.Logger.LogInformation("Claude deshabilitado. Modo desarrollo activo en AIService.");
+    app.Logger.LogInformation("DeepSeek deshabilitado. Modo desarrollo activo en AIService.");
 }
 else
 {
     app.Logger.LogInformation(
-        "Claude configurado → BaseUrl: {BaseUrl}, Model: {Model}",
-        string.IsNullOrWhiteSpace(claudeOpts.BaseUrl) ? "https://api.anthropic.com" : claudeOpts.BaseUrl,
-        string.IsNullOrWhiteSpace(claudeOpts.Model) ? "claude-3-5-sonnet-20241022" : claudeOpts.Model);
+        "DeepSeek configurado → BaseUrl: {BaseUrl}, Model: {Model}",
+        string.IsNullOrWhiteSpace(deepSeekOpts.BaseUrl) ? "https://api.deepseek.com" : deepSeekOpts.BaseUrl,
+        string.IsNullOrWhiteSpace(deepSeekOpts.Model) ? "deepseek-v4-pro" : deepSeekOpts.Model);
 }
 
 if (builder.Configuration.GetValue<bool>("Stripe:UseMock"))
     app.Logger.LogInformation("Stripe mock mode enabled. Use POST /api/billing/simulate-purchase to test subscriptions.");
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -139,7 +139,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsEnvironment("Testing"))
+    app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseCors("Frontend");
 app.UseAuthentication();
@@ -156,3 +157,5 @@ app.Use(async (context, next) =>
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

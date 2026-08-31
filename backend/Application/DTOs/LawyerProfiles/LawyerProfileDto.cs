@@ -15,4 +15,5 @@ public class LawyerProfileDto
     public string? RejectionReason { get; set; }
     public DateTime? VerifiedAt { get; set; }
     public DateTime? ResolvedAt { get; set; }
+    public string? LicenseDocumentUrl { get; set; }
 }

@@ -17,7 +17,7 @@ JurisApp es una plataforma SaaS orientada a profesionales del derecho en Argenti
 
 ### Integraciones
 
-* Claude AI
+* DeepSeek AI
 * Stripe
 
 ## Arquitectura
@@ -91,8 +91,8 @@ Variables requeridas:
 ```text
 ConnectionStrings__DefaultConnection
 Jwt__Secret
-AI__Claude__ApiKey
-AI__Claude__Model
+AI__DeepSeek__ApiKey
+AI__DeepSeek__Model
 ```
 
 ## Autenticación
@@ -146,8 +146,8 @@ Variables requeridas en Azure:
 ASPNETCORE_ENVIRONMENT
 ConnectionStrings__DefaultConnection
 Jwt__Secret
-AI__Claude__ApiKey
-AI__Claude__Model
+AI__DeepSeek__ApiKey
+AI__DeepSeek__Model
 ```
 
 ## Seguridad

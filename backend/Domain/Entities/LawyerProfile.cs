@@ -16,6 +16,7 @@ public class LawyerProfile : BaseEntity
     public LawyerVerificationStatus VerificationStatus { get; private set; }
     public string? RejectionReason { get; private set; }
     public DateTime? ResolvedAt { get; private set; }
+    public string? LicenseDocumentUrl { get; private set; }
 
     public User User { get; private set; } = null!;
     public ICollection<Folder> Folders { get; private set; } = new List<Folder>();
@@ -38,6 +39,12 @@ public class LawyerProfile : BaseEntity
         Province = province;
         Specialty = specialty;
         VerificationStatus = LawyerVerificationStatus.Pending;
+    }
+
+    public void SetLicenseDocumentUrl(string url)
+    {
+        LicenseDocumentUrl = url;
+        Touch();
     }
 
     public void Verify(Guid verifiedById)
