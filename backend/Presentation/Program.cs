@@ -100,26 +100,26 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-var deepSeekOpts = builder.Configuration.GetSection(DeepSeekOptions.SectionName).Get<DeepSeekOptions>()
-    ?? new DeepSeekOptions();
+var openAiOpts = builder.Configuration.GetSection(OpenAIOptions.SectionName).Get<OpenAIOptions>()
+    ?? new OpenAIOptions();
 if (builder.Configuration.GetValue<bool>("AI:UseMock"))
-    deepSeekOpts.Enabled = false;
+    openAiOpts.Enabled = false;
 
-if (deepSeekOpts.Enabled && string.IsNullOrWhiteSpace(deepSeekOpts.ApiKey))
+if (openAiOpts.Enabled && string.IsNullOrWhiteSpace(openAiOpts.ApiKey))
 {
     app.Logger.LogWarning(
-        "AI:DeepSeek:Enabled=true pero falta AI:DeepSeek:ApiKey. Se usará respuesta simulada.");
+        "AI:OpenAI:Enabled=true pero falta AI:OpenAI:ApiKey. Se usará respuesta simulada.");
 }
-else if (!deepSeekOpts.Enabled)
+else if (!openAiOpts.Enabled)
 {
-    app.Logger.LogInformation("DeepSeek deshabilitado. Modo desarrollo activo en AIService.");
+    app.Logger.LogInformation("OpenAI deshabilitado. Modo desarrollo activo en AIService.");
 }
 else
 {
     app.Logger.LogInformation(
-        "DeepSeek configurado → BaseUrl: {BaseUrl}, Model: {Model}",
-        string.IsNullOrWhiteSpace(deepSeekOpts.BaseUrl) ? "https://api.deepseek.com" : deepSeekOpts.BaseUrl,
-        string.IsNullOrWhiteSpace(deepSeekOpts.Model) ? "deepseek-v4-pro" : deepSeekOpts.Model);
+        "OpenAI configurado → BaseUrl: {BaseUrl}, Model: {Model}",
+        string.IsNullOrWhiteSpace(openAiOpts.BaseUrl) ? "https://api.openai.com/v1" : openAiOpts.BaseUrl,
+        string.IsNullOrWhiteSpace(openAiOpts.Model) ? "gpt-4o" : openAiOpts.Model);
 }
 
 if (builder.Configuration.GetValue<bool>("Stripe:UseMock"))

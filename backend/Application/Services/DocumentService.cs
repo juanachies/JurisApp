@@ -158,6 +158,7 @@ public class DocumentService : IDocumentService
                 documentText,
                 promptType,
                 skills,
+                (await _lawyerProfileRepository.GetByUserIdAsync(userId, cancellationToken))?.Province,
                 cancellationToken);
         }
         catch (AIServiceException ex)

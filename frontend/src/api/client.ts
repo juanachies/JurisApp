@@ -69,22 +69,33 @@ export async function apiClient<T>(path: string, options: RequestOptions = {}): 
     body,
   })
 
-  if (res.status === 401) {
-    unauthorizedHandler?.()
-    throw new ApiError('Tu sesión venció. Volvé a iniciar sesión.', 401, 'Unauthorized')
+  const text = await res.text()
+  let data: unknown
+  if (text) {
+    try {
+      data = JSON.parse(text) as unknown
+    } catch {
+      data = undefined
+    }
   }
 
-  const text = await res.text()
-  const data = text ? (JSON.parse(text) as unknown) : undefined
+  const err = data as ApiErrorBody | undefined
+  const parsedMessage = readErrorMessage(data)
+
+  if (res.status === 401) {
+    if (err?.code === 'Unauthorized' && parsedMessage) {
+      throw new ApiError(parsedMessage, 401, err.code, data)
+    }
+    unauthorizedHandler?.()
+    throw new ApiError('Tu sesión venció. Volvé a iniciar sesión.', 401, 'Unauthorized', data)
+  }
 
   if (!res.ok) {
-    const err = data as ApiErrorBody | undefined
-    throw new ApiError(
-      err?.message || 'No pudimos completar la operación. Reintentá o volvé a intentarlo más tarde.',
-      res.status,
-      err?.code,
-      data,
-    )
+    const fallback =
+      res.status === 403
+        ? 'No tenés permiso para esta acción. Si te verificaron como abogado recién, cerrá sesión y volvé a entrar para renovar el acceso.'
+        : 'No pudimos completar la operación. Reintentá o volvé a intentarlo más tarde.'
+    throw new ApiError(parsedMessage || fallback, res.status, err?.code, data)
   }
 
   return data as T
@@ -98,4 +109,19 @@ export function errorMessage(error: unknown, fallback = 'No pudimos completar la
   if (isApiError(error)) return error.message
   if (error instanceof Error && error.message) return error.message
   return fallback
+}
+
+function readErrorMessage(data: unknown): string | undefined {
+  if (!data || typeof data !== 'object') return undefined
+  const body = data as Record<string, unknown>
+  if (typeof body.message === 'string' && body.message.trim()) return body.message
+  if (typeof body.title === 'string' && body.title.trim()) return body.title
+  const errors = body.errors
+  if (errors && typeof errors === 'object') {
+    for (const value of Object.values(errors as Record<string, unknown>)) {
+      if (typeof value === 'string' && value.trim()) return value
+      if (Array.isArray(value) && typeof value[0] === 'string' && value[0].trim()) return value[0]
+    }
+  }
+  return undefined
 }

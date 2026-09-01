@@ -99,25 +99,25 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddOptions<DeepSeekOptions>()
-            .Bind(configuration.GetSection(DeepSeekOptions.SectionName))
+        services.AddOptions<OpenAIOptions>()
+            .Bind(configuration.GetSection(OpenAIOptions.SectionName))
             .PostConfigure(options =>
             {
                 if (configuration.GetValue<bool>("AI:UseMock"))
                     options.Enabled = false;
 
                 if (string.IsNullOrWhiteSpace(options.BaseUrl))
-                    options.BaseUrl = "https://api.deepseek.com";
+                    options.BaseUrl = "https://api.openai.com/v1";
 
                 if (string.IsNullOrWhiteSpace(options.Model))
-                    options.Model = configuration["AI:Model"] ?? "deepseek-v4-pro";
+                    options.Model = configuration["AI:Model"] ?? "gpt-4o";
 
-                options.ApiKey ??= configuration["AI:DeepSeek:ApiKey"];
+                options.ApiKey ??= configuration["AI:OpenAI:ApiKey"];
             });
 
-        services.AddHttpClient<DeepSeekMessageClient>((sp, client) =>
+        services.AddHttpClient<OpenAIMessageClient>((sp, client) =>
         {
-            var options = sp.GetRequiredService<IOptions<DeepSeekOptions>>().Value;
+            var options = sp.GetRequiredService<IOptions<OpenAIOptions>>().Value;
             client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(Math.Max(30, options.HttpTimeoutSeconds));
 

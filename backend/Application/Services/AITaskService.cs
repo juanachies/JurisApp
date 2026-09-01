@@ -15,6 +15,7 @@ public class AITaskService : IAITaskService
     private readonly IAITaskRepository _aiTaskRepository;
     private readonly IMessageRepository _messageRepository;
     private readonly ICustomSkillRepository _customSkillRepository;
+    private readonly ILawyerProfileRepository _lawyerProfileRepository;
     private readonly IChatDocumentContextService _chatDocumentContextService;
     private readonly IAIService _aiService;
     private readonly IPlanLimitService _planLimitService;
@@ -27,6 +28,7 @@ public class AITaskService : IAITaskService
         IAITaskRepository aiTaskRepository,
         IMessageRepository messageRepository,
         ICustomSkillRepository customSkillRepository,
+        ILawyerProfileRepository lawyerProfileRepository,
         IChatDocumentContextService chatDocumentContextService,
         IAIService aiService,
         IPlanLimitService planLimitService,
@@ -38,6 +40,7 @@ public class AITaskService : IAITaskService
         _aiTaskRepository = aiTaskRepository;
         _messageRepository = messageRepository;
         _customSkillRepository = customSkillRepository;
+        _lawyerProfileRepository = lawyerProfileRepository;
         _chatDocumentContextService = chatDocumentContextService;
         _aiService = aiService;
         _planLimitService = planLimitService;
@@ -69,6 +72,7 @@ public class AITaskService : IAITaskService
         var skillNames = activeSkills.Select(s => s.Name).ToList();
         var previousMessages = await _messageRepository.GetByChatIdAsync(request.ChatId, cancellationToken);
         var chatDocuments = await _chatDocumentContextService.BuildForChatAsync(request.ChatId, cancellationToken);
+        var userProvince = (await _lawyerProfileRepository.GetByUserIdAsync(userId, cancellationToken))?.Province;
 
         var userMessage = new Message(
             Guid.NewGuid(),
@@ -87,6 +91,7 @@ public class AITaskService : IAITaskService
                 previousMessages,
                 activeSkills,
                 chatDocuments,
+                userProvince,
                 cancellationToken);
         }
         catch (AIServiceException ex)
@@ -344,6 +349,10 @@ public class AITaskService : IAITaskService
         var activeSkills = await _customSkillRepository.GetAppliedByChatIdAsync(task.ChatId, cancellationToken);
         var previousMessages = await _messageRepository.GetByChatIdAsync(task.ChatId, cancellationToken);
         var chatDocuments = await _chatDocumentContextService.BuildForChatAsync(task.ChatId, cancellationToken);
+        var chat = await _chatRepository.GetByIdAsync(task.ChatId, cancellationToken);
+        var userProvince = chat is null
+            ? null
+            : (await _lawyerProfileRepository.GetByUserIdAsync(chat.UserId, cancellationToken))?.Province;
 
         var completedSteps = task.Steps
             .Where(s => s.Status == AITaskStepStatus.Completed)
@@ -364,6 +373,7 @@ public class AITaskService : IAITaskService
                 previousMessages,
                 activeSkills,
                 chatDocuments,
+                userProvince,
                 cancellationToken);
 
             currentStep.MarkAsCompleted(stepResult);

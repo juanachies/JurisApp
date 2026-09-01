@@ -8,18 +8,24 @@ namespace JurisApp.Application.Services;
 
 public class ChatDocumentContextService : IChatDocumentContextService
 {
-    private const int MaxCharsPerDocument = 12_000;
-    private const int MaxTotalChars = 30_000;
+    private const int MaxCharsPerDocument = 24_000;
+    private const int MaxTotalChars = 60_000;
 
+    private readonly IChatRepository _chatRepository;
+    private readonly IFolderRepository _folderRepository;
     private readonly IDocumentRepository _documentRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly IDocumentTextExtractor _textExtractor;
 
     public ChatDocumentContextService(
+        IChatRepository chatRepository,
+        IFolderRepository folderRepository,
         IDocumentRepository documentRepository,
         IFileStorageService fileStorageService,
         IDocumentTextExtractor textExtractor)
     {
+        _chatRepository = chatRepository;
+        _folderRepository = folderRepository;
         _documentRepository = documentRepository;
         _fileStorageService = fileStorageService;
         _textExtractor = textExtractor;
@@ -29,12 +35,35 @@ public class ChatDocumentContextService : IChatDocumentContextService
         Guid chatId,
         CancellationToken cancellationToken = default)
     {
-        var documents = await _documentRepository.GetByChatIdAsync(chatId, cancellationToken);
-        if (documents.Count == 0)
+        var chat = await _chatRepository.GetByIdLightAsync(chatId, cancellationToken);
+        if (chat is null)
             return Array.Empty<ChatDocumentContext>();
+
+        var documents = (await _documentRepository.GetByChatIdAsync(chatId, cancellationToken)).ToList();
+
+        Folder? folder = null;
+        if (chat.FolderId is Guid folderId)
+        {
+            folder = await _folderRepository.GetByIdAsync(folderId, cancellationToken);
+            var folderDocuments = await _documentRepository.GetByFolderIdAsync(folderId, cancellationToken);
+            documents.AddRange(folderDocuments);
+        }
+
+        documents = documents
+            .DistinctBy(d => d.Id)
+            .ToList();
 
         var contexts = new List<ChatDocumentContext>();
         var totalChars = 0;
+
+        if (folder is not null && !string.IsNullOrWhiteSpace(folder.LegalContext))
+        {
+            AddContext(
+                contexts,
+                ref totalChars,
+                $"Contexto del caso: {folder.Name}",
+                folder.LegalContext);
+        }
 
         foreach (var document in documents)
         {
@@ -48,37 +77,78 @@ public class ChatDocumentContextService : IChatDocumentContextService
             }
             catch
             {
-                continue;
+                content = $"[No se pudo leer el archivo «{document.Title}».]";
             }
 
             if (string.IsNullOrWhiteSpace(content))
-                continue;
+                content = $"[El archivo «{document.Title}» no tiene texto extraíble.]";
 
-            var remaining = MaxTotalChars - totalChars;
-            var maxForDoc = Math.Min(MaxCharsPerDocument, remaining);
-            if (content.Length > maxForDoc)
-                content = content[..maxForDoc] + "\n[... contenido truncado ...]";
-
-            totalChars += content.Length;
-            contexts.Add(new ChatDocumentContext
-            {
-                Title = document.Title,
-                Content = content
-            });
+            var origin = document.FolderId.HasValue ? "Documento del caso" : "Documento del chat";
+            AddContext(contexts, ref totalChars, $"{origin}: {document.Title}", content);
         }
 
         return contexts;
+    }
+
+    private static void AddContext(
+        List<ChatDocumentContext> contexts,
+        ref int totalChars,
+        string title,
+        string content)
+    {
+        if (string.IsNullOrWhiteSpace(content) || totalChars >= MaxTotalChars)
+            return;
+
+        var remaining = MaxTotalChars - totalChars;
+        var maxForDoc = Math.Min(MaxCharsPerDocument, remaining);
+        if (maxForDoc <= 0)
+            return;
+
+        if (content.Length > maxForDoc)
+            content = content[..maxForDoc] + "\n[... contenido truncado ...]";
+
+        totalChars += content.Length;
+        contexts.Add(new ChatDocumentContext
+        {
+            Title = title,
+            Content = content
+        });
     }
 
     private async Task<string> BuildDocumentContentAsync(
         Document document,
         CancellationToken cancellationToken)
     {
-        if (document.Analysis is not null)
-            return FormatAnalysis(document.Analysis);
+        var extracted = await ExtractFileTextAsync(document, cancellationToken);
+        var analysis = document.Analysis is not null ? FormatAnalysis(document.Analysis) : null;
 
+        if (!string.IsNullOrWhiteSpace(extracted) && !string.IsNullOrWhiteSpace(analysis))
+            return extracted + "\n\n--- Análisis previo del documento ---\n" + analysis;
+
+        if (!string.IsNullOrWhiteSpace(extracted))
+            return extracted;
+
+        return analysis ?? string.Empty;
+    }
+
+    private async Task<string> ExtractFileTextAsync(
+        Document document,
+        CancellationToken cancellationToken)
+    {
         await using var stream = await _fileStorageService.OpenReadAsync(document.Url, cancellationToken);
-        return await _textExtractor.ExtractTextAsync(document.Title, stream, cancellationToken);
+        return await _textExtractor.ExtractTextAsync(
+            FileNameForExtraction(document),
+            stream,
+            cancellationToken);
+    }
+
+    private static string FileNameForExtraction(Document document)
+    {
+        var fromUrl = Path.GetFileName(document.Url);
+        if (!string.IsNullOrEmpty(Path.GetExtension(fromUrl)))
+            return fromUrl;
+
+        return document.Title;
     }
 
     private static string FormatAnalysis(DocumentAnalysis analysis)

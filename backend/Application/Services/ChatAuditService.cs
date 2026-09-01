@@ -7,7 +7,7 @@ namespace JurisApp.Application.Services;
 
 public class ChatAuditService : IChatAuditService
 {
-    public const string PromptVersion = "jurisapp-v1";
+    public const string PromptVersion = "jurisapp-ar-const-v2";
 
     private readonly IChatAuditRepository _chatAuditRepository;
     private readonly IConfiguration _configuration;
@@ -38,8 +38,8 @@ public class ChatAuditService : IChatAuditService
 
     private string ResolveModel()
     {
-        var configured = _configuration["AI:DeepSeek:Model"];
-        return string.IsNullOrWhiteSpace(configured) ? "deepseek-v4-pro" : configured;
+        var configured = _configuration["AI:OpenAI:Model"];
+        return string.IsNullOrWhiteSpace(configured) ? "gpt-4o" : configured;
     }
 
     private bool UseMock()

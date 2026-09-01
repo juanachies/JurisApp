@@ -140,6 +140,11 @@ export function ChatWorkspacePage() {
     queryFn: () => documentsApi.listByChat(chatId!),
     enabled: Boolean(chatId),
   })
+  const folderDocsQuery = useQuery({
+    queryKey: queryKeys.folderDocuments(chatQuery.data?.folderId ?? ''),
+    queryFn: () => documentsApi.listByFolder(chatQuery.data!.folderId!),
+    enabled: Boolean(chatQuery.data?.folderId),
+  })
   const tasksQuery = useQuery({
     queryKey: queryKeys.chatTasks(chatId ?? ''),
     queryFn: () => tasksApi.listByChat(chatId!),
@@ -164,6 +169,8 @@ export function ChatWorkspacePage() {
 
   const chat = chatQuery.data
   const folder = foldersQuery.data?.find((f) => f.id === chat?.folderId)
+  const chatDocuments = docsQuery.data ?? []
+  const caseDocuments = folderDocsQuery.data ?? []
   const running = tasksQuery.data?.some((t) => t.status === 'InProgress')
 
   useEffect(() => {
@@ -246,17 +253,38 @@ export function ChatWorkspacePage() {
       <div>
         <p className="text-[11px] uppercase tracking-wide text-faint">Caso</p>
         {folder ? (
-          <Link to={`/app/cases/${folder.id}`} className="mt-1 block font-medium text-blue-600 hover:underline">
-            {folder.name}
-          </Link>
+          <>
+            <Link to={`/app/cases/${folder.id}`} className="mt-1 block font-medium text-blue-600 hover:underline">
+              {folder.name}
+            </Link>
+            {folder.legalContext ? (
+              <p className="mt-1 text-[12px] text-muted">{folder.legalContext}</p>
+            ) : null}
+          </>
         ) : (
           <p className="mt-1 text-muted">Sin caso asociado</p>
         )}
       </div>
       <div>
-        <p className="text-[11px] uppercase tracking-wide text-faint">Documentos</p>
+        <p className="text-[11px] uppercase tracking-wide text-faint">Documentos del caso</p>
+        {caseDocuments.length === 0 ? (
+          <p className="mt-1 text-muted">{folder ? 'Ninguno en este caso' : 'Este chat no está en un caso'}</p>
+        ) : (
+          <ul className="mt-1 space-y-1">
+            {caseDocuments.map((doc) => (
+              <li key={doc.id}>
+                <Link to={`/app/documents/${doc.id}`} className="hover:underline">
+                  {doc.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div>
+        <p className="text-[11px] uppercase tracking-wide text-faint">Documentos de este chat</p>
         <ul className="mt-1 space-y-1">
-          {(docsQuery.data ?? []).map((doc) => (
+          {chatDocuments.map((doc) => (
             <li key={doc.id}>
               <Link to={`/app/documents/${doc.id}`} className="hover:underline">
                 {doc.title}
@@ -264,9 +292,9 @@ export function ChatWorkspacePage() {
             </li>
           ))}
         </ul>
-        {(docsQuery.data ?? []).length === 0 ? <p className="mt-1 text-muted">Ninguno</p> : null}
+        {chatDocuments.length === 0 ? <p className="mt-1 text-muted">Ninguno</p> : null}
         <Button size="sm" variant="ghost" className="mt-2 px-0" onClick={() => setUploadOpen(true)}>
-          + Adjuntar
+          + Adjuntar a este chat
         </Button>
       </div>
       <div>
@@ -385,6 +413,11 @@ export function ChatWorkspacePage() {
         <div className="border-t border-border bg-surface px-4 py-3 lg:px-8">
           <div className="mx-auto max-w-3xl">
             {sendError ? <Alert className="mb-2">{sendError}</Alert> : null}
+            {folder && caseDocuments.length > 0 ? (
+              <p className="mb-2 text-[12px] text-muted">
+                JurisApp usa el contexto del caso y {caseDocuments.length === 1 ? 'el documento adjunto' : `los ${caseDocuments.length} documentos`} al responder.
+              </p>
+            ) : null}
             {taskMode ? (
               <p className="mb-2 text-[12px] font-medium text-blue-600">
                 Modo tarea — describí el objetivo. JurisApp va a proponer un plan antes de ejecutarlo.

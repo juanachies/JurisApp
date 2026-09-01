@@ -117,6 +117,8 @@ public class ChatService : IChatService
 
         var previousMessages = await _messageRepository.GetByChatIdAsync(chatId, cancellationToken);
         var chatDocuments = await _chatDocumentContextService.BuildForChatAsync(chatId, cancellationToken);
+        var lawyerProfile = await _lawyerProfileRepository.GetByUserIdAsync(userId, cancellationToken);
+        var userProvince = lawyerProfile?.Province;
 
         var userMessage = new Message(
             Guid.NewGuid(),
@@ -136,6 +138,7 @@ public class ChatService : IChatService
                 previousMessages,
                 activeSkills,
                 chatDocuments,
+                userProvince,
                 cancellationToken);
         }
         catch (AIServiceException ex)

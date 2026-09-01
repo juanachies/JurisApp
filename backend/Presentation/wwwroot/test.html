@@ -286,8 +286,8 @@
       </section>
 
       <section>
-        <h2>Chats (consultas con DeepSeek)</h2>
-        <p class="chat-hint">Creá un chat, escribí tu consulta y enviá. La respuesta viene de DeepSeek vía la API.</p>
+        <h2>Chats (consultas con ChatGPT)</h2>
+        <p class="chat-hint">Creá un chat, escribí tu consulta y enviá. La respuesta viene de OpenAI (gpt-4o) vía la API, con derecho argentino y la Constitución Nacional.</p>
         <input id="chatTitle" placeholder="Título del chat" value="Consulta laboral">
         <button type="button" onclick="createChat()">Crear chat</button>
         <button type="button" onclick="listChats()">Listar chats</button>
@@ -339,7 +339,7 @@
             <button type="button" id="chatSendBtn" onclick="handleChatSend()">Enviar mensaje</button>
             <button type="button" onclick="deleteChat()">Eliminar chat</button>
           </div>
-          <p class="chat-hint" id="chatModeHint">Modo normal: respuesta directa de DeepSeek. Modo Tarea IA: genera un plan de trabajo paso a paso.</p>
+          <p class="chat-hint" id="chatModeHint">Modo normal: respuesta directa de ChatGPT. Modo Tarea IA: genera un plan de trabajo paso a paso.</p>
         </div>
       </section>
 
@@ -720,7 +720,7 @@
       const sorted = [...messages].sort((a, b) => new Date(a.date) - new Date(b.date));
       el.innerHTML = sorted.map(m => {
         const role = (m.role || "").toLowerCase();
-        const label = role === "user" ? "Vos" : role === "assistant" ? "JurisApp (DeepSeek)" : m.role;
+        const label = role === "user" ? "Vos" : role === "assistant" ? "JurisApp (ChatGPT)" : m.role;
         const msgId = m.id || m.Id;
         const skillsUsed = m.skillsUsed || m.SkillsUsed || messageSkillsDebug[msgId];
         const debugHtml = skillsUsed?.length
@@ -753,7 +753,7 @@
           if (res.status === 401) hint = "No autorizado. Hacé Login.";
           if (res.status === 403) hint = "Sin permiso para esta acción.";
           if (res.status === 404) hint = "No encontrado. ¿Reiniciaste dotnet run después de los cambios?";
-          if (res.status === 500) hint = "Error del servidor. Revisá logs de dotnet run (ej. API key DeepSeek).";
+          if (res.status === 500) hint = "Error del servidor. Revisá logs de dotnet run (ej. API key de OpenAI).";
           show(action, data, res.status, hint, true);
           setStatus(`${action} — error ${res.status}`);
           return { ok: false, status: res.status, data };
@@ -1065,7 +1065,7 @@
         textarea.placeholder = "Describí el encargo legal completo (caso, documentación, objetivos)...";
       } else {
         btn.textContent = "Enviar mensaje";
-        hint.textContent = "Modo normal: respuesta directa de DeepSeek. Ctrl+Enter para enviar.";
+        hint.textContent = "Modo normal: respuesta directa de ChatGPT. Ctrl+Enter para enviar.";
         textarea.placeholder = "Escribí tu consulta legal aquí...";
       }
     }
@@ -1098,7 +1098,7 @@
       if (!chatId) { showLocal("Enviar mensaje", "Creá o cargá un chat primero.", true); return; }
       if (!content) { showLocal("Enviar mensaje", "Escribí un mensaje.", true); return; }
 
-      const result = await api("Enviar mensaje (DeepSeek)", "/api/chats/" + chatId + "/messages", {
+      const result = await api("Enviar mensaje (ChatGPT)", "/api/chats/" + chatId + "/messages", {
         method: "POST",
         body: JSON.stringify({ content })
       });
@@ -1525,7 +1525,7 @@
     (function init() {
       updateChatModeUi();
       const token = getToken();
-      setStatus(token ? "Token cargado. Probá el módulo de autenticación o chateá con DeepSeek." : "Sin token. Registrate o hacé login primero.");
+      setStatus(token ? "Token cargado. Probá el módulo de autenticación o chateá con ChatGPT." : "Sin token. Registrate o hacé login primero.");
       if (token) document.getElementById("tokenDisplay").textContent = token.substring(0, 40) + "...";
       suggestEmail(true);
       if (token) getMe();

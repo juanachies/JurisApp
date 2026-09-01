@@ -26,6 +26,7 @@ public class DocumentRepository : IDocumentRepository
 
     public async Task<IReadOnlyList<Document>> GetByFolderIdAsync(Guid folderId, CancellationToken cancellationToken = default)
         => await _context.Documents
+            .Include(d => d.Analysis)
             .Where(d => d.FolderId == folderId)
             .ToListAsync(cancellationToken);
 

@@ -40,9 +40,25 @@ public class DocumentTextExtractor : IDocumentTextExtractor
         return await reader.ReadToEndAsync(cancellationToken);
     }
 
+    private static string ExtractDocxText(Stream stream)
+    {
+        using var seekable = EnsureSeekable(stream);
+        using var document = WordprocessingDocument.Open(seekable, false);
+        var body = document.MainDocumentPart?.Document.Body;
+        if (body is null)
+            return string.Empty;
+
+        var paragraphs = body.Descendants<Paragraph>()
+            .Select(p => string.Concat(p.Descendants<Text>().Select(t => t.Text)))
+            .Where(t => !string.IsNullOrWhiteSpace(t));
+
+        return string.Join(Environment.NewLine, paragraphs);
+    }
+
     private static string ExtractPdfText(Stream stream)
     {
-        using var pdf = PdfDocument.Open(stream);
+        using var seekable = EnsureSeekable(stream);
+        using var pdf = PdfDocument.Open(seekable);
         var builder = new StringBuilder();
 
         foreach (var page in pdf.GetPages())
@@ -57,15 +73,13 @@ public class DocumentTextExtractor : IDocumentTextExtractor
         return builder.ToString().Trim();
     }
 
-    private static string ExtractDocxText(Stream stream)
+    private static MemoryStream EnsureSeekable(Stream stream)
     {
-        using var document = WordprocessingDocument.Open(stream, false);
-        var body = document.MainDocumentPart?.Document.Body;
-        if (body is null)
-            return string.Empty;
-
-        return string.Join(
-            Environment.NewLine,
-            body.Descendants<Text>().Select(t => t.Text).Where(t => !string.IsNullOrWhiteSpace(t)));
+        var copy = new MemoryStream();
+        if (stream.CanSeek)
+            stream.Position = 0;
+        stream.CopyTo(copy);
+        copy.Position = 0;
+        return copy;
     }
 }

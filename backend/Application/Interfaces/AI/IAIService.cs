@@ -11,12 +11,14 @@ public interface IAIService
         IReadOnlyList<Message> previousMessages,
         IReadOnlyList<CustomSkill> activeSkills,
         IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
+        string? userProvince = null,
         CancellationToken cancellationToken = default);
 
     Task<DocumentAnalysisResult> AnalyzeDocumentAsync(
         string documentText,
         DocumentAnalysisType analysisType,
         IReadOnlyList<CustomSkill> activeSkills,
+        string? userProvince = null,
         CancellationToken cancellationToken = default);
 
     Task<StructuredTaskPlan> CreateStructuredTaskPlanAsync(
@@ -24,6 +26,7 @@ public interface IAIService
         IReadOnlyList<Message> previousMessages,
         IReadOnlyList<CustomSkill> activeSkills,
         IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
+        string? userProvince = null,
         CancellationToken cancellationToken = default);
 
     Task<string> ExecuteTaskStepAsync(
@@ -33,5 +36,6 @@ public interface IAIService
         IReadOnlyList<Message> previousMessages,
         IReadOnlyList<CustomSkill> activeSkills,
         IReadOnlyList<ChatDocumentContext>? chatDocuments = null,
+        string? userProvince = null,
         CancellationToken cancellationToken = default);
 }

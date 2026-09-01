@@ -87,7 +87,47 @@ public class DocumentTests : IClassFixture<JurisAppApiFactory>
         Assert.NotEqual(profileId, Guid.Empty);
     }
 
-    private static MultipartFormDataContent BuildFileContent(Guid? chatId, Guid? folderId)
+    [Fact]
+    public async Task Chat_in_folder_includes_case_document_in_ai_context()
+    {
+        using var client = _factory.CreateClient();
+        await _factory.BecomeVerifiedLawyerAsync(client);
+
+        var folder = await client.PostAsJsonAsync("/api/folders", new
+        {
+            name = "Locación comercial",
+            legalContext = "Alquiler de local. Agosto quedó impago."
+        });
+        var folderId = (await folder.Content.ReadFromJsonAsync<JsonElement>(ApiClient.Json)).GetProperty("id").GetGuid();
+
+        using var file = BuildFileContent(null, folderId, "Alquiler agosto $180000. Impago $45000.");
+        var uploaded = await client.PostAsync("/api/documents/upload", file);
+        Assert.Equal(HttpStatusCode.OK, uploaded.StatusCode);
+
+        var chat = await client.PostAsJsonAsync("/api/chats", new
+        {
+            title = "Consulta del caso",
+            folderId
+        });
+        Assert.Equal(HttpStatusCode.OK, chat.StatusCode);
+        var chatId = (await chat.Content.ReadFromJsonAsync<JsonElement>(ApiClient.Json)).GetProperty("id").GetGuid();
+
+        var sent = await client.PostAsJsonAsync($"/api/chats/{chatId}/messages", new
+        {
+            content = "¿Cuánto quedó impago del alquiler de agosto?"
+        });
+        Assert.Equal(HttpStatusCode.OK, sent.StatusCode);
+        var reply = await sent.Content.ReadFromJsonAsync<JsonElement>(ApiClient.Json);
+        var content = reply.GetProperty("content").GetString() ?? string.Empty;
+        Assert.Contains("Documento del caso", content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("contrato.txt", content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Contexto del caso", content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static MultipartFormDataContent BuildFileContent(
+        Guid? chatId,
+        Guid? folderId,
+        string body = "Contrato de prueba para analisis.")
     {
         var content = new MultipartFormDataContent();
         if (chatId.HasValue)
@@ -95,7 +135,7 @@ public class DocumentTests : IClassFixture<JurisAppApiFactory>
         if (folderId.HasValue)
             content.Add(new StringContent(folderId.Value.ToString()), "folderId");
 
-        var file = new ByteArrayContent(Encoding.UTF8.GetBytes("Contrato de prueba para analisis."));
+        var file = new ByteArrayContent(Encoding.UTF8.GetBytes(body));
         file.Headers.ContentType = new MediaTypeHeaderValue("text/plain");
         content.Add(file, "file", "contrato.txt");
         return content;

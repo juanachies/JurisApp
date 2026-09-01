@@ -22,7 +22,7 @@ import { fullName, roleLabel } from '@/utils/format'
 type NavItem = { to: string; label: string; icon: typeof Home; end?: boolean }
 
 export function AppShell() {
-  const { user, canManageCases, isAdmin, logout } = useAuth()
+  const { user, canManageCases, isAdmin, logout, sessionNeedsRelogin } = useAuth()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
 
@@ -104,6 +104,22 @@ export function AppShell() {
           <Logo to="/app" />
         </header>
         <main className="min-w-0 flex-1">
+          {sessionNeedsRelogin ? (
+            <div className="border-b border-warning/20 bg-warning-bg px-5 py-3 text-[13px] text-warning">
+              Tu cuenta ya tiene un rol nuevo, pero esta sesión se abrió antes.{' '}
+              <button
+                type="button"
+                className="font-medium underline"
+                onClick={() => {
+                  logout()
+                  navigate('/login')
+                }}
+              >
+                Cerrar sesión y volver a entrar
+              </button>{' '}
+              para poder crear casos y usar el resto de funciones de abogado.
+            </div>
+          ) : null}
           <Outlet />
         </main>
       </div>

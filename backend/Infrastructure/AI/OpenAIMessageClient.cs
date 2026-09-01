@@ -6,16 +6,16 @@ using Microsoft.Extensions.Options;
 
 namespace JurisApp.Infrastructure.AI;
 
-public sealed class DeepSeekMessageClient
+public sealed class OpenAIMessageClient
 {
     private readonly HttpClient _httpClient;
-    private readonly DeepSeekOptions _options;
-    private readonly ILogger<DeepSeekMessageClient> _logger;
+    private readonly OpenAIOptions _options;
+    private readonly ILogger<OpenAIMessageClient> _logger;
 
-    public DeepSeekMessageClient(
+    public OpenAIMessageClient(
         HttpClient httpClient,
-        IOptions<DeepSeekOptions> options,
-        ILogger<DeepSeekMessageClient> logger)
+        IOptions<OpenAIOptions> options,
+        ILogger<OpenAIMessageClient> logger)
     {
         _httpClient = httpClient;
         _options = options.Value;
@@ -24,6 +24,9 @@ public sealed class DeepSeekMessageClient
 
     public bool IsLiveMode() =>
         _options.Enabled && !string.IsNullOrWhiteSpace(_options.ApiKey);
+
+    public string Model =>
+        string.IsNullOrWhiteSpace(_options.Model) ? "gpt-4o" : _options.Model;
 
     public async Task<string> SendAsync(
         string systemPrompt,
@@ -35,16 +38,15 @@ public sealed class DeepSeekMessageClient
 
         var body = new
         {
-            model = _options.Model,
+            model = Model,
             max_tokens = maxTokens ?? _options.MaxTokens,
-            thinking = new { type = "enabled" },
             messages = BuildMessages(systemPrompt, messages)
         };
 
         _logger.LogInformation(
-            "DeepSeek request → URL: {Url}, Model: {Model}",
+            "OpenAI request → URL: {Url}, Model: {Model}",
             requestUrl,
-            _options.Model);
+            Model);
 
         HttpResponseMessage response;
         try
@@ -53,12 +55,12 @@ public sealed class DeepSeekMessageClient
         }
         catch (Exception ex) when (ex is not AIServiceException)
         {
-            _logger.LogError(ex, "Error de red al llamar a DeepSeek en {Url}", requestUrl);
+            _logger.LogError(ex, "Error de red al llamar a OpenAI en {Url}", requestUrl);
 
             if (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested)
             {
                 throw new AIServiceException(
-                    "DeepSeek tardó demasiado en responder. Intentá de nuevo o reducí el tamaño del documento.",
+                    "OpenAI tardó demasiado en responder. Intentá de nuevo o reducí el tamaño del documento.",
                     ex);
             }
 
@@ -70,10 +72,10 @@ public sealed class DeepSeekMessageClient
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogError(
-                "DeepSeek error → Status: {StatusCode}, URL: {Url}, Model: {Model}, Body: {Body}",
+                "OpenAI error → Status: {StatusCode}, URL: {Url}, Model: {Model}, Body: {Body}",
                 (int)response.StatusCode,
                 requestUrl,
-                _options.Model,
+                Model,
                 responseBody);
 
             throw new AIServiceException(
@@ -91,7 +93,7 @@ public sealed class DeepSeekMessageClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Respuesta inesperada de DeepSeek: {Body}", responseBody);
+            _logger.LogError(ex, "Respuesta inesperada de OpenAI: {Body}", responseBody);
             throw new AIServiceException("La respuesta del servicio de IA no tiene el formato esperado.", ex);
         }
     }

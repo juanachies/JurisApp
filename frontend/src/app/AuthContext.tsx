@@ -13,7 +13,8 @@ import { getToken, onUnauthorized, setToken } from '@/api/client'
 import { queryKeys } from '@/api/queryKeys'
 import { ApiError } from '@/api/client'
 import type { AuthResponse, LawyerProfileDto, UserDto } from '@/types/api'
-import { canManageCases, isAdmin, isVerifiedLawyer } from '@/utils/permissions'
+import { canManageCases, isAdmin, isVerifiedLawyer, roleAllowsFolders } from '@/utils/permissions'
+import { readJwtRole } from '@/utils/jwt'
 
 type AuthContextValue = {
   user: UserDto | null
@@ -23,6 +24,7 @@ type AuthContextValue = {
   isAdmin: boolean
   isVerifiedLawyer: boolean
   canManageCases: boolean
+  sessionNeedsRelogin: boolean
   login: (email: string, password: string) => Promise<UserDto>
   register: (data: {
     firstName: string
@@ -125,6 +127,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const profile = user ? (profileQuery.data ?? null) : null
   const waitingMe = Boolean(token) && meQuery.isLoading
   const waitingProfile = Boolean(user) && profileQuery.isLoading
+  const jwtRole = readJwtRole(token)
+  const sessionNeedsRelogin = Boolean(
+    user && jwtRole && roleAllowsFolders(user.role) && !roleAllowsFolders(jwtRole),
+  )
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -135,13 +141,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin: isAdmin(user),
       isVerifiedLawyer: isVerifiedLawyer(user, profile),
       canManageCases: canManageCases(user, profile),
+      sessionNeedsRelogin,
       login,
       register,
       applyAuth,
       logout,
       refreshUser,
     }),
-    [user, profile, waitingMe, waitingProfile, login, register, applyAuth, logout, refreshUser],
+    [user, profile, waitingMe, waitingProfile, sessionNeedsRelogin, login, register, applyAuth, logout, refreshUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
