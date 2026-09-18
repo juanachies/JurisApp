@@ -14,6 +14,8 @@ namespace JurisApp.Application.Services;
 public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
+    private readonly IPlanRepository _planRepository;
+    private readonly ISubscriptionRepository _subscriptionRepository;
     private readonly IPasswordResetTokenRepository _passwordResetTokenRepository;
     private readonly IEmailVerificationTokenRepository _emailVerificationTokenRepository;
     private readonly IPasswordHasher _passwordHasher;
@@ -24,6 +26,8 @@ public class AuthService : IAuthService
 
     public AuthService(
         IUserRepository userRepository,
+        IPlanRepository planRepository,
+        ISubscriptionRepository subscriptionRepository,
         IPasswordResetTokenRepository passwordResetTokenRepository,
         IEmailVerificationTokenRepository emailVerificationTokenRepository,
         IPasswordHasher passwordHasher,
@@ -33,6 +37,8 @@ public class AuthService : IAuthService
         IConfiguration configuration)
     {
         _userRepository = userRepository;
+        _planRepository = planRepository;
+        _subscriptionRepository = subscriptionRepository;
         _passwordResetTokenRepository = passwordResetTokenRepository;
         _emailVerificationTokenRepository = emailVerificationTokenRepository;
         _passwordHasher = passwordHasher;
@@ -76,12 +82,30 @@ public class AuthService : IAuthService
         await _userRepository.AddAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await SendVerificationEmailAsync(user, cancellationToken);
+        var freePlan = await _planRepository.GetByTypeAsync(PlanType.Free, cancellationToken);
+        if (freePlan is not null)
+        {
+            var existingSubscription = await _subscriptionRepository.GetActiveByUserIdAsync(user.Id, cancellationToken);
+            if (existingSubscription is null)
+            {
+                var freeSubscription = new Subscription(
+                    Guid.NewGuid(),
+                    user.Id,
+                    freePlan.Id,
+                    DateTime.UtcNow);
+
+                await _subscriptionRepository.AddAsync(freeSubscription, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        var verificationCode = await SendVerificationEmailAsync(user, cancellationToken);
 
         return Result<AuthResponse>.Success(new AuthResponse
         {
             Token = _jwtTokenGenerator.GenerateToken(user),
-            User = user.ToDto()
+            User = user.ToDto(),
+            VerificationCode = verificationCode
         });
     }
 
@@ -222,7 +246,7 @@ public class AuthService : IAuthService
         return Result.Success();
     }
 
-    private async Task SendVerificationEmailAsync(User user, CancellationToken cancellationToken)
+    private async Task<string> SendVerificationEmailAsync(User user, CancellationToken cancellationToken)
     {
         await _emailVerificationTokenRepository.InvalidateAllForUserAsync(user.Id, cancellationToken);
 
@@ -243,5 +267,6 @@ public class AuthService : IAuthService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await _emailSender.SendEmailVerificationCodeAsync(user.Email, code, cancellationToken);
+        return code;
     }
 }

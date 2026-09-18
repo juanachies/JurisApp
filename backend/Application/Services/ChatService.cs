@@ -13,6 +13,7 @@ public class ChatService : IChatService
 {
     private readonly IUserRepository _userRepository;
     private readonly IChatRepository _chatRepository;
+    private readonly IAITaskRepository _aiTaskRepository;
     private readonly IMessageRepository _messageRepository;
     private readonly IFolderRepository _folderRepository;
     private readonly ILawyerProfileRepository _lawyerProfileRepository;
@@ -26,6 +27,7 @@ public class ChatService : IChatService
     public ChatService(
         IUserRepository userRepository,
         IChatRepository chatRepository,
+        IAITaskRepository aiTaskRepository,
         IMessageRepository messageRepository,
         IFolderRepository folderRepository,
         ILawyerProfileRepository lawyerProfileRepository,
@@ -38,6 +40,7 @@ public class ChatService : IChatService
     {
         _userRepository = userRepository;
         _chatRepository = chatRepository;
+        _aiTaskRepository = aiTaskRepository;
         _messageRepository = messageRepository;
         _folderRepository = folderRepository;
         _lawyerProfileRepository = lawyerProfileRepository;
@@ -110,6 +113,13 @@ public class ChatService : IChatService
         if (ownershipError is not null)
         {
             return Result<MessageDto>.Failure(ownershipError);
+        }
+
+        var tasks = await _aiTaskRepository.GetByChatIdWithStepsAsync(chatId, cancellationToken);
+        if (tasks.Any(task => task.Status == AITaskStatus.AwaitingApproval))
+        {
+            return Result<MessageDto>.Failure(
+                Error.Validation("Revisá, editá o cancelá el plan pendiente antes de enviar mensajes."));
         }
 
         var activeSkills = await _customSkillRepository.GetAppliedByChatIdAsync(chatId, cancellationToken);

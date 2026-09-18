@@ -34,6 +34,7 @@ export interface UserDto {
 export interface AuthResponse {
   token: string
   user: UserDto
+  verificationCode?: string
 }
 
 export interface RegisterRequest {
@@ -303,6 +304,8 @@ export interface PlanDto {
   type: PlanType
   price: number
   limitsJson: string
+  stripeProductId?: string | null
+  stripePriceId?: string | null
 }
 
 export interface CurrentPlanDto {
@@ -330,6 +333,8 @@ export interface CreatePlanRequest {
   type: PlanType
   price: number
   limitsJson: string
+  stripeProductId?: string
+  stripePriceId?: string
 }
 
 export interface UpdatePlanRequest {
@@ -337,6 +342,8 @@ export interface UpdatePlanRequest {
   type: PlanType
   price: number
   limitsJson: string
+  stripeProductId?: string
+  stripePriceId?: string
 }
 
 export interface CreateCheckoutSessionRequest {

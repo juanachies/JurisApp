@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.IdentityModel.Tokens.Jwt;
+using DotNetEnv;
 using JurisApp.Application;
 using JurisApp.Infrastructure;
 using JurisApp.Infrastructure.AI;
@@ -10,6 +11,42 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+
+string? FindEnvFile()
+{
+    var directories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    foreach (var directory in new[]
+             {
+                 Directory.GetCurrentDirectory(),
+                 AppContext.BaseDirectory
+             })
+    {
+        directories.Add(directory);
+
+        var current = new DirectoryInfo(directory);
+        for (var i = 0; i < 10 && current is not null; i++)
+        {
+            directories.Add(current.FullName);
+            current = current.Parent;
+        }
+    }
+
+    foreach (var directory in directories)
+    {
+        var envPath = Path.Combine(directory, ".env");
+        if (File.Exists(envPath))
+            return envPath;
+    }
+
+    return null;
+}
+
+var envPath = FindEnvFile();
+if (!string.IsNullOrWhiteSpace(envPath))
+{
+    Env.Load(envPath);
+}
 
 var builder = WebApplication.CreateBuilder(args);
 

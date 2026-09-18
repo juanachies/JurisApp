@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { cn } from '@/utils/cn'
+import logoImage from '@/assets/logo.png' 
 
 export function Logo({
   to = '/',
@@ -12,16 +13,14 @@ export function Logo({
 }) {
   return (
     <Link to={to} className={cn('inline-flex items-center gap-2 font-semibold tracking-tight', className)}>
-      <span
-        className={cn(
-          'flex size-7 items-center justify-center rounded-[7px] text-[11px] font-semibold',
-          light ? 'bg-white/12 text-white' : 'bg-navy-900 text-white',
-        )}
-        aria-hidden
-      >
-        J
+      <img
+        src={logoImage}
+        alt="Logo de JurisApp"
+        className={cn('size-7 object-contain', light && 'brightness-0 invert')} 
+      />
+      <span className={cn('text-[16px]', light ? 'text-white' : 'text-navy-900')}>
+        JurisApp
       </span>
-      <span className={cn('text-[16px]', light ? 'text-white' : 'text-navy-900')}>JurisApp</span>
     </Link>
   )
 }

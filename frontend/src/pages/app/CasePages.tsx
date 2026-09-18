@@ -15,8 +15,6 @@ import { Button } from '@/components/ui/Button'
 import { ConfirmDialog, Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Input } from '@/components/ui/Input'
-import { PageHeader } from '@/components/ui/PageHeader'
-import { Table, TBody, Td, Th, THead, Tr } from '@/components/ui/Table'
 import { TableSkeleton } from '@/components/ui/Loading'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
@@ -54,50 +52,90 @@ export function CasesPage() {
   })
 
   return (
-    <AppPage>
-      <PageHeader
-        title="Casos"
-        description="Organizá documentos y conversaciones por asunto."
-        actions={<Button onClick={() => setCreateOpen(true)}>Nuevo caso</Button>}
-      />
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Buscar casos"
-        className="mb-4 h-10 w-full max-w-md rounded-[8px] border border-border-strong bg-surface px-3 text-[14px]"
-      />
-      {foldersQuery.isLoading ? <TableSkeleton /> : null}
-      {foldersQuery.isError ? (
-        <QueryError message="No pudimos cargar tus casos." onRetry={() => foldersQuery.refetch()} />
-      ) : null}
-      {!foldersQuery.isLoading && folders.length === 0 ? (
-        <EmptyState
-          title="Todavía no creaste ningún caso."
-          description="Agrupá documentos y conversaciones relacionadas en un mismo espacio."
-          action={{ label: 'Nuevo caso', onClick: () => setCreateOpen(true) }}
-        />
-      ) : !foldersQuery.isLoading ? (
-        <Table>
-          <THead>
-            <tr>
-              <Th>Caso</Th>
-              <Th>Descripción</Th>
-              <Th>Chats</Th>
-              <Th></Th>
-            </tr>
-          </THead>
-          <TBody>
+    <AppPage wide>
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">Workspace</p>
+            <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.04em] text-ink">Casos</h1>
+          </div>
+
+          <Button onClick={() => setCreateOpen(true)} className="bg-navy-900 text-white hover:bg-navy-800">
+            Nuevo caso
+          </Button>
+        </div>
+
+        <div className="mb-6">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar casos"
+            className="h-10 w-full max-w-md rounded-[10px] border border-border bg-surface px-3 text-[14px] text-ink outline-none transition focus:border-blue-500"
+          />
+        </div>
+
+        {foldersQuery.isLoading ? <TableSkeleton /> : null}
+        {foldersQuery.isError ? (
+          <QueryError message="No pudimos cargar tus casos." onRetry={() => foldersQuery.refetch()} />
+        ) : null}
+
+        {!foldersQuery.isLoading && folders.length === 0 ? (
+          <EmptyState
+            title="Todavía no creaste ningún caso."
+            description="Agrupá documentos y conversaciones relacionadas en un mismo espacio."
+            action={{ label: 'Nuevo caso', onClick: () => setCreateOpen(true) }}
+          />
+        ) : !foldersQuery.isLoading ? (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="group flex min-h-[170px] flex-col justify-between rounded-[18px] border border-dashed border-border-strong bg-surface p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-500 hover:bg-blue-50/40"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex h-12 w-12 items-center justify-center rounded-[12px] border border-border bg-subtle text-blue-600">
+                  <span className="text-[22px] leading-none">+</span>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[15px] font-semibold text-ink">Nuevo caso</p>
+                <p className="mt-1 text-[12px] text-muted">Crear un espacio nuevo</p>
+              </div>
+            </button>
+
             {folders.map((folder) => {
               const chatCount = (chatsQuery.data ?? []).filter((c) => c.folderId === folder.id).length
+
               return (
-                <Tr key={folder.id} onClick={() => navigate(`/app/cases/${folder.id}`)}>
-                  <Td className="font-medium">{folder.name}</Td>
-                  <Td className="max-w-sm truncate text-muted">{folder.legalContext || '—'}</Td>
-                  <Td>{chatCount}</Td>
-                  <Td>
+                <div key={folder.id} className="group rounded-[18px] border border-border bg-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-500 hover:shadow-md">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-[12px] bg-sky-100 text-blue-700">
+                      <span className="text-[20px]">▣</span>
+                    </div>
+
+                    <span className="rounded-full border border-border bg-subtle px-2 py-1 text-[10px] font-medium uppercase tracking-[0.08em] text-muted">
+                      {chatCount} chat{chatCount === 1 ? '' : 's'}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 min-h-[90px]">
+                    <p className="line-clamp-2 text-[15px] font-semibold text-ink">{folder.name}</p>
+                    <p className="mt-2 line-clamp-3 text-[12px] text-muted">{folder.legalContext || 'Sin descripción'}</p>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-3">
                     <button
                       type="button"
-                      className="text-[13px] text-danger"
+                      onClick={() => navigate(`/app/cases/${folder.id}`)}
+                      className="text-[12px] font-medium text-blue-600 transition hover:text-blue-700"
+                    >
+                      Abrir caso
+                    </button>
+
+                    <button
+                      type="button"
+                      className="text-[12px] text-danger hover:text-red-500"
                       onClick={(e) => {
                         e.stopPropagation()
                         setDeleteId(folder.id)
@@ -105,29 +143,29 @@ export function CasesPage() {
                     >
                       Eliminar
                     </button>
-                  </Td>
-                </Tr>
+                  </div>
+                </div>
               )
             })}
-          </TBody>
-        </Table>
-      ) : null}
+          </div>
+        ) : null}
 
-      <FolderFormModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onSaved={(id) => navigate(`/app/cases/${id}`)}
-      />
-      <ConfirmDialog
-        open={Boolean(deleteId)}
-        title="Eliminar caso"
-        description="Se eliminará el caso según el comportamiento definido por JurisApp."
-        confirmLabel="Eliminar"
-        danger
-        loading={remove.isPending}
-        onConfirm={() => deleteId && remove.mutate(deleteId)}
-        onClose={() => setDeleteId(null)}
-      />
+        <FolderFormModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onSaved={(id) => navigate(`/app/cases/${id}`)}
+        />
+        <ConfirmDialog
+          open={Boolean(deleteId)}
+          title="Eliminar caso"
+          description="Se eliminará el caso según el comportamiento definido por JurisApp."
+          confirmLabel="Eliminar"
+          danger
+          loading={remove.isPending}
+          onConfirm={() => deleteId && remove.mutate(deleteId)}
+          onClose={() => setDeleteId(null)}
+        />
+      </div>
     </AppPage>
   )
 }

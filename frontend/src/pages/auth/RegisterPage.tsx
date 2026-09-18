@@ -36,8 +36,12 @@ export function RegisterPage() {
         onSubmit={form.handleSubmit(async (values) => {
           setError(null)
           try {
-            await registerUser(values)
-            navigate(`/verify-email?email=${encodeURIComponent(values.email)}`, { replace: true })
+            const response = await registerUser(values)
+            const params = new URLSearchParams({ email: values.email })
+            if (response.verificationCode) {
+              params.set('code', response.verificationCode)
+            }
+            navigate(`/verify-email?${params.toString()}`, { replace: true })
           } catch (err) {
             setError(errorMessage(err, 'No pudimos crear la cuenta.'))
           }

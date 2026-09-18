@@ -140,6 +140,9 @@ public class PlanService : IPlanService
             return Result<PlanDto>.Failure(validation);
 
         var plan = new Plan(Guid.NewGuid(), request.Name.Trim(), request.Type, request.Price, request.LimitsJson);
+        if (request.StripeProductId is not null || request.StripePriceId is not null)
+            plan.SetStripeIds(request.StripeProductId, request.StripePriceId);
+
         await _planRepository.AddAsync(plan, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<PlanDto>.Success(MapToPlanDto(plan));
@@ -156,6 +159,9 @@ public class PlanService : IPlanService
             return Result<PlanDto>.Failure(Error.NotFound("Plan not found."));
 
         plan.Update(request.Name.Trim(), request.Type, request.Price, request.LimitsJson);
+        if (request.StripeProductId is not null || request.StripePriceId is not null)
+            plan.SetStripeIds(request.StripeProductId, request.StripePriceId);
+
         _planRepository.Update(plan);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<PlanDto>.Success(MapToPlanDto(plan));
@@ -235,11 +241,13 @@ public class PlanService : IPlanService
 
     private static PlanDto MapToPlanDto(Plan plan) => new()
     {
-        Id         = plan.Id,
-        Name       = plan.Name,
-        Type       = plan.Type,
-        Price      = plan.Price,
-        LimitsJson = plan.LimitsJson
+        Id              = plan.Id,
+        Name            = plan.Name,
+        Type            = plan.Type,
+        Price           = plan.Price,
+        LimitsJson      = plan.LimitsJson,
+        StripeProductId = plan.StripeProductId,
+        StripePriceId   = plan.StripePriceId
     };
 
     private static SubscriptionDto MapToDto(Subscription subscription) => new()

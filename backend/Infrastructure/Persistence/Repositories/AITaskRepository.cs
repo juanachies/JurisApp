@@ -24,6 +24,7 @@ public class AITaskRepository : IAITaskRepository
     public async Task<IReadOnlyList<AITask>> GetByChatIdAsync(Guid chatId, CancellationToken cancellationToken = default)
         => await _context.AITasks
             .Where(t => t.ChatId == chatId)
+            .OrderByDescending(t => t.CreatedAt)
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<AITask>> GetByChatIdWithStepsAsync(Guid chatId, CancellationToken cancellationToken = default)

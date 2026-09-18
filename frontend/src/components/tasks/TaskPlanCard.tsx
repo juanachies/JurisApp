@@ -117,9 +117,9 @@ export function TaskPlanCard({ task }: { task: AITaskDto }) {
 
       {awaiting ? <p className="mt-3 text-[13px] text-muted">Plan propuesto. Revisalo antes de ejecutarlo.</p> : null}
 
-      <ol className="mt-4 space-y-2">
+      <div className="mt-4 space-y-2">
         {task.steps.map((step, index) => (
-          <li key={step.id || step.order} className="flex gap-3 text-[14px]">
+          <div key={step.id || step.order} className="flex gap-3 text-[14px]">
             <span
               className={cn(
                 'mt-0.5 w-4 shrink-0 text-center text-[13px]',
@@ -165,9 +165,9 @@ export function TaskPlanCard({ task }: { task: AITaskDto }) {
                 </>
               )}
             </div>
-          </li>
+          </div>
         ))}
-      </ol>
+      </div>
 
       {task.result && task.status === 'Completed' ? (
         <div className="mt-4 border-t border-border pt-3">

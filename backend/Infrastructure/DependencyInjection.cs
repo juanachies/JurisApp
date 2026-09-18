@@ -87,10 +87,10 @@ public static class DependencyInjection
     private static IServiceCollection AddAuthServices(this IServiceCollection services)
     {
         services.AddHttpContextAccessor();
+        services.AddScoped<IEmailSender, GmailSmtpEmailSender>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
-        services.AddScoped<IEmailSender, LoggingEmailSender>();
 
         return services;
     }

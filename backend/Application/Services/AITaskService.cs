@@ -64,6 +64,13 @@ public class AITaskService : IAITaskService
         if (chat.UserId != userId)
             return Result<AITaskDto>.Failure(Error.Unauthorized("No tenés acceso a este chat."));
 
+        var existingTasks = await _aiTaskRepository.GetByChatIdWithStepsAsync(request.ChatId, cancellationToken);
+        if (existingTasks.Any(task => task.Status == AITaskStatus.AwaitingApproval))
+        {
+            return Result<AITaskDto>.Failure(
+                Error.Validation("Revisá, editá o cancelá el plan pendiente antes de crear otra tarea."));
+        }
+
         var limit = await _planLimitService.EnsureCanCreateAiTaskAsync(userId, cancellationToken);
         if (!limit.IsSuccess)
             return Result<AITaskDto>.Failure(limit.Error);

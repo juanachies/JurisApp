@@ -8,4 +8,6 @@ public class UpdatePlanRequest
     public PlanType Type { get; set; }
     public decimal Price { get; set; }
     public string LimitsJson { get; set; } = string.Empty;
+    public string? StripeProductId { get; set; }
+    public string? StripePriceId { get; set; }
 }

@@ -31,7 +31,7 @@ type AuthContextValue = {
     lastName: string
     email: string
     password: string
-  }) => Promise<UserDto>
+  }) => Promise<AuthResponse>
   applyAuth: (response: AuthResponse) => void
   logout: () => void
   refreshUser: () => Promise<void>
@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (data: { firstName: string; lastName: string; email: string; password: string }) => {
       const response = await authApi.register(data)
       applyAuth(response)
-      return response.user
+      return response
     },
     [applyAuth],
   )

@@ -336,6 +336,8 @@ const planSchema = z.object({
   chats: z.coerce.number(),
   documents: z.coerce.number(),
   aiTasks: z.coerce.number(),
+  stripeProductId: z.string().optional(),
+  stripePriceId: z.string().optional(),
 })
 
 export function AdminPlansPage() {
@@ -356,8 +358,10 @@ export function AdminPlansPage() {
           type: editing.type,
           price: editing.price,
           ...parseLimitsSafe(editing.limitsJson),
+          stripeProductId: editing.stripeProductId ?? '',
+          stripePriceId: editing.stripePriceId ?? '',
         }
-      : { name: '', type: 'Free' as PlanType, price: 0, chats: 5, documents: 10, aiTasks: 3 },
+      : { name: '', type: 'Free' as PlanType, price: 0, chats: 5, documents: 10, aiTasks: 3, stripeProductId: '', stripePriceId: '' },
   })
 
   const save = useMutation({
@@ -371,6 +375,8 @@ export function AdminPlansPage() {
           documents: values.documents,
           aiTasks: values.aiTasks,
         }),
+        stripeProductId: values.stripeProductId?.trim() ? values.stripeProductId.trim() : undefined,
+        stripePriceId: values.stripePriceId?.trim() ? values.stripePriceId.trim() : undefined,
       }
       return editId ? plansApi.update(editId, payload) : plansApi.create(payload)
     },
@@ -451,6 +457,8 @@ export function AdminPlansPage() {
             <option value="Max">Max</option>
           </Select>
           <Input label="Precio (USD)" type="number" step="0.01" {...form.register('price')} />
+          <Input label="Stripe Product ID (opcional)" {...form.register('stripeProductId')} />
+          <Input label="Stripe Price ID (opcional)" {...form.register('stripePriceId')} />
           <Input label="Límite de chats (-1 ilimitado)" type="number" {...form.register('chats')} />
           <Input label="Límite de documentos" type="number" {...form.register('documents')} />
           <Input label="Límite de tareas IA" type="number" {...form.register('aiTasks')} />

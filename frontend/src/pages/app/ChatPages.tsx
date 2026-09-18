@@ -53,62 +53,84 @@ export function ChatsPage() {
 
   return (
     <div className="px-5 py-6 lg:px-8">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-[28px] font-semibold">Chats</h1>
-          <p className="mt-1 text-[14px] text-muted">Conversaciones con contexto de documentos y skills.</p>
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted">Workspace</p>
+            <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.04em] text-ink">Chats</h1>
+          </div>
+
+          <Button onClick={() => setOpen(true)} className="bg-navy-900 text-white hover:bg-navy-800">
+            + Nuevo chat
+          </Button>
         </div>
-        <Button onClick={() => setOpen(true)}>+ Nuevo chat</Button>
+
+        <div className="mb-6">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar por título"
+            className="h-10 w-full max-w-md rounded-[10px] border border-border bg-surface px-3 text-[14px] text-ink outline-none transition focus:border-blue-500"
+          />
+        </div>
+
+        {chatsQuery.isLoading ? <Skeleton className="h-64" /> : null}
+        {chatsQuery.isError ? (
+          <QueryError message="No pudimos cargar tus chats." onRetry={() => chatsQuery.refetch()} />
+        ) : null}
+
+        {!chatsQuery.isLoading && chats.length === 0 ? (
+          <EmptyState
+            title="Todavía no tenés conversaciones."
+            description="Creá un chat para empezar a trabajar con JurisApp."
+            action={{ label: 'Nuevo chat', onClick: () => setOpen(true) }}
+          />
+        ) : (
+          <div className="space-y-5">
+            {(['Hoy', 'Esta semana', 'Anteriores'] as const).map((group) =>
+              grouped[group].length ? (
+                <section key={group} className="rounded-[18px] border border-border bg-surface shadow-sm">
+                  <p className="border-b border-border px-4 py-3 text-[12px] font-medium uppercase tracking-[0.12em] text-muted">
+                    {group}
+                  </p>
+
+                  <div className="divide-y divide-border">
+                    {grouped[group].map((chat) => {
+                      const folder = foldersQuery.data?.find((f) => f.id === chat.folderId)
+
+                      return (
+                        <button
+                          key={chat.id}
+                          type="button"
+                          className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-subtle"
+                          onClick={() => navigate(`/app/chats/${chat.id}`)}
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-subtle text-blue-600">
+                              <span className="text-[16px]">✦</span>
+                            </div>
+                            <div className="min-w-0">
+                              <span className="block truncate text-[15px] font-medium text-ink">{chat.title}</span>
+                              <span className="mt-1 block text-[12px] text-muted">
+                                {folder ? `${folder.name} · ` : ''}
+                                {formatDate(chat.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <span className="text-[12px] font-medium text-blue-600">Abrir →</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </section>
+              ) : null,
+            )}
+          </div>
+        )}
+
+        <CreateChatModal open={open} onClose={() => setOpen(false)} />
       </div>
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Buscar por título"
-        className="mb-4 h-10 w-full max-w-md rounded-[8px] border border-border-strong bg-surface px-3 text-[14px]"
-      />
-      {chatsQuery.isLoading ? <Skeleton className="h-64" /> : null}
-      {chatsQuery.isError ? (
-        <QueryError message="No pudimos cargar tus chats." onRetry={() => chatsQuery.refetch()} />
-      ) : null}
-      {!chatsQuery.isLoading && chats.length === 0 ? (
-        <EmptyState
-          title="Todavía no tenés conversaciones."
-          description="Creá un chat para empezar a trabajar con JurisApp."
-          action={{ label: 'Nuevo chat', onClick: () => setOpen(true) }}
-        />
-      ) : (
-        <div className="divide-y divide-border rounded-[12px] border border-border bg-surface">
-          {(['Hoy', 'Esta semana', 'Anteriores'] as const).map((group) =>
-            grouped[group].length ? (
-              <div key={group}>
-                <p className="bg-subtle px-4 py-2 text-[12px] font-medium uppercase tracking-wide text-muted">
-                  {group}
-                </p>
-                {grouped[group].map((chat) => {
-                  const folder = foldersQuery.data?.find((f) => f.id === chat.folderId)
-                  return (
-                    <button
-                      key={chat.id}
-                      type="button"
-                      className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-subtle"
-                      onClick={() => navigate(`/app/chats/${chat.id}`)}
-                    >
-                      <span>
-                        <span className="block text-[14px] font-medium">{chat.title}</span>
-                        <span className="text-[12px] text-muted">
-                          {folder ? `${folder.name} · ` : ''}
-                          {formatDate(chat.createdAt)}
-                        </span>
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            ) : null,
-          )}
-        </div>
-      )}
-      <CreateChatModal open={open} onClose={() => setOpen(false)} />
     </div>
   )
 }
@@ -129,7 +151,6 @@ export function ChatWorkspacePage() {
   const [sendError, setSendError] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  const chatsQuery = useQuery({ queryKey: queryKeys.chats, queryFn: chatsApi.list })
   const chatQuery = useQuery({
     queryKey: queryKeys.chat(chatId ?? ''),
     queryFn: () => chatsApi.getById(chatId!),
@@ -172,10 +193,15 @@ export function ChatWorkspacePage() {
   const chatDocuments = docsQuery.data ?? []
   const caseDocuments = folderDocsQuery.data ?? []
   const running = tasksQuery.data?.some((t) => t.status === 'InProgress')
+  const awaitingPlan = tasksQuery.data?.some((t) => t.status === 'AwaitingApproval') ?? false
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chat?.messages.length, pendingUser])
+
+  useEffect(() => {
+    if (awaitingPlan) setTaskMode(false)
+  }, [awaitingPlan])
 
   const sendMutation = useMutation({
     mutationFn: (content: string) => chatsApi.sendMessage(chatId!, { content }),
@@ -236,7 +262,7 @@ export function ChatWorkspacePage() {
 
   const submit = () => {
     const content = message.trim()
-    if (!content || !chatId) return
+    if (!content || !chatId || awaitingPlan) return
     setSendError(null)
     if (taskMode) {
       taskMutation.mutate(content)
@@ -318,27 +344,6 @@ export function ChatWorkspacePage() {
 
   return (
     <div className="flex h-[calc(100dvh-57px)] min-h-[560px] bg-canvas md:h-dvh">
-      <aside className="hidden w-[240px] shrink-0 border-r border-border bg-surface lg:flex lg:flex-col">
-        <div className="flex items-center justify-between border-b border-border px-3 py-3">
-          <p className="text-[13px] font-semibold">Chats</p>
-          <CreateChatButton />
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          {(chatsQuery.data ?? []).map((item) => (
-            <Link
-              key={item.id}
-              to={`/app/chats/${item.id}`}
-              className={cn(
-                'block border-l-2 px-3 py-2.5 text-[13px]',
-                item.id === chatId ? 'border-sky-500 bg-subtle font-medium' : 'border-transparent hover:bg-subtle',
-              )}
-            >
-              {item.title}
-            </Link>
-          ))}
-        </div>
-      </aside>
-
       <section className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center gap-3 border-b border-border bg-surface px-4 py-3">
           <button type="button" className="lg:hidden" onClick={() => navigate('/app/chats')} aria-label="Volver">
@@ -423,11 +428,19 @@ export function ChatWorkspacePage() {
                 Modo tarea — describí el objetivo. JurisApp va a proponer un plan antes de ejecutarlo.
               </p>
             ) : null}
+            {awaitingPlan ? (
+              <p className="mb-2 text-[12px] font-medium text-warning">
+                Revisá, editá o cancelá el plan pendiente antes de enviar otro mensaje o crear una nueva tarea.
+              </p>
+            ) : null}
             <div className="rounded-[12px] border border-border-strong bg-canvas p-3">
               <Textarea
                 className="min-h-20 border-0 bg-transparent p-0 focus:border-0"
+                disabled={awaitingPlan}
                 placeholder={
-                  taskMode
+                  awaitingPlan
+                    ? 'Aprobá, editá o cancelá el plan pendiente para continuar.'
+                    : taskMode
                     ? 'Ej: Analizá estos documentos, identificá los principales riesgos contractuales y prepará recomendaciones.'
                     : 'Escribí tu consulta...'
                 }
@@ -441,13 +454,14 @@ export function ChatWorkspacePage() {
                 }}
               />
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Button size="sm" variant="ghost" onClick={() => setUploadOpen(true)}>
+                <Button size="sm" variant="ghost" onClick={() => setUploadOpen(true)} disabled={awaitingPlan}>
                   <Paperclip size={14} /> Documento
                 </Button>
                 {canManageCases && (skillsQuery.data ?? []).filter((s) => s.isActive).length > 0 ? (
                   <select
                     className="h-8 rounded-[8px] border border-border bg-surface px-2 text-[12px]"
                     defaultValue=""
+                    disabled={awaitingPlan}
                     onChange={(e) => {
                       if (e.target.value) applySkill.mutate(e.target.value)
                       e.target.value = ''
@@ -469,6 +483,7 @@ export function ChatWorkspacePage() {
                     'h-8 rounded-[8px] px-2 text-[12px] font-medium',
                     taskMode ? 'bg-navy-900 text-white' : 'text-muted hover:bg-subtle',
                   )}
+                  disabled={awaitingPlan}
                   onClick={() => setTaskMode((v) => !v)}
                 >
                   Modo tarea
@@ -478,7 +493,7 @@ export function ChatWorkspacePage() {
                     size="sm"
                     loading={sendMutation.isPending || taskMutation.isPending}
                     onClick={submit}
-                    disabled={running && taskMode}
+                    disabled={awaitingPlan || (running && taskMode)}
                   >
                     {taskMode ? 'Generar plan' : 'Enviar'}
                   </Button>
@@ -546,14 +561,3 @@ function MessageBubble({ message }: { message: MessageDto }) {
   )
 }
 
-function CreateChatButton() {
-  const [open, setOpen] = useState(false)
-  return (
-    <>
-      <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
-        +
-      </Button>
-      <CreateChatModal open={open} onClose={() => setOpen(false)} />
-    </>
-  )
-}

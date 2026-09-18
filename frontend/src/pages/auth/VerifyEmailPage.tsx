@@ -24,20 +24,30 @@ export function VerifyEmailPage() {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
+  const verificationCode = params.get('code') || ''
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { email: params.get('email') || user?.email || '', code: '' },
+    defaultValues: { email: params.get('email') || user?.email || '', code: verificationCode },
   })
 
   return (
     <AuthSplit
       title="Verificá tu email"
-      subtitle="Te enviamos un código de 6 dígitos. En desarrollo aparece en la consola del servidor."
+      subtitle={
+        verificationCode
+          ? 'Te enviamos un código de 6 dígitos. Revisá el código que aparece abajo para verificar tu email.'
+          : 'Te enviamos un código de 6 dígitos. En desarrollo aparece en la consola del servidor.'
+      }
     >
       {error ? <Alert className="mb-4">{error}</Alert> : null}
       {info ? (
         <Alert variant="success" className="mb-4">
           {info}
+        </Alert>
+      ) : null}
+      {verificationCode ? (
+        <Alert className="mb-4">
+          Código de verificación: <strong>{verificationCode}</strong>
         </Alert>
       ) : null}
       <form

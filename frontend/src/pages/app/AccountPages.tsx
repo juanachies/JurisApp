@@ -126,9 +126,6 @@ export function SubscriptionPage() {
   })
   const checkout = useMutation({
     mutationFn: async (planId: string) => {
-      if (import.meta.env.DEV) {
-        return billingApi.simulatePurchase({ planId })
-      }
       const session = await billingApi.createCheckoutSession({ planId })
       window.location.href = session.url
       return session
@@ -142,12 +139,12 @@ export function SubscriptionPage() {
 
   const choose = (planId: string, type: PlanType) => {
     setError(null)
-    if (current?.hasActiveSubscription) {
-      change.mutate(planId)
+    if (type === 'Free') {
+      if (current?.hasActiveSubscription) change.mutate(planId)
+      else subscribeFree.mutate(planId)
       return
     }
-    if (type === 'Free') subscribeFree.mutate(planId)
-    else checkout.mutate(planId)
+    checkout.mutate(planId)
   }
 
   return (
@@ -208,11 +205,6 @@ export function SubscriptionPage() {
           )
         })}
       </div>
-      {import.meta.env.DEV ? (
-        <p className="mt-4 text-[12px] text-faint">
-          En desarrollo, los planes pagos se activan con una compra simulada (Stripe mock).
-        </p>
-      ) : null}
       <ConfirmDialog
         open={cancelOpen}
         title="Cancelar suscripción"
