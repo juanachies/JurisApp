@@ -11,6 +11,7 @@ using JurisApp.Infrastructure.Payments;
 using JurisApp.Infrastructure.Persistence;
 using JurisApp.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -64,6 +65,10 @@ public static class DependencyInjection
                 }
 
                 options.UseNpgsql(npgsql.ConnectionString);
+                // Guid, DateTime y bool se mapean en runtime a TEXT/INTEGER para
+                // coincidir con las migraciones ya generadas. No es un cambio de esquema.
+                options.ConfigureWarnings(warnings =>
+                    warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
             }
         });
 
