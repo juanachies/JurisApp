@@ -125,30 +125,15 @@ Bearer {token}
 
 ## Despliegue
 
-El proyecto incluye un workflow de GitHub Actions para despliegue automático en Azure App Service.
+GitHub Actions solo verifica el proyecto. No despliega en Azure.
 
 Archivo:
 
 ```text
-.github/workflows/api-azure-app-service.yml
+.github/workflows/ci.yml
 ```
 
-Variables requeridas en GitHub:
-
-```text
-AZURE_WEBAPP_NAME
-AZURE_WEBAPP_PUBLISH_PROFILE
-```
-
-Variables requeridas en Azure:
-
-```text
-ASPNETCORE_ENVIRONMENT
-ConnectionStrings__DefaultConnection
-Jwt__Secret
-AI__OpenAI__ApiKey
-AI__OpenAI__Model
-```
+El frontend se publica en Vercel. Al importar el repositorio, el directorio raíz del proyecto es `frontend`. La API de .NET no corre en Vercel: hay que indicarle la URL pública con la variable `VITE_API_URL`.
 
 ## Seguridad
 
