@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/.vs/
+**/*.user
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/.env
+**/appsettings.Development.json
+**/appsettings.Testing.json
+TpiTests/
