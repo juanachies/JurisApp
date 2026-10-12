@@ -621,7 +621,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("UserId")
                         .IsUnique()
-                        .HasFilter("Status = 'Active'");
+                        .HasFilter("\"Status\" = 'Active'");
 
                     b.ToTable("Subscriptions");
                 });

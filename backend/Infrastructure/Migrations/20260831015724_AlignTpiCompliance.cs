@@ -70,7 +70,7 @@ namespace Infrastructure.Migrations
                 table: "Subscriptions",
                 column: "UserId",
                 unique: true,
-                filter: "Status = 'Active'");
+                filter: "\"Status\" = 'Active'");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Audits_ChatId",
@@ -209,7 +209,7 @@ namespace Infrastructure.Migrations
                 );
                 CREATE UNIQUE INDEX IF NOT EXISTS "IX_Audits_ChatId" ON "Audits" ("ChatId");
 
-                CREATE UNIQUE INDEX IF NOT EXISTS "IX_Subscriptions_UserId" ON "Subscriptions" ("UserId") WHERE Status = 'Active';
+                CREATE UNIQUE INDEX IF NOT EXISTS "IX_Subscriptions_UserId" ON "Subscriptions" ("UserId") WHERE "Status" = 'Active';
 
                 COMMIT;
                 PRAGMA foreign_keys = ON;

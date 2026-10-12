@@ -32,6 +32,6 @@ public class SubscriptionConfiguration : IEntityTypeConfiguration<Subscription>
 
         builder.HasIndex(s => s.UserId)
             .IsUnique()
-            .HasFilter("Status = 'Active'");
+            .HasFilter("\"Status\" = 'Active'");
     }
 }
