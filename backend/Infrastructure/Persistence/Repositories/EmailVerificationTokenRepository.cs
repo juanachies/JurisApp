@@ -17,14 +17,19 @@ public class EmailVerificationTokenRepository : IEmailVerificationTokenRepositor
         => await _context.EmailVerificationTokens.AddAsync(token, cancellationToken);
 
     public async Task<EmailVerificationToken?> GetValidForUserAsync(Guid userId, string codeHash, CancellationToken cancellationToken = default)
-        => await _context.EmailVerificationTokens
+    {
+        // Una variable se envía como parámetro. DateTime.UtcNow se traduce a timestamptz
+        // y la columna, creada por las migraciones de SQLite, es text.
+        var now = DateTime.UtcNow;
+        return await _context.EmailVerificationTokens
             .Include(t => t.User)
             .FirstOrDefaultAsync(
                 t => t.UserId == userId &&
                      t.TokenHash == codeHash &&
                      t.UsedAt == null &&
-                     t.ExpiresAt > DateTime.UtcNow,
+                     t.ExpiresAt > now,
                 cancellationToken);
+    }
 
     public async Task InvalidateAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {

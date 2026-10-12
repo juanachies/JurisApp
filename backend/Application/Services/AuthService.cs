@@ -99,13 +99,12 @@ public class AuthService : IAuthService
             }
         }
 
-        var verificationCode = await SendVerificationEmailAsync(user, cancellationToken);
+        await SendVerificationEmailAsync(user, cancellationToken);
 
         return Result<AuthResponse>.Success(new AuthResponse
         {
             Token = _jwtTokenGenerator.GenerateToken(user),
-            User = user.ToDto(),
-            VerificationCode = verificationCode
+            User = user.ToDto()
         });
     }
 

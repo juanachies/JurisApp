@@ -49,8 +49,8 @@ public class GmailSmtpEmailSender : IEmailSender
 
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
         {
-            _logger.LogWarning(
-                "SMTP no configurado. No se envió el email a {Email}. Completar SMTP_USERNAME y SMTP_PASSWORD.",
+            _logger.LogError(
+                "SMTP no configurado. No se envió el email a {Email}. Definí Email__Smtp__Username y Email__Smtp__Password.",
                 toEmail);
             return;
         }
@@ -71,15 +71,18 @@ public class GmailSmtpEmailSender : IEmailSender
         };
 
         using var client = new SmtpClient();
-        await client.ConnectAsync(host, port, SecureSocketOptions.StartTlsWhenAvailable, cancellationToken);
-
-        if (!string.IsNullOrWhiteSpace(username))
+        try
         {
+            await client.ConnectAsync(host, port, SecureSocketOptions.StartTls, cancellationToken);
             await client.AuthenticateAsync(username, password, cancellationToken);
+            await client.SendAsync(message, cancellationToken);
+            await client.DisconnectAsync(true, cancellationToken);
         }
-
-        await client.SendAsync(message, cancellationToken);
-        await client.DisconnectAsync(true, cancellationToken);
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "No se pudo enviar el email por SMTP a {Email}.", toEmail);
+            throw;
+        }
 
         _logger.LogInformation("Email enviado correctamente por SMTP a {Email}.", toEmail);
     }

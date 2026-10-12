@@ -17,9 +17,16 @@ public class PasswordResetTokenRepository : IPasswordResetTokenRepository
         => await _context.PasswordResetTokens.AddAsync(token, cancellationToken);
 
     public async Task<PasswordResetToken?> GetValidByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
-        => await _context.PasswordResetTokens
+    {
+        // Una variable se envía como parámetro. DateTime.UtcNow se traduce a timestamptz
+        // y la columna, creada por las migraciones de SQLite, es text.
+        var now = DateTime.UtcNow;
+        return await _context.PasswordResetTokens
             .Include(t => t.User)
-            .FirstOrDefaultAsync(t => t.TokenHash == tokenHash && t.UsedAt == null && t.ExpiresAt > DateTime.UtcNow, cancellationToken);
+            .FirstOrDefaultAsync(
+                t => t.TokenHash == tokenHash && t.UsedAt == null && t.ExpiresAt > now,
+                cancellationToken);
+    }
 
     public async Task InvalidateAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
