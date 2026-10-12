@@ -15,6 +15,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Npgsql;
 
 namespace JurisApp.Infrastructure;
 
@@ -55,7 +56,14 @@ public static class DependencyInjection
             }
             else
             {
-                options.UseNpgsql(connectionString);
+                var npgsql = new NpgsqlConnectionStringBuilder(connectionString);
+                if (!ContainsKey(connectionString, "GSS Encryption Mode")
+                    && !ContainsKey(connectionString, "GSSEncryptionMode"))
+                {
+                    npgsql.GssEncryptionMode = GssEncryptionMode.Disable;
+                }
+
+                options.UseNpgsql(npgsql.ConnectionString);
             }
         });
 
@@ -63,6 +71,9 @@ public static class DependencyInjection
 
         return services;
     }
+
+    private static bool ContainsKey(string connectionString, string key)
+        => connectionString.Contains(key, StringComparison.OrdinalIgnoreCase);
 
     private static IServiceCollection AddRepositories(this IServiceCollection services)
     {

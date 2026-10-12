@@ -16,7 +16,7 @@ namespace Infrastructure.Migrations
                 table: "Users",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: true);
+                defaultValue: 1);
 
             migrationBuilder.CreateTable(
                 name: "PasswordResetTokens",

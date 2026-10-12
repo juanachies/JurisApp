@@ -111,27 +111,12 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+var allowedOrigins = GetAllowedOrigins(builder.Configuration);
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
-        var origins = builder.Configuration
-            .GetSection("Cors:AllowedOrigins")
-            .Get<string[]>();
-
-        if (origins is { Length: > 0 })
-        {
-            policy.WithOrigins(origins);
-        }
-        else
-        {
-            policy.WithOrigins(
-                builder.Configuration["Cors:AllowedOrigin"] ?? "http://localhost:5173",
-                "http://localhost:5248",
-                "https://localhost:7212");
-        }
-
-        policy.AllowAnyHeader().AllowAnyMethod();
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
     });
 });
 
@@ -162,12 +147,41 @@ else
 if (builder.Configuration.GetValue<bool>("Stripe:UseMock"))
     app.Logger.LogInformation("Stripe mock mode enabled. Use POST /api/billing/simulate-purchase to test subscriptions.");
 
-if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+await using (var scope = app.Services.CreateAsyncScope())
 {
-    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    app.Logger.LogInformation("Applying database migrations.");
     await db.Database.MigrateAsync();
-    await DevDataSeeder.SeedAsync(db, scope.ServiceProvider);
+    app.Logger.LogInformation("Database migrations applied.");
+
+    if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+        await DevDataSeeder.SeedAsync(db, scope.ServiceProvider);
+}
+
+if (!app.Environment.IsDevelopment())
+{
+    app.Use(async (context, next) =>
+    {
+        try
+        {
+            await next();
+        }
+        catch (Exception exception)
+        {
+            app.Logger.LogError(exception, "Unhandled exception");
+            if (context.Response.HasStarted)
+                throw;
+
+            context.Response.Clear();
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            var origin = context.Request.Headers.Origin.ToString();
+            if (allowedOrigins.Contains(origin, StringComparer.Ordinal))
+            {
+                context.Response.Headers.AccessControlAllowOrigin = origin;
+                context.Response.Headers.Append("Vary", "Origin");
+            }
+        }
+    });
 }
 
 if (app.Environment.IsDevelopment())
@@ -194,5 +208,25 @@ app.Use(async (context, next) =>
 app.MapControllers();
 
 app.Run();
+
+static string[] GetAllowedOrigins(ConfigurationManager configuration)
+{
+    var origins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+    if (origins is { Length: > 0 })
+    {
+        return origins
+            .Where(origin => !string.IsNullOrWhiteSpace(origin))
+            .Select(origin => origin.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    return
+    [
+        configuration["Cors:AllowedOrigin"] ?? "http://localhost:5173",
+        "http://localhost:5248",
+        "https://localhost:7212"
+    ];
+}
 
 public partial class Program { }

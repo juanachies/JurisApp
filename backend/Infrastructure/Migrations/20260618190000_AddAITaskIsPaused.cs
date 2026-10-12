@@ -17,7 +17,7 @@ namespace Infrastructure.Migrations
                 table: "AITasks",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: 0);
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

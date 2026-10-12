@@ -41,7 +41,7 @@ namespace Infrastructure.Migrations
                 table: "CustomSkills",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: true);
+                defaultValue: 1);
 
             migrationBuilder.CreateTable(
                 name: "Audits",

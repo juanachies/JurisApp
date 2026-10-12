@@ -16,7 +16,7 @@ namespace Infrastructure.Migrations
                 table: "Users",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: 0);
 
             migrationBuilder.CreateTable(
                 name: "EmailVerificationTokens",

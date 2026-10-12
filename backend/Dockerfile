@@ -14,6 +14,11 @@ COPY Presentation/ Presentation/
 RUN dotnet publish Presentation/Presentation.csproj -c Release -o /app/out --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
+USER $APP_UID
 WORKDIR /app
 COPY --from=build /app/out ./
 
