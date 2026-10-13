@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useLocation } from 'react-router-dom'
 import { plansApi } from '@/api'
@@ -15,20 +15,42 @@ const nav = [
   { href: '/pricing', label: 'Planes' },
 ]
 
-export function PublicHeader() {
+export function PublicHeader({ tone = 'default' }: { tone?: 'default' | 'home' }) {
   const location = useLocation()
+  const home = tone === 'home'
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    if (!home) return
+    const onScroll = () => setScrolled(window.scrollY > 12)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [home])
+
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">
+    <header
+      className={cn(
+        'z-40',
+        home
+          ? cn(
+              'fixed inset-x-0 top-0 transition-colors duration-300',
+              scrolled ? 'border-b border-white/10 bg-[#0c1220]/90 backdrop-blur' : 'bg-transparent',
+            )
+          : 'sticky top-0 border-b border-border bg-surface/95 backdrop-blur',
+      )}
+    >
       <div className="mx-auto flex h-16 w-full max-w-[1240px] items-center justify-between px-5">
-        <Logo />
+        <Logo light={home} />
         <nav className="hidden items-center gap-6 md:flex">
           {nav.map((item) => (
             <a
               key={item.href}
               href={item.href}
               className={cn(
-                'text-[14px] text-muted hover:text-ink',
-                location.pathname === '/pricing' && item.href === '/pricing' && 'text-ink',
+                'text-[14px]',
+                home ? 'text-white/75 hover:text-white' : 'text-muted hover:text-ink',
+                !home && location.pathname === '/pricing' && item.href === '/pricing' && 'text-ink',
               )}
             >
               {item.label}
@@ -36,12 +58,18 @@ export function PublicHeader() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <Link to="/login" className="hidden text-[14px] text-muted hover:text-ink sm:inline">
+          <Link
+            to="/login"
+            className={cn('hidden text-[14px] sm:inline', home ? 'text-white/80 hover:text-white' : 'text-muted hover:text-ink')}
+          >
             Iniciar sesión
           </Link>
           <Link
             to="/register"
-            className="inline-flex h-8 items-center rounded-[8px] bg-navy-900 px-3 text-[13px] font-medium text-white hover:bg-navy-800"
+            className={cn(
+              'inline-flex h-8 items-center rounded-[8px] px-3 text-[13px] font-medium text-white',
+              home ? 'bg-[#ff5a36] hover:bg-[#ff734f]' : 'bg-navy-900 hover:bg-navy-800',
+            )}
           >
             Comenzar
           </Link>
@@ -51,23 +79,24 @@ export function PublicHeader() {
   )
 }
 
-export function PublicFooter() {
+export function PublicFooter({ tone = 'default' }: { tone?: 'default' | 'home' }) {
+  const home = tone === 'home'
   return (
-    <footer className="border-t border-border bg-surface">
-      <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-3 px-5 py-8 text-[13px] text-muted">
-        <Logo />
+    <footer className={cn('border-t', home ? 'border-white/10 bg-[#0c1220] text-white/70' : 'border-border bg-surface text-muted')}>
+      <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-3 px-5 py-8 text-[13px]">
+        <Logo light={home} />
         <p>Herramienta de productividad jurídica. No reemplaza el criterio profesional.</p>
       </div>
     </footer>
   )
 }
 
-export function PublicLayout({ children }: { children: ReactNode }) {
+export function PublicLayout({ children, tone = 'default' }: { children: ReactNode; tone?: 'default' | 'home' }) {
   return (
-    <div className="min-h-screen bg-canvas">
-      <PublicHeader />
+    <div className={tone === 'home' ? 'home-root min-h-screen' : 'min-h-screen bg-canvas'}>
+      <PublicHeader tone={tone} />
       {children}
-      <PublicFooter />
+      <PublicFooter tone={tone} />
     </div>
   )
 }

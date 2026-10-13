@@ -126,3 +126,122 @@ body {
 .prose-legal a {
   color: var(--color-blue-600);
 }
+
+.home-root {
+  background: #f6f3ee;
+  color: #16181d;
+  font-family: Outfit, Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.home-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.home-reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+.home-cursor-dot,
+.home-cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 80;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.home-cursor-dot {
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  background: #fff;
+  mix-blend-mode: difference;
+}
+
+.home-cursor-ring {
+  width: 42px;
+  height: 42px;
+  margin: -21px 0 0 -21px;
+  border: 1.5px solid #fff;
+  mix-blend-mode: difference;
+  transition:
+    width 0.25s ease,
+    height 0.25s ease,
+    margin 0.25s ease,
+    background 0.25s ease;
+}
+
+.home-cursor-ring.is-hot {
+  width: 76px;
+  height: 76px;
+  margin: -38px 0 0 -38px;
+  background: rgb(255 255 255 / 0.12);
+}
+
+html.home-cursor,
+html.home-cursor * {
+  cursor: none !important;
+}
+
+.home-stage {
+  perspective: 1400px;
+}
+
+.home-shot {
+  transform-style: preserve-3d;
+  transition: transform 0.12s linear;
+  filter: drop-shadow(0 30px 50px rgb(0 0 0 / 0.35));
+}
+
+.home-blob {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(40px);
+  animation: home-float 14s ease-in-out infinite;
+}
+
+.home-marquee {
+  display: flex;
+  width: max-content;
+  animation: home-marquee 28s linear infinite;
+}
+
+@keyframes home-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(24px, -28px, 0) scale(1.08);
+  }
+}
+
+@keyframes home-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .home-blob,
+  .home-marquee,
+  .home-shot {
+    animation: none;
+    transition: none;
+  }
+}
