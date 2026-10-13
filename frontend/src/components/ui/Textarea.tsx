@@ -15,8 +15,8 @@ export function Textarea({ className, label, error, hint, ...props }: TextareaPr
       ) : null}
       <textarea
         className={cn(
-          'min-h-28 w-full resize-y rounded-[8px] border bg-surface px-3 py-2 text-[14px] text-ink placeholder:text-faint',
-          'transition-colors duration-150 focus:border-blue-600',
+          'min-h-28 w-full resize-y rounded-[12px] border bg-surface px-3 py-2 text-[14px] text-ink placeholder:text-faint',
+          'transition-colors duration-150 focus:border-navy-700',
           error ? 'border-danger' : 'border-border-strong',
           className,
         )}

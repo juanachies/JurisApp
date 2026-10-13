@@ -17,8 +17,8 @@ export function Input({ className, label, error, hint, id, ...props }: InputProp
       <input
         id={inputId}
         className={cn(
-          'h-10 w-full rounded-[8px] border bg-surface px-3 text-[14px] text-ink placeholder:text-faint',
-          'transition-colors duration-150 focus:border-blue-600',
+          'h-11 w-full rounded-[12px] border bg-surface px-3 text-[14px] text-ink placeholder:text-faint',
+          'transition-colors duration-150 focus:border-navy-700',
           error ? 'border-danger' : 'border-border-strong',
           className,
         )}

@@ -82,7 +82,7 @@ export function SkillsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {(skillsQuery.data ?? []).map((skill) => (
-            <article key={skill.id} className="rounded-[12px] border border-border bg-surface p-5">
+            <article key={skill.id} className="rounded-[18px] border border-border bg-surface p-5 shadow-card">
               <div className="flex items-start justify-between gap-3">
                 <h2 className="text-[16px] font-semibold">{skill.name}</h2>
                 <Badge tone={skill.isActive ? 'success' : 'neutral'}>
@@ -181,10 +181,10 @@ export function SkillEditorPage() {
       <Link to="/app/skills" className="text-[13px] text-blue-600 hover:underline">
         ← Skills
       </Link>
-      <h1 className="mt-3 mb-6 text-[28px] font-semibold">{isNew ? 'Nueva skill' : 'Editar skill'}</h1>
+      <h1 className="mt-3 mb-6 text-[clamp(1.7rem,2.4vw,2.1rem)] font-semibold tracking-[-0.04em]">{isNew ? 'Nueva skill' : 'Editar skill'}</h1>
       {error ? <Alert className="mb-4">{error}</Alert> : null}
       <form
-        className="max-w-2xl space-y-4"
+        className="max-w-2xl space-y-4 rounded-[20px] border border-border bg-surface p-6 shadow-card"
         onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
       >
         <Input label="Nombre" {...form.register('name')} error={form.formState.errors.name?.message} />

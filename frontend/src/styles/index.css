@@ -2,12 +2,19 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
 
   --color-navy-950: #081525;
   --color-navy-900: #0b1f3a;
   --color-navy-800: #112b4d;
   --color-navy-700: #183a62;
   --color-navy-600: #1e4a78;
+
+  --color-ember: #ff5a36;
+  --color-ember-hover: #e64a28;
+  --color-ember-soft: #fff1eb;
+  --color-pine: #1f8a70;
+  --color-pine-soft: #e7f6f2;
 
   --color-blue-700: #174f8a;
   --color-blue-600: #1e5aa8;
@@ -40,6 +47,7 @@
 
   --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.04);
   --shadow-lg: 0 8px 24px rgb(16 24 40 / 0.10);
+  --shadow-card: 0 16px 40px rgb(8 21 37 / 0.06);
 }
 
 html[data-theme="dark"] {
@@ -70,6 +78,13 @@ body {
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
 }
 
 * {
@@ -128,9 +143,18 @@ body {
 }
 
 .home-root {
-  background: #f6f3ee;
-  color: #16181d;
+  background: var(--color-canvas);
+  color: var(--color-ink);
   font-family: Outfit, Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 0.16);
+  border-radius: 999px;
 }
 
 .home-reveal {

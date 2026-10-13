@@ -99,7 +99,7 @@ export function TaskPlanCard({ task }: { task: AITaskDto }) {
   const canCancel = task.status !== 'Completed' && task.status !== 'Cancelled'
 
   return (
-    <div className="rounded-[12px] border border-border bg-surface p-4">
+    <div className="rounded-[18px] border border-border bg-surface p-5 shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-[12px] font-medium uppercase tracking-wide text-faint">Tarea con IA</p>

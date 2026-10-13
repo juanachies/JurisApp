@@ -30,7 +30,7 @@ export function buttonClass(
   className?: string,
 ) {
   return cn(
-    'inline-flex items-center justify-center gap-2 rounded-[8px] font-medium transition-colors duration-150',
+    'inline-flex items-center justify-center gap-2 rounded-[10px] font-medium transition-colors duration-150',
     variants[variant],
     sizes[size],
     className,

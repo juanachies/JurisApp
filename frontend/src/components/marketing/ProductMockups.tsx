@@ -3,7 +3,7 @@ import { Check, Circle } from 'lucide-react'
 
 export function WorkspacePreview() {
   return (
-    <div className="overflow-hidden rounded-[12px] border border-border bg-surface shadow-lg">
+    <div className="overflow-hidden rounded-[18px] border border-border bg-surface shadow-lg">
       <div className="flex min-h-[380px]">
         <aside className="hidden w-[200px] shrink-0 bg-navy-900 p-4 text-white sm:block">
           <p className="text-[13px] font-semibold">JurisApp</p>
@@ -20,7 +20,7 @@ export function WorkspacePreview() {
             <p className="text-[12px] text-muted">Caso · Gómez c/ Inmobiliaria Norte</p>
             <h3 className="mt-1 text-[16px] font-semibold">Análisis contrato de alquiler</h3>
             <div className="mt-4 space-y-3 text-[13px]">
-              <div className="ml-auto max-w-[80%] rounded-[8px] bg-subtle px-3 py-2">
+              <div className="ml-auto max-w-[80%] rounded-[16px] rounded-br-[6px] bg-navy-900 px-3 py-2 text-white">
                 ¿Qué cláusulas de rescisión son más riesgosas para el locatario?
               </div>
               <div className="max-w-[90%] text-[13px] leading-relaxed text-ink">
@@ -60,7 +60,7 @@ export function WorkspacePreview() {
 
 export function AnalysisPreview() {
   return (
-    <div className="rounded-[12px] border border-border bg-surface p-6 shadow-sm">
+    <div className="rounded-[18px] border border-border bg-surface p-6 shadow-sm">
       <p className="text-[13px] text-muted">Contrato de prestación de servicios.pdf</p>
       <h3 className="mt-1 text-[18px] font-semibold">Análisis</h3>
       <div className="mt-5 grid gap-5 md:grid-cols-3">
@@ -81,8 +81,8 @@ export function AnalysisPreview() {
 
 export function PlanModePreview() {
   return (
-    <div className="rounded-[12px] border border-border bg-surface p-6">
-      <p className="text-[12px] font-medium text-blue-600">Modo tarea</p>
+    <div className="rounded-[18px] border border-border bg-surface p-6">
+      <p className="text-[12px] font-medium text-ember">Modo tarea</p>
       <h3 className="mt-1 text-[18px] font-semibold">Preparar análisis contractual</h3>
       <ol className="mt-5 space-y-3 text-[14px]">
         {[
@@ -124,7 +124,7 @@ export function SkillPreviewCards() {
   return (
     <div className="grid gap-4 md:grid-cols-3">
       {skills.map((skill) => (
-        <div key={skill.name} className="rounded-[12px] border border-border bg-surface p-5">
+        <div key={skill.name} className="rounded-[18px] border border-border bg-surface p-5">
           <p className="font-medium">{skill.name}</p>
           <p className="mt-2 text-[13px] text-muted">{skill.body}</p>
           <p className="mt-4 text-[12px] text-success">Estado: ejemplo ilustrativo</p>
@@ -136,7 +136,7 @@ export function SkillPreviewCards() {
 
 export function CasePreview() {
   return (
-    <div className="rounded-[12px] border border-border bg-surface p-6">
+    <div className="rounded-[18px] border border-border bg-surface p-6">
       <h3 className="text-[18px] font-semibold">Gómez c/ Inmobiliaria Norte</h3>
       <p className="mt-2 text-[13px] text-muted">Documentos 2 · Chats 2</p>
       <ul className="mt-4 space-y-2 text-[14px]">

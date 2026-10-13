@@ -35,7 +35,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <div
               key={item.id}
               className={cn(
-                'pointer-events-auto rounded-[8px] border px-3 py-2.5 text-[13px] shadow-lg',
+                'pointer-events-auto rounded-[14px] border px-3.5 py-2.5 text-[13px] shadow-lg',
                 item.tone === 'success' && 'border-success/20 bg-success-bg text-success',
                 item.tone === 'error' && 'border-danger/20 bg-danger-bg text-danger',
                 item.tone === 'info' && 'border-border bg-surface text-ink',

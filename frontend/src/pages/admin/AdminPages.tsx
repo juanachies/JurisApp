@@ -42,7 +42,7 @@ export function AdminHomePage() {
 
 function AdminLink({ to, title, body, hint }: { to: string; title: string; body: string; hint: string }) {
   return (
-    <Link to={to} className="rounded-[12px] border border-border bg-surface p-5 hover:bg-subtle">
+    <Link to={to} className="rounded-[18px] border border-border bg-surface p-5 shadow-card transition hover:-translate-y-0.5 hover:border-navy-700">
       <p className="text-[13px] text-muted">{title}</p>
       <p className="mt-2 text-[22px] font-semibold">{body}</p>
       <p className="mt-1 text-[13px] text-blue-600">{hint}</p>
@@ -66,7 +66,7 @@ export function AdminUsersPage() {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Buscar"
-        className="mb-4 h-10 max-w-sm rounded-[8px] border border-border-strong px-3 text-[14px]"
+        className="mb-4 h-11 max-w-sm rounded-[12px] border border-border-strong bg-surface px-3 text-[14px]"
       />
       {usersQuery.isLoading ? <TableSkeleton /> : null}
       {usersQuery.isError ? (
@@ -128,7 +128,7 @@ export function AdminUserDetailPage() {
         ← Usuarios
       </Link>
       {userQuery.isError ? <QueryError message="No pudimos cargar el usuario." /> : null}
-      <h1 className="mt-3 text-[28px] font-semibold">{user ? fullName(user.firstName, user.lastName) : 'Usuario'}</h1>
+      <h1 className="mt-3 text-[clamp(1.7rem,2.4vw,2.1rem)] font-semibold tracking-[-0.04em]">{user ? fullName(user.firstName, user.lastName) : 'Usuario'}</h1>
       <p className="text-[14px] text-muted">{user?.email}</p>
       {error ? <Alert className="mt-4">{error}</Alert> : null}
       {user ? (
@@ -254,7 +254,7 @@ export function AdminVerificationDetailPage() {
         ← Verificaciones
       </Link>
       {detail.isError ? <QueryError message="No pudimos cargar la solicitud." /> : null}
-      <h1 className="mt-3 text-[28px] font-semibold">
+      <h1 className="mt-3 text-[clamp(1.7rem,2.4vw,2.1rem)] font-semibold tracking-[-0.04em]">
         {req ? fullName(req.userFirstName, req.userLastName) : 'Solicitud'}
       </h1>
       {error ? <Alert className="mt-4">{error}</Alert> : null}

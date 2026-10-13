@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { FolderOpen, Plus } from 'lucide-react'
 import { chatsApi, documentsApi, foldersApi } from '@/api'
 import { queryKeys } from '@/api/queryKeys'
 import { errorMessage } from '@/api/client'
@@ -70,7 +71,7 @@ export function CasesPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar casos"
-            className="h-10 w-full max-w-md rounded-[10px] border border-border bg-surface px-3 text-[14px] text-ink outline-none transition focus:border-blue-500"
+            className="h-11 w-full max-w-md rounded-[12px] border border-border bg-surface px-3 text-[14px] text-ink outline-none transition focus:border-navy-700"
           />
         </div>
 
@@ -90,11 +91,11 @@ export function CasesPage() {
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
-              className="group flex min-h-[170px] flex-col justify-between rounded-[18px] border border-dashed border-border-strong bg-surface p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-500 hover:bg-blue-50/40"
+              className="group flex min-h-[170px] flex-col justify-between rounded-[18px] border border-dashed border-border-strong bg-surface p-4 text-left shadow-card transition hover:-translate-y-0.5 hover:border-navy-700"
             >
               <div className="flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-[12px] border border-border bg-subtle text-blue-600">
-                  <span className="text-[22px] leading-none">+</span>
+                <div className="flex h-12 w-12 items-center justify-center rounded-[12px] border border-border bg-sky-100 text-navy-800">
+                  <Plus size={22} />
                 </div>
               </div>
 
@@ -108,10 +109,10 @@ export function CasesPage() {
               const chatCount = (chatsQuery.data ?? []).filter((c) => c.folderId === folder.id).length
 
               return (
-                <div key={folder.id} className="group rounded-[18px] border border-border bg-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-500 hover:shadow-md">
+                <div key={folder.id} className="group rounded-[18px] border border-border bg-surface p-4 shadow-card transition hover:-translate-y-0.5 hover:border-navy-700">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-[12px] bg-sky-100 text-blue-700">
-                      <span className="text-[20px]">▣</span>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-[12px] bg-sky-100 text-navy-800">
+                      <FolderOpen size={20} />
                     </div>
 
                     <span className="rounded-full border border-border bg-subtle px-2 py-1 text-[10px] font-medium uppercase tracking-[0.08em] text-muted">
@@ -128,7 +129,7 @@ export function CasesPage() {
                     <button
                       type="button"
                       onClick={() => navigate(`/app/cases/${folder.id}`)}
-                      className="text-[12px] font-medium text-blue-600 transition hover:text-blue-700"
+                      className="text-[12px] font-medium text-navy-700 transition hover:text-navy-900"
                     >
                       Abrir caso
                     </button>
@@ -222,7 +223,7 @@ export function CaseDetailPage() {
       </Link>
       <div className="mt-3 mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-[28px] font-semibold">{folder.name}</h1>
+          <h1 className="text-[clamp(1.7rem,2.4vw,2.1rem)] font-semibold tracking-[-0.04em]">{folder.name}</h1>
           {folder.legalContext ? <p className="mt-1 max-w-2xl text-[14px] text-muted">{folder.legalContext}</p> : null}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -243,7 +244,7 @@ export function CaseDetailPage() {
             type="button"
             className={cn(
               'border-b-2 px-3 py-2 text-[14px] capitalize',
-              tab === id ? 'border-navy-900 font-medium text-ink' : 'border-transparent text-muted',
+              tab === id ? 'border-ember font-medium text-ink' : 'border-transparent text-muted hover:text-ink',
             )}
             onClick={() => setTab(id)}
           >
@@ -299,7 +300,7 @@ export function CaseDetailPage() {
             action={{ label: 'Subir documento', onClick: () => setUpload(true) }}
           />
         ) : (
-          <div className="divide-y divide-border rounded-[12px] border border-border bg-surface">
+          <div className="divide-y divide-border overflow-hidden rounded-[18px] border border-border bg-surface shadow-card">
             {(docsQuery.data ?? []).map((doc) => (
               <div key={doc.id} className="flex items-center justify-between px-4 py-3">
                 <div>
@@ -325,7 +326,7 @@ export function CaseDetailPage() {
             action={{ label: 'Chat nuevo', onClick: () => setNewChat(true) }}
           />
         ) : (
-          <div className="divide-y divide-border rounded-[12px] border border-border bg-surface">
+          <div className="divide-y divide-border overflow-hidden rounded-[18px] border border-border bg-surface shadow-card">
             {caseChats.map((chat) => (
               <Link key={chat.id} to={`/app/chats/${chat.id}`} className="flex items-center justify-between px-4 py-3 hover:bg-subtle">
                 <span className="text-[14px] font-medium">{chat.title}</span>

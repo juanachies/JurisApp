@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, MoreHorizontal, Paperclip, PanelRight } from 'lucide-react'
+import { ArrowLeft, MessageSquare, MoreHorizontal, Paperclip, PanelRight } from 'lucide-react'
 import {
   chatsApi,
   documentsApi,
@@ -70,7 +70,7 @@ export function ChatsPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar por título"
-            className="h-10 w-full max-w-md rounded-[10px] border border-border bg-surface px-3 text-[14px] text-ink outline-none transition focus:border-blue-500"
+            className="h-11 w-full max-w-md rounded-[12px] border border-border bg-surface px-3 text-[14px] text-ink outline-none transition focus:border-navy-700"
           />
         </div>
 
@@ -89,7 +89,7 @@ export function ChatsPage() {
           <div className="space-y-5">
             {(['Hoy', 'Esta semana', 'Anteriores'] as const).map((group) =>
               grouped[group].length ? (
-                <section key={group} className="rounded-[18px] border border-border bg-surface shadow-sm">
+                <section key={group} className="overflow-hidden rounded-[18px] border border-border bg-surface shadow-card">
                   <p className="border-b border-border px-4 py-3 text-[12px] font-medium uppercase tracking-[0.12em] text-muted">
                     {group}
                   </p>
@@ -106,8 +106,8 @@ export function ChatsPage() {
                           onClick={() => navigate(`/app/chats/${chat.id}`)}
                         >
                           <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-subtle text-blue-600">
-                              <span className="text-[16px]">✦</span>
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-sky-100 text-navy-800">
+                              <MessageSquare size={18} />
                             </div>
                             <div className="min-w-0">
                               <span className="block truncate text-[15px] font-medium text-ink">{chat.title}</span>
@@ -118,7 +118,7 @@ export function ChatsPage() {
                             </div>
                           </div>
 
-                          <span className="text-[12px] font-medium text-blue-600">Abrir →</span>
+                          <span className="text-[12px] font-medium text-navy-700">Abrir →</span>
                         </button>
                       )
                     })}
@@ -345,14 +345,14 @@ export function ChatWorkspacePage() {
   return (
     <div className="flex h-[calc(100dvh-57px)] min-h-[560px] bg-canvas md:h-dvh">
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-border bg-surface px-4 py-3">
+        <header className="flex items-center gap-3 border-b border-border bg-surface px-4 py-3.5">
           <button type="button" className="lg:hidden" onClick={() => navigate('/app/chats')} aria-label="Volver">
             <ArrowLeft size={18} />
           </button>
           <div className="min-w-0 flex-1">
             {chatQuery.isLoading ? <Skeleton className="h-5 w-48" /> : (
               <>
-                <h1 className="truncate text-[16px] font-semibold">{chat?.title}</h1>
+                <h1 className="truncate text-[17px] font-semibold tracking-[-0.03em]">{chat?.title}</h1>
                 {folder ? <p className="truncate text-[12px] text-muted">Caso: {folder.name}</p> : null}
               </>
             )}
@@ -365,7 +365,7 @@ export function ChatWorkspacePage() {
               <MoreHorizontal size={18} />
             </button>
             {menu ? (
-              <div className="absolute right-0 z-10 mt-1 w-44 rounded-[8px] border border-border bg-surface py-1 shadow-lg">
+              <div className="absolute right-0 z-10 mt-1 w-44 rounded-[14px] border border-border bg-surface py-1 shadow-lg">
                 <button
                   type="button"
                   className="block w-full px-3 py-2 text-left text-[13px] text-danger hover:bg-subtle"
@@ -424,7 +424,7 @@ export function ChatWorkspacePage() {
               </p>
             ) : null}
             {taskMode ? (
-              <p className="mb-2 text-[12px] font-medium text-blue-600">
+              <p className="mb-2 text-[12px] font-medium text-ember">
                 Modo tarea — describí el objetivo. JurisApp va a proponer un plan antes de ejecutarlo.
               </p>
             ) : null}
@@ -433,7 +433,7 @@ export function ChatWorkspacePage() {
                 Revisá, editá o cancelá el plan pendiente antes de enviar otro mensaje o crear una nueva tarea.
               </p>
             ) : null}
-            <div className="rounded-[12px] border border-border-strong bg-canvas p-3">
+            <div className="rounded-[20px] border border-border bg-canvas p-3 shadow-sm">
               <Textarea
                 className="min-h-20 border-0 bg-transparent p-0 focus:border-0"
                 disabled={awaitingPlan}
@@ -481,7 +481,7 @@ export function ChatWorkspacePage() {
                   type="button"
                   className={cn(
                     'h-8 rounded-[8px] px-2 text-[12px] font-medium',
-                    taskMode ? 'bg-navy-900 text-white' : 'text-muted hover:bg-subtle',
+                    taskMode ? 'bg-ember text-white' : 'text-muted hover:bg-subtle',
                   )}
                   disabled={awaitingPlan}
                   onClick={() => setTaskMode((v) => !v)}
@@ -505,7 +505,7 @@ export function ChatWorkspacePage() {
         </div>
       </section>
 
-      <aside className="hidden w-[280px] shrink-0 border-l border-border bg-surface xl:block">{contextPanel}</aside>
+      <aside className="hidden w-[300px] shrink-0 border-l border-border bg-surface xl:block">{contextPanel}</aside>
 
       {contextOpen ? (
         <div className="fixed inset-0 z-40 xl:hidden">
@@ -536,8 +536,8 @@ function MessageBubble({ message }: { message: MessageDto }) {
       <div
         className={cn(
           isUser
-            ? 'max-w-[80%] rounded-[8px] bg-subtle px-3 py-2 text-[14px]'
-            : 'max-w-[min(100%,720px)]',
+            ? 'max-w-[80%] rounded-[18px] rounded-br-[6px] bg-navy-900 px-4 py-2.5 text-[14px] text-white'
+            : 'max-w-[min(100%,720px)] rounded-[18px] border border-border bg-surface px-4 py-3 shadow-sm',
         )}
       >
         {isUser ? (

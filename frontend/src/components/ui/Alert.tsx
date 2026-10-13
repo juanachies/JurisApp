@@ -18,7 +18,7 @@ export function Alert({
   } as const
 
   return (
-    <div className={cn('rounded-[8px] border px-3 py-2.5 text-[13px]', styles[variant], className)}>
+    <div className={cn('rounded-[12px] border px-3.5 py-2.5 text-[13px]', styles[variant], className)}>
       {children}
     </div>
   )

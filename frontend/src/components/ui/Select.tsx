@@ -14,7 +14,7 @@ export function Select({ className, label, error, children, ...props }: SelectPr
       ) : null}
       <select
         className={cn(
-          'h-10 w-full rounded-[8px] border bg-surface px-3 text-[14px] text-ink',
+          'h-11 w-full rounded-[12px] border bg-surface px-3 text-[14px] text-ink',
           error ? 'border-danger' : 'border-border-strong',
           className,
         )}

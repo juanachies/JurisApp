@@ -35,7 +35,7 @@ export function PublicHeader({ tone = 'default' }: { tone?: 'default' | 'home' }
         home
           ? cn(
               'fixed inset-x-0 top-0 transition-colors duration-300',
-              scrolled ? 'border-b border-white/10 bg-[#0c1220]/90 backdrop-blur' : 'bg-transparent',
+              scrolled ? 'border-b border-white/10 bg-navy-950/90 backdrop-blur' : 'bg-transparent',
             )
           : 'sticky top-0 border-b border-border bg-surface/95 backdrop-blur',
       )}
@@ -67,8 +67,8 @@ export function PublicHeader({ tone = 'default' }: { tone?: 'default' | 'home' }
           <Link
             to="/register"
             className={cn(
-              'inline-flex h-8 items-center rounded-[8px] px-3 text-[13px] font-medium text-white',
-              home ? 'bg-[#ff5a36] hover:bg-[#ff734f]' : 'bg-navy-900 hover:bg-navy-800',
+              'inline-flex h-9 items-center rounded-[10px] px-3.5 text-[13px] font-medium text-white',
+              'bg-ember hover:bg-ember-hover',
             )}
           >
             Comenzar
@@ -82,7 +82,7 @@ export function PublicHeader({ tone = 'default' }: { tone?: 'default' | 'home' }
 export function PublicFooter({ tone = 'default' }: { tone?: 'default' | 'home' }) {
   const home = tone === 'home'
   return (
-    <footer className={cn('border-t', home ? 'border-white/10 bg-[#0c1220] text-white/70' : 'border-border bg-surface text-muted')}>
+    <footer className={cn('border-t', home ? 'border-white/10 bg-navy-950 text-white/70' : 'border-border bg-surface text-muted')}>
       <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-3 px-5 py-8 text-[13px]">
         <Logo light={home} />
         <p>Herramienta de productividad jurídica. No reemplaza el criterio profesional.</p>
@@ -112,26 +112,29 @@ export function AuthSplit({
 }) {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="hidden flex-col justify-between bg-navy-900 px-12 py-12 text-white lg:flex">
-        <Logo light to="/" />
-        <div className="max-w-md">
-          <p className="text-[13px] font-medium text-sky-400">IA aplicada al trabajo jurídico</p>
-          <h1 className="mt-3 text-[36px] font-semibold leading-tight">
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-navy-950 px-12 py-12 text-white lg:flex">
+        <div className="home-blob left-[-10%] top-10 h-56 w-56 bg-blue-500/30" />
+        <div className="home-blob bottom-0 right-[-8%] h-64 w-64 bg-ember/25" />
+        <Logo light to="/" className="relative" />
+        <div className="relative max-w-md">
+          <p className="text-[13px] font-medium uppercase tracking-[0.16em] text-sky-400">IA aplicada al trabajo jurídico</p>
+          <h1 className="mt-4 text-[clamp(2.2rem,4vw,3.4rem)] font-semibold leading-[1.02]">
             Casos, documentos y conversaciones en un solo espacio.
           </h1>
-          <p className="mt-4 text-[15px] text-white/70">
+          <p className="mt-4 text-[16px] leading-relaxed text-white/70">
             JurisApp mantiene el contexto de tu trabajo para que la IA analice y responda sobre lo que realmente
             estás haciendo.
           </p>
+          <span className="mt-8 block h-1 w-12 rounded-full bg-ember" />
         </div>
-        <p className="text-[12px] text-white/40">JurisApp — software jurídico, Argentina</p>
+        <p className="relative text-[12px] text-white/40">JurisApp — software jurídico, Argentina</p>
       </div>
       <div className="flex items-center justify-center bg-canvas px-5 py-12">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md rounded-[24px] border border-border bg-surface p-8 shadow-card">
           <div className="mb-8 lg:hidden">
             <Logo />
           </div>
-          <h2 className="text-[26px] font-semibold text-ink">{title}</h2>
+          <h2 className="text-[28px] font-semibold tracking-[-0.04em] text-ink">{title}</h2>
           <p className="mt-1 text-[14px] text-muted">{subtitle}</p>
           <div className="mt-8">{children}</div>
         </div>
@@ -150,7 +153,7 @@ export function PlanCards({ ctaTo = '/register' }: { ctaTo?: string }) {
     return (
       <div className="grid gap-4 md:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-72 animate-pulse rounded-[12px] bg-subtle" />
+          <div key={i} className="h-72 animate-pulse rounded-[20px] bg-subtle" />
         ))}
       </div>
     )
@@ -158,7 +161,7 @@ export function PlanCards({ ctaTo = '/register' }: { ctaTo?: string }) {
 
   if (isError || !data) {
     return (
-      <div className="rounded-[12px] border border-border bg-surface p-6 text-center">
+      <div className="rounded-[20px] border border-border bg-surface p-6 text-center shadow-card">
         <p className="text-[14px] text-muted">No pudimos cargar los planes.</p>
         <Button className="mt-3" variant="secondary" onClick={() => refetch()}>
           Reintentar
@@ -176,8 +179,8 @@ export function PlanCards({ ctaTo = '/register' }: { ctaTo?: string }) {
           <div
             key={plan.id}
             className={cn(
-              'flex flex-col rounded-[12px] border bg-surface p-6',
-              highlight ? 'border-navy-900 shadow-sm' : 'border-border',
+              'flex flex-col rounded-[20px] border bg-surface p-6 shadow-card',
+              highlight ? 'border-ember' : 'border-border',
             )}
           >
             <p className="text-[13px] font-medium text-muted">{plan.name}</p>

@@ -35,8 +35,8 @@ export function FileDropzone({
           if (next) onFile(next)
         }}
         className={cn(
-          'flex w-full flex-col items-center justify-center rounded-[12px] border border-dashed px-4 py-8 text-center transition-colors',
-          drag ? 'border-blue-600 bg-sky-100/60' : 'border-border-strong bg-subtle',
+          'flex w-full flex-col items-center justify-center rounded-[16px] border border-dashed px-4 py-8 text-center transition-colors',
+          drag ? 'border-navy-700 bg-sky-100/70' : 'border-border-strong bg-subtle',
         )}
       >
         <Upload size={18} className="text-muted" />

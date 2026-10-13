@@ -13,7 +13,7 @@ export function EmptyState({
   className?: string
 }) {
   return (
-    <div className={cn('rounded-[12px] border border-dashed border-border-strong bg-surface px-6 py-12 text-center', className)}>
+    <div className={cn('rounded-[20px] border border-dashed border-border-strong bg-surface px-6 py-14 text-center shadow-card', className)}>
       <h3 className="text-[16px] font-semibold text-ink">{title}</h3>
       {description ? <p className="mx-auto mt-2 max-w-md text-[14px] text-muted">{description}</p> : null}
       {action ? (

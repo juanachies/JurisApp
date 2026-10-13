@@ -68,7 +68,7 @@ export function AppShell() {
   const visibleFolders = allFolders.slice(0, folderExpanded ? allFolders.length : 5)
 
   const sidebar = (
-    <div className="flex h-full flex-col bg-[#071a2d] text-white transition-all duration-300 rounded-none">
+    <div className="flex h-full flex-col rounded-none bg-navy-950 text-white transition-all duration-300">
       <div
         className={cn(
           'flex h-16 shrink-0 items-center border-b border-white/10 px-4 transition-all duration-200',
@@ -106,7 +106,7 @@ export function AppShell() {
             onClick={() => setOpen(false)}
             className={({ isActive }) => cn(
               'flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-[14px] transition-all duration-200',
-              isActive ? 'bg-white/8 font-medium text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]' : 'text-white/70 hover:bg-white/5 hover:text-white',
+              isActive ? 'bg-white/10 font-medium text-white' : 'text-white/70 hover:bg-white/5 hover:text-white',
               collapsed && 'justify-center px-2',
             )}
             title="Inicio"
@@ -123,7 +123,7 @@ export function AppShell() {
               onClick={() => setOpen(false)}
               className={({ isActive }) => cn(
                 'flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-[14px] transition-all duration-200',
-                isActive ? 'bg-white/8 font-medium text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]' : 'text-white/70 hover:bg-white/5 hover:text-white',
+                isActive ? 'bg-white/10 font-medium text-white' : 'text-white/70 hover:bg-white/5 hover:text-white',
                 collapsed && 'justify-center px-2',
               )}
               title="Skills IA"
@@ -140,7 +140,7 @@ export function AppShell() {
             onClick={() => setOpen(false)}
             className={({ isActive }) => cn(
               'flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-[14px] transition-all duration-200',
-              isActive ? 'bg-white/8 font-medium text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]' : 'text-white/70 hover:bg-white/5 hover:text-white',
+              isActive ? 'bg-white/10 font-medium text-white' : 'text-white/70 hover:bg-white/5 hover:text-white',
               collapsed && 'justify-center px-2',
             )}
             title="Chats"
@@ -182,7 +182,7 @@ export function AppShell() {
               onClick={() => setOpen(false)}
               className={({ isActive }) => cn(
                 'flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-[14px] transition-all duration-200',
-                isActive ? 'bg-white/8 font-medium text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]' : 'text-white/70 hover:bg-white/5 hover:text-white',
+                isActive ? 'bg-white/10 font-medium text-white' : 'text-white/70 hover:bg-white/5 hover:text-white',
                 collapsed && 'justify-center px-2',
               )}
               title="Carpetas"
@@ -225,7 +225,7 @@ export function AppShell() {
               onClick={() => setOpen(false)}
               className={({ isActive }) => cn(
                 'flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-[14px] transition-all duration-200',
-                isActive ? 'bg-white/8 font-medium text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]' : 'text-white/70 hover:bg-white/5 hover:text-white',
+                isActive ? 'bg-white/10 font-medium text-white' : 'text-white/70 hover:bg-white/5 hover:text-white',
                 collapsed && 'justify-center px-2',
               )}
               title="Administración"
@@ -247,7 +247,7 @@ export function AppShell() {
               collapsed && 'justify-center bg-transparent hover:bg-white/5',
             )}
           >
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-[10px] font-bold text-[#071a2d] shadow-sm shadow-black/20">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ember text-[10px] font-bold text-white shadow-sm shadow-black/20">
               {user ? `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase() : 'JC'}
             </div>
 
@@ -259,7 +259,7 @@ export function AppShell() {
                   </p>
                   <div className="mt-0.5 flex items-center gap-1.5">
                     <p className="truncate text-[11px] text-white/60">{user ? roleLabel(user.role) : 'Abogado'}</p>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-1.5 py-[1px] text-[9px] font-medium uppercase tracking-[0.08em] text-white/75">
+                    <span className="rounded-full border border-pine/40 bg-pine/25 px-1.5 py-[1px] text-[9px] font-medium uppercase tracking-[0.08em] text-white">
                       {planTypeLabel(currentPlanQuery.data?.planType ?? 'Free')}
                     </span>
                   </div>
@@ -270,7 +270,7 @@ export function AppShell() {
           </button>
 
           {userMenuOpen && (
-            <div className={cn('absolute bottom-full z-20 mb-2 w-full min-w-[200px] rounded-[12px] border border-white/10 bg-[#071a2d] p-1.5 shadow-2xl shadow-black/40', collapsed ? 'left-0' : 'left-0 right-0')}>
+            <div className={cn('absolute bottom-full z-20 mb-2 w-full min-w-[200px] rounded-[16px] border border-white/10 bg-navy-900 p-1.5 shadow-2xl shadow-black/40', collapsed ? 'left-0' : 'left-0 right-0')}>
               <Link to="/app/profile" className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-white/90 transition-colors hover:bg-white/8 hover:text-white">
                 <User size={15} className="text-white/60" /> Perfil
               </Link>
@@ -351,12 +351,12 @@ export function AdminShell() {
 
   return (
     <div className="flex min-h-screen bg-canvas">
-      <aside className="hidden w-[240px] shrink-0 border-r border-border bg-surface md:flex md:flex-col">
-        <div className="px-4 py-4">
-          <p className="text-[12px] font-medium uppercase tracking-wide text-muted">Administración</p>
-          <p className="text-[16px] font-semibold text-navy-900">JurisApp</p>
+      <aside className="hidden w-[240px] shrink-0 bg-navy-950 text-white md:flex md:flex-col">
+        <div className="border-b border-white/10 px-4 py-4">
+          <Logo light to="/admin" />
+          <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.16em] text-white/45">Administración</p>
         </div>
-        <nav className="flex-1 space-y-0.5 px-3">
+        <nav className="flex-1 space-y-1 px-3 py-4">
           {items.map((item) => (
             <NavLink
               key={item.to}
@@ -364,8 +364,10 @@ export function AdminShell() {
               end={item.end}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-2 rounded-[8px] px-2 py-2 text-[14px]',
-                  isActive ? 'bg-subtle font-medium text-navy-900' : 'text-muted hover:bg-subtle hover:text-ink',
+                  'flex items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-[14px] transition-colors',
+                  isActive
+                    ? 'bg-white/10 font-medium text-white'
+                    : 'text-white/70 hover:bg-white/5 hover:text-white',
                 )
               }
             >
@@ -374,13 +376,13 @@ export function AdminShell() {
             </NavLink>
           ))}
         </nav>
-        <div className="space-y-2 border-t border-border p-4">
-          <Link to="/app" className="block text-[13px] text-blue-600 hover:underline">
+        <div className="space-y-2 border-t border-white/10 p-4">
+          <Link to="/app" className="block text-[13px] text-sky-400 hover:text-white">
             Volver a JurisApp
           </Link>
           <button
             type="button"
-            className="text-[13px] text-muted hover:text-ink"
+            className="text-[13px] text-white/55 hover:text-white"
             onClick={() => {
               logout()
               navigate('/login')
@@ -391,11 +393,11 @@ export function AdminShell() {
         </div>
       </aside>
       <main className="min-w-0 flex-1">
-        <div className="border-b border-border bg-surface px-4 py-3 md:hidden">
+        <div className="border-b border-white/10 bg-navy-950 px-4 py-3 text-white md:hidden">
           <p className="font-semibold">Administración</p>
-          <div className="mt-2 flex flex-wrap gap-2 text-[13px]">
+          <div className="mt-2 flex flex-wrap gap-3 text-[13px]">
             {items.map((item) => (
-              <Link key={item.to} to={item.to} className="text-blue-600">
+              <Link key={item.to} to={item.to} className="text-sky-400">
                 {item.label}
               </Link>
             ))}
@@ -408,7 +410,7 @@ export function AdminShell() {
 }
 
 export function AppPage({ children, wide }: { children: ReactNode; wide?: boolean }) {
-  return <div className={cn('px-5 py-6 lg:px-8', wide ? '' : 'mx-auto max-w-6xl')}>{children}</div>
+  return <div className={cn('px-5 py-8 lg:px-10', wide ? '' : 'mx-auto max-w-6xl')}>{children}</div>
 }
 
 export function QueryError({
@@ -419,7 +421,7 @@ export function QueryError({
   onRetry?: () => void
 }) {
   return (
-    <div className="rounded-[12px] border border-border bg-surface p-6">
+    <div className="rounded-[18px] border border-border bg-surface p-6 shadow-card">
       <p className="text-[14px] text-ink">{message}</p>
       <p className="mt-1 text-[13px] text-muted">Reintentá en unos segundos.</p>
       {onRetry ? (

@@ -19,6 +19,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Select } from '@/components/ui/Select'
 import { useToast } from '@/components/ui/Toast'
 import { formatPrice, limitLabel, parseLimits, roleLabel, verificationLabel } from '@/utils/format'
+import { cn } from '@/utils/cn'
 import { isPaidPlan } from '@/utils/permissions'
 import type { PlanType, UserTheme } from '@/types/api'
 
@@ -56,7 +57,7 @@ export function ProfilePage() {
       <PageHeader title="Mi perfil" description="Datos de la cuenta. El rol no se edita acá." />
       {error ? <Alert className="mb-4">{error}</Alert> : null}
       <form
-        className="max-w-lg space-y-4"
+        className="max-w-lg space-y-4 rounded-[20px] border border-border bg-surface p-6 shadow-card"
         onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
       >
         <h2 className="text-[16px] font-semibold">Información personal</h2>
@@ -72,7 +73,7 @@ export function ProfilePage() {
         </Button>
       </form>
 
-      <section className="mt-10 max-w-lg">
+      <section className="mt-6 max-w-lg rounded-[20px] border border-border bg-surface p-6 shadow-card">
         <h2 className="text-[16px] font-semibold">Rol y verificación</h2>
         <p className="mt-2 text-[14px] text-muted">
           Rol: <span className="text-ink">{user ? roleLabel(user.role) : '—'}</span>
@@ -154,7 +155,7 @@ export function SubscriptionPage() {
       {currentQuery.isError ? (
         <QueryError message="No pudimos cargar tu plan." onRetry={() => currentQuery.refetch()} />
       ) : (
-        <div className="mb-10 rounded-[12px] border border-navy-900 bg-surface p-6">
+        <div className="mb-10 rounded-[20px] border border-navy-900 bg-surface p-6 shadow-card">
           <p className="text-[13px] text-muted">Tu plan</p>
           <p className="mt-1 text-[28px] font-semibold">{current?.planName ?? '—'}</p>
           <p className="text-[14px] text-muted">{current ? formatPrice(current.price) : ''}</p>
@@ -181,7 +182,7 @@ export function SubscriptionPage() {
           const lim = parseLimits(plan.limitsJson)
           const currentOne = plan.id === current?.planId && current.hasActiveSubscription
           return (
-            <div key={plan.id} className="rounded-[12px] border border-border bg-surface p-5">
+            <div key={plan.id} className={cn('rounded-[20px] border bg-surface p-5 shadow-card', plan.type === 'Pro' ? 'border-ember' : 'border-border')}>
               <p className="font-semibold">{plan.name}</p>
               <p className="mt-1 text-[22px] font-semibold">{formatPrice(plan.price)}</p>
               {isPaidPlan(plan.type) ? (
@@ -278,7 +279,7 @@ export function VerificationPage() {
       />
 
       {!hasPro && status !== 'Verified' ? (
-        <div className="max-w-xl rounded-[12px] border border-border bg-surface p-6">
+        <div className="max-w-xl rounded-[20px] border border-border bg-surface p-6 shadow-card">
           <p className="text-[15px] font-medium">Para solicitar la verificación como abogado necesitás un plan Pro activo.</p>
           <ButtonLink to="/app/subscription" className="mt-4">
             Ver planes
@@ -287,7 +288,7 @@ export function VerificationPage() {
       ) : null}
 
       {status === 'Pending' ? (
-        <div className="max-w-xl rounded-[12px] border border-border bg-surface p-6">
+        <div className="max-w-xl rounded-[20px] border border-border bg-surface p-6 shadow-card">
           <Badge tone="warning">Pendiente</Badge>
           <h2 className="mt-3 text-[18px] font-semibold">Verificación en revisión</h2>
           <p className="mt-2 text-[14px] text-muted">Recibimos tu solicitud. Te vamos a notificar cuando haya una resolución.</p>
@@ -295,7 +296,7 @@ export function VerificationPage() {
       ) : null}
 
       {status === 'Verified' ? (
-        <div className="max-w-xl rounded-[12px] border border-border bg-surface p-6">
+        <div className="max-w-xl rounded-[20px] border border-border bg-surface p-6 shadow-card">
           <Badge tone="success">Verificado</Badge>
           <h2 className="mt-3 text-[18px] font-semibold">Perfil profesional verificado</h2>
           <dl className="mt-4 space-y-2 text-[14px]">
@@ -366,7 +367,7 @@ export function VerificationPage() {
 export function BillingSuccessPage() {
   return (
     <AppPage>
-      <h1 className="text-[28px] font-semibold">Pago recibido</h1>
+      <h1 className="text-[clamp(1.7rem,2.4vw,2.1rem)] font-semibold tracking-[-0.04em]">Pago recibido</h1>
       <p className="mt-2 text-[14px] text-muted">
         Si el cobro se confirmó, tu plan debería actualizarse en unos instantes.
       </p>

@@ -9,7 +9,7 @@ export function Table({
   className?: string
 }) {
   return (
-    <div className={cn('overflow-x-auto rounded-[12px] border border-border bg-surface', className)}>
+    <div className={cn('overflow-x-auto rounded-[18px] border border-border bg-surface shadow-card', className)}>
       <table className="w-full min-w-[640px] border-collapse text-left text-[14px]">{children}</table>
     </div>
   )

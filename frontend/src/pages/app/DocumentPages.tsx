@@ -84,7 +84,7 @@ export function DocumentsPage() {
           <button
             key={id}
             type="button"
-            className={`rounded-[8px] px-3 py-1.5 text-[13px] ${filter === id ? 'bg-navy-900 text-white' : 'bg-surface text-muted'}`}
+            className={`rounded-full border px-3 py-1.5 text-[13px] ${filter === id ? 'border-navy-900 bg-navy-900 text-white' : 'border-border bg-surface text-muted'}`}
             onClick={() => setFilter(id)}
           >
             {id === 'all' ? 'Todos' : id === 'cases' ? 'En casos' : 'En chats'}
@@ -94,7 +94,7 @@ export function DocumentsPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Filtrar por nombre"
-          className="h-9 rounded-[8px] border border-border-strong bg-surface px-3 text-[13px]"
+          className="h-10 rounded-[12px] border border-border-strong bg-surface px-3 text-[13px]"
         />
       </div>
       {loading ? <TableSkeleton /> : null}
@@ -215,7 +215,7 @@ export function DocumentDetailPage() {
       ) : null}
       <div className="mt-3 mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-[28px] font-semibold">{doc?.title ?? 'Documento'}</h1>
+          <h1 className="text-[clamp(1.7rem,2.4vw,2.1rem)] font-semibold tracking-[-0.04em]">{doc?.title ?? 'Documento'}</h1>
           <p className="mt-1 text-[14px] text-muted">
             {folder ? `Caso: ${folder.name}` : chat ? `Chat: ${chat.title}` : 'Sin ubicación'}
           </p>
@@ -234,14 +234,14 @@ export function DocumentDetailPage() {
         </div>
       </div>
 
-      <section className="rounded-[12px] border border-border bg-surface p-5">
+      <section className="rounded-[20px] border border-border bg-surface p-6 shadow-card">
         <h2 className="text-[18px] font-semibold">Análisis con IA</h2>
         <p className="mt-1 text-[13px] text-muted">
           El análisis no se vuelve a listar al recargar: queda visible en esta sesión después de pedirlo.
         </p>
         {canManageCases && (skillsQuery.data ?? []).some((s) => s.isActive) ? (
           <select
-            className="mt-4 h-10 rounded-[8px] border border-border-strong bg-canvas px-3 text-[14px]"
+            className="mt-4 h-11 rounded-[12px] border border-border-strong bg-canvas px-3 text-[14px]"
             value={skillId}
             onChange={(e) => setSkillId(e.target.value)}
           >
