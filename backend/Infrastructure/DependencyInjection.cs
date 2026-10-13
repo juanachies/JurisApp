@@ -103,7 +103,16 @@ public static class DependencyInjection
     private static IServiceCollection AddAuthServices(this IServiceCollection services)
     {
         services.AddHttpContextAccessor();
-        services.AddScoped<IEmailSender, GmailSmtpEmailSender>();
+        services.AddScoped<GmailSmtpEmailSender>();
+        services.AddScoped<BrevoEmailSender>();
+        services.AddScoped<IEmailSender>(serviceProvider =>
+        {
+            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+            if (!string.IsNullOrWhiteSpace(configuration["Brevo:ApiKey"]))
+                return serviceProvider.GetRequiredService<BrevoEmailSender>();
+
+            return serviceProvider.GetRequiredService<GmailSmtpEmailSender>();
+        });
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
