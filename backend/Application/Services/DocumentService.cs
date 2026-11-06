@@ -127,6 +127,10 @@ public class DocumentService : IDocumentService
         if (types.Count == 0)
             return Result<DocumentAnalysisDto>.Failure(Error.Validation("Indicá al menos un tipo de análisis."));
 
+        var existing = await _documentAnalysisRepository.GetByDocumentIdAsync(request.DocumentId, cancellationToken);
+        if (IsAutomaticCompleteRequest(request) && existing is not null && IsPersistedComplete(existing))
+            return Result<DocumentAnalysisDto>.Success(existing.ToDto());
+
         string documentText;
         try
         {
@@ -166,7 +170,6 @@ public class DocumentService : IDocumentService
             return Result<DocumentAnalysisDto>.Failure(Error.ExternalService(ex.Message));
         }
 
-        var existing = await _documentAnalysisRepository.GetByDocumentIdAsync(request.DocumentId, cancellationToken);
         var storedType = types.Count == 1 ? types[0] : DocumentAnalysisType.Custom;
 
         if (existing is null)
@@ -197,6 +200,22 @@ public class DocumentService : IDocumentService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<DocumentAnalysisDto>.Success(existing.ToDto());
+    }
+
+    public async Task<Result<DocumentAnalysisDto>> GetAnalysisAsync(Guid userId, Guid documentId, CancellationToken cancellationToken = default)
+    {
+        var document = await _documentRepository.GetByIdAsync(documentId, cancellationToken);
+        if (document is null)
+            return Result<DocumentAnalysisDto>.Failure(Error.NotFound("Documento no encontrado."));
+
+        var accessError = await EnsureDocumentAccessAsync(userId, document, cancellationToken);
+        if (accessError is not null)
+            return Result<DocumentAnalysisDto>.Failure(accessError);
+
+        if (document.Analysis is null)
+            return Result<DocumentAnalysisDto>.Failure(Error.NotFound("Este documento todavía no tiene análisis."));
+
+        return Result<DocumentAnalysisDto>.Success(document.Analysis.ToDto());
     }
 
     public async Task<Result<DocumentDto>> GetByIdAsync(Guid userId, Guid documentId, CancellationToken cancellationToken = default)
@@ -285,6 +304,14 @@ public class DocumentService : IDocumentService
 
         return skills;
     }
+
+    private static bool IsAutomaticCompleteRequest(AnalyzeDocumentRequest request) =>
+        request.Types is not { Count: > 0 } && !request.Type.HasValue;
+
+    private static bool IsPersistedComplete(DocumentAnalysis analysis) =>
+        !string.IsNullOrWhiteSpace(analysis.Summary)
+        && !string.IsNullOrWhiteSpace(analysis.Risks)
+        && !string.IsNullOrWhiteSpace(analysis.Recommendations);
 
     private static IReadOnlyList<DocumentAnalysisType> ResolveAnalysisTypes(AnalyzeDocumentRequest request)
     {

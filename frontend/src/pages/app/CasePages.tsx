@@ -309,7 +309,7 @@ export function CaseDetailPage() {
                 </div>
                 <div className="flex gap-3 text-[13px]">
                   <Link to={`/app/documents/${doc.id}`} className="text-blue-600 hover:underline">
-                    Analizar
+                    Ver análisis
                   </Link>
                 </div>
               </div>

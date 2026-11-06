@@ -11,7 +11,8 @@ public static class DocumentMappings
         ChatId = document.ChatId,
         FolderId = document.FolderId,
         Title = document.Title,
-        Url = document.Url
+        Url = document.Url,
+        HasAnalysis = document.Analysis is not null
     };
 
     public static DocumentAnalysisDto ToDto(this DocumentAnalysis analysis) => new()

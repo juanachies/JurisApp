@@ -1,12 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { chatsApi, documentsApi, foldersApi, skillsApi } from '@/api'
-import { fileUrl } from '@/api/client'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { chatsApi, documentsApi, foldersApi } from '@/api'
+import { ApiError, fileUrl } from '@/api/client'
 import { queryKeys } from '@/api/queryKeys'
-import { errorMessage } from '@/api/client'
 import { useAuth } from '@/app/AuthContext'
 import { AppPage, QueryError } from '@/components/layout/AppShell'
+import { ensureCompleteAnalysis, readAnalysisRun, retryCompleteAnalysis, useAnalysisRun } from '@/components/documents/analysisRun'
 import { UploadDocumentModal } from '@/components/documents/UploadDocumentModal'
 import { Alert } from '@/components/ui/Alert'
 import { Button, ButtonLink, buttonClass } from '@/components/ui/Button'
@@ -15,9 +15,8 @@ import { MarkdownBody, AiDisclaimer } from '@/components/ui/MarkdownBody'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Table, TBody, Td, Th, THead, Tr } from '@/components/ui/Table'
 import { TableSkeleton } from '@/components/ui/Loading'
-import { useToast } from '@/components/ui/Toast'
-import type { DocumentAnalysisDto, DocumentAnalysisType, DocumentDto } from '@/types/api'
-import { analysisTypeLabel, fileExtension } from '@/utils/format'
+import type { DocumentAnalysisDto, DocumentDto } from '@/types/api'
+import { fileExtension } from '@/utils/format'
 
 type Filter = 'all' | 'cases' | 'chats'
 
@@ -129,7 +128,7 @@ export function DocumentsPage() {
                 <Td>{fileExtension(doc.title) || '—'}</Td>
                 <Td>
                   <Link to={`/app/documents/${doc.id}`} className="text-[13px] text-blue-600 hover:underline">
-                    Analizar
+                    Ver análisis
                   </Link>
                 </Td>
               </Tr>
@@ -142,21 +141,11 @@ export function DocumentsPage() {
   )
 }
 
-const ANALYSIS_ACTIONS: { label: string; types?: DocumentAnalysisType[] }[] = [
-  { label: 'Resumir', types: ['Summary'] },
-  { label: 'Detectar riesgos', types: ['RiskAnalysis'] },
-  { label: 'Generar recomendaciones', types: ['Recommendations'] },
-  { label: 'Revisión contractual', types: ['ContractReview'] },
-  { label: 'Análisis completo' },
-]
-
 export function DocumentDetailPage() {
   const { documentId } = useParams<{ documentId: string }>()
   const { canManageCases } = useAuth()
   const queryClient = useQueryClient()
-  const toast = useToast()
-  const [error, setError] = useState<string | null>(null)
-  const [skillId, setSkillId] = useState('')
+  const run = useAnalysisRun(documentId ?? '')
 
   const docQuery = useQuery({
     queryKey: queryKeys.document(documentId ?? ''),
@@ -170,38 +159,38 @@ export function DocumentDetailPage() {
     enabled: canManageCases,
     retry: false,
   })
-  const skillsQuery = useQuery({
-    queryKey: queryKeys.skills,
-    queryFn: skillsApi.list,
-    enabled: canManageCases,
-    retry: false,
-  })
   const analysisQuery = useQuery({
     queryKey: queryKeys.documentAnalysis(documentId ?? ''),
-    queryFn: async () => null as DocumentAnalysisDto | null,
-    enabled: false,
+    queryFn: async () => {
+      try {
+        return await documentsApi.getAnalysis(documentId!)
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) {
+          const saved = readAnalysisRun(documentId!)
+          if (saved?.status === 'done' && saved.analysis) return saved.analysis
+          return null
+        }
+        throw err
+      }
+    },
+    enabled: Boolean(documentId),
     staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   })
 
-  const analyze = useMutation({
-    mutationFn: (types?: DocumentAnalysisType[]) =>
-      documentsApi.analyze({
-        documentId: documentId!,
-        types,
-        customSkillIds: skillId ? [skillId] : undefined,
-      }),
-    onSuccess: (result) => {
-      queryClient.setQueryData(queryKeys.documentAnalysis(documentId!), result)
-      toast('Análisis listo.')
-      setError(null)
-    },
-    onError: (err) => setError(errorMessage(err, 'No pudimos analizar el documento.')),
-  })
+  useEffect(() => {
+    if (!documentId || !analysisQuery.isSuccess || analysisQuery.data) return
+    ensureCompleteAnalysis(documentId, queryClient)
+  }, [documentId, analysisQuery.isSuccess, analysisQuery.data, queryClient])
 
   const doc = docQuery.data
   const chat = chatsQuery.data?.find((c) => c.id === doc?.chatId)
   const folder = foldersQuery.data?.find((f) => f.id === doc?.folderId)
   const href = fileUrl(doc?.url)
+  const analysis = analysisQuery.data ?? (run?.status === 'done' ? run.analysis ?? null : null)
+  const failed = !analysis && run?.status === 'error'
+  const analyzing = !analysis && !failed && (analysisQuery.isSuccess || run?.status === 'queued' || run?.status === 'running')
 
   return (
     <AppPage>
@@ -237,43 +226,28 @@ export function DocumentDetailPage() {
       <section className="rounded-[20px] border border-border bg-surface p-6 shadow-card">
         <h2 className="text-[18px] font-semibold">Análisis con IA</h2>
         <p className="mt-1 text-[13px] text-muted">
-          El análisis no se vuelve a listar al recargar: queda visible en esta sesión después de pedirlo.
+          El análisis completo queda guardado y no cambia. Para hacer preguntas sobre el documento, usá el chat donde está vinculado.
         </p>
-        {canManageCases && (skillsQuery.data ?? []).some((s) => s.isActive) ? (
-          <select
-            className="mt-4 h-11 rounded-[12px] border border-border-strong bg-canvas px-3 text-[14px]"
-            value={skillId}
-            onChange={(e) => setSkillId(e.target.value)}
-          >
-            <option value="">Skill: ninguna</option>
-            {(skillsQuery.data ?? [])
-              .filter((s) => s.isActive)
-              .map((skill) => (
-                <option key={skill.id} value={skill.id}>
-                  {skill.name}
-                </option>
-              ))}
-          </select>
+        {analysisQuery.isLoading && !run ? (
+          <p className="mt-6 text-[14px] text-muted">Cargando el análisis guardado…</p>
         ) : null}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {ANALYSIS_ACTIONS.map((action) => (
-            <Button
-              key={action.label}
-              variant="secondary"
-              loading={analyze.isPending}
-              onClick={() => analyze.mutate(action.types)}
-            >
-              {action.label}
+        {analyzing ? (
+          <p className="mt-6 text-[14px] font-medium text-blue-600">Analizando con IA</p>
+        ) : null}
+        {failed ? (
+          <div className="mt-4">
+            <Alert>{run?.error ?? 'No pudimos analizar el documento.'}</Alert>
+            <Button className="mt-3" variant="secondary" onClick={() => retryCompleteAnalysis(documentId!, queryClient)}>
+              Reintentar análisis
             </Button>
-          ))}
-        </div>
-        {analyze.isPending ? (
-          <p className="mt-6 text-[14px] text-muted">
-            Analizando documento… JurisApp está procesando el contenido para generar el análisis solicitado.
-          </p>
+          </div>
         ) : null}
-        {error ? <Alert className="mt-4">{error}</Alert> : null}
-        {analysisQuery.data ? <AnalysisResult analysis={analysisQuery.data} /> : null}
+        {analysisQuery.isError ? (
+          <div className="mt-4">
+            <QueryError message="No pudimos cargar el análisis." onRetry={() => analysisQuery.refetch()} />
+          </div>
+        ) : null}
+        {analysis ? <AnalysisResult analysis={analysis} /> : null}
       </section>
     </AppPage>
   )
@@ -282,7 +256,7 @@ export function DocumentDetailPage() {
 function AnalysisResult({ analysis }: { analysis: DocumentAnalysisDto }) {
   return (
     <div className="mt-6 space-y-6">
-      <p className="text-[12px] text-faint">Tipo: {analysisTypeLabel(analysis.type)}</p>
+      <p className="text-[12px] font-medium text-success">Análisis completo</p>
       {analysis.summary ? (
         <article>
           <h3 className="text-[16px] font-semibold">Resumen</h3>

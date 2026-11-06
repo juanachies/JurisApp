@@ -16,6 +16,8 @@ export const documentsApi = {
 
   listByFolder: (folderId: string) => apiClient<DocumentDto[]>(`/api/documents/folder/${folderId}`),
 
+  getAnalysis: (id: string) => apiClient<DocumentAnalysisDto>(`/api/documents/${id}/analysis`),
+
   analyze: (data: AnalyzeDocumentRequest) =>
     apiClient<DocumentAnalysisDto>('/api/documents/analyze', { method: 'POST', json: data }),
 }

@@ -123,6 +123,7 @@ export interface DocumentDto {
   folderId?: string | null
   title: string
   url: string
+  hasAnalysis: boolean
 }
 
 export interface AnalyzeDocumentRequest {

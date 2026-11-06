@@ -80,6 +80,14 @@ public class DocumentsController : ControllerBase
         return result.ToActionResult();
     }
 
+    [HttpGet("{id:guid}/analysis")]
+    public async Task<IActionResult> GetAnalysis(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService.UserId!.Value;
+        var result = await _documentService.GetAnalysisAsync(userId, id, cancellationToken);
+        return result.ToActionResult();
+    }
+
     [HttpPost("analyze")]
     public async Task<IActionResult> Analyze(
         [FromBody] AnalyzeDocumentRequest request,

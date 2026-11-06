@@ -13,6 +13,7 @@ import { ApiError, errorMessage } from '@/api/client'
 import { queryKeys } from '@/api/queryKeys'
 import { useAuth } from '@/app/AuthContext'
 import { CreateChatModal } from '@/components/chat/CreateChatModal'
+import { DocumentAnalysisCard } from '@/components/documents/DocumentAnalysisCard'
 import { UploadDocumentModal } from '@/components/documents/UploadDocumentModal'
 import { TaskPlanCard } from '@/components/tasks/TaskPlanCard'
 import { Alert } from '@/components/ui/Alert'
@@ -296,12 +297,10 @@ export function ChatWorkspacePage() {
         {caseDocuments.length === 0 ? (
           <p className="mt-1 text-muted">{folder ? 'Ninguno en este caso' : 'Este chat no está en un caso'}</p>
         ) : (
-          <ul className="mt-1 space-y-1">
+          <ul className="mt-2 space-y-2">
             {caseDocuments.map((doc) => (
               <li key={doc.id}>
-                <Link to={`/app/documents/${doc.id}`} className="hover:underline">
-                  {doc.title}
-                </Link>
+                <DocumentAnalysisCard doc={doc} />
               </li>
             ))}
           </ul>
@@ -309,12 +308,10 @@ export function ChatWorkspacePage() {
       </div>
       <div>
         <p className="text-[11px] uppercase tracking-wide text-faint">Documentos de este chat</p>
-        <ul className="mt-1 space-y-1">
+        <ul className="mt-2 space-y-2">
           {chatDocuments.map((doc) => (
             <li key={doc.id}>
-              <Link to={`/app/documents/${doc.id}`} className="hover:underline">
-                {doc.title}
-              </Link>
+              <DocumentAnalysisCard doc={doc} />
             </li>
           ))}
         </ul>
@@ -380,6 +377,19 @@ export function ChatWorkspacePage() {
             ) : null}
           </div>
         </header>
+
+        {chatDocuments.length > 0 ? (
+          <div className="border-b border-border bg-canvas px-4 py-3 lg:hidden">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-faint">Documentos de este chat</p>
+            <ul className="space-y-2">
+              {chatDocuments.map((doc) => (
+                <li key={doc.id}>
+                  <DocumentAnalysisCard doc={doc} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 lg:px-8">
           {chatQuery.isLoading ? (
@@ -505,10 +515,10 @@ export function ChatWorkspacePage() {
         </div>
       </section>
 
-      <aside className="hidden w-[300px] shrink-0 border-l border-border bg-surface xl:block">{contextPanel}</aside>
+      <aside className="hidden w-[320px] shrink-0 border-l border-border bg-surface lg:block">{contextPanel}</aside>
 
       {contextOpen ? (
-        <div className="fixed inset-0 z-40 xl:hidden">
+        <div className="fixed inset-0 z-40 lg:hidden">
           <button type="button" className="absolute inset-0 bg-navy-950/40" aria-label="Cerrar" onClick={() => setContextOpen(false)} />
           <div className="absolute inset-y-0 right-0 w-[min(100%,320px)] bg-surface shadow-lg">{contextPanel}</div>
         </div>

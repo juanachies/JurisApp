@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { documentsApi, chatsApi, foldersApi } from '@/api'
+import { ensureCompleteAnalysis } from '@/components/documents/analysisRun'
 import { queryKeys } from '@/api/queryKeys'
 import { errorMessage } from '@/api/client'
 import { useAuth } from '@/app/AuthContext'
@@ -10,6 +11,7 @@ import { FileDropzone } from '@/components/ui/FileDropzone'
 import { Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Select'
 import { useToast } from '@/components/ui/Toast'
+import type { DocumentDto } from '@/types/api'
 
 const ANALYZABLE =
   '.pdf,.docx,.rtf,.txt,.md,.csv,.json,.xml,.html,.htm,.log'
@@ -60,9 +62,22 @@ export function UploadDocumentModal({
       return documentsApi.upload(file, destination)
     },
     onSuccess: (doc) => {
-      if (doc.chatId) queryClient.invalidateQueries({ queryKey: queryKeys.chatDocuments(doc.chatId) })
-      if (doc.folderId) queryClient.invalidateQueries({ queryKey: queryKeys.folderDocuments(doc.folderId) })
-      toast('Documento subido.')
+      if (doc.chatId) {
+        queryClient.setQueryData<DocumentDto[]>(queryKeys.chatDocuments(doc.chatId), (current) => {
+          const list = current ?? []
+          return list.some((item) => item.id === doc.id) ? list : [...list, doc]
+        })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.chatDocuments(doc.chatId) })
+      }
+      if (doc.folderId) {
+        queryClient.setQueryData<DocumentDto[]>(queryKeys.folderDocuments(doc.folderId), (current) => {
+          const list = current ?? []
+          return list.some((item) => item.id === doc.id) ? list : [...list, doc]
+        })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.folderDocuments(doc.folderId) })
+      }
+      ensureCompleteAnalysis(doc.id, queryClient)
+      toast('Documento subido. Analizando con IA.')
       setFile(null)
       onUploaded?.(doc.id)
       onClose()

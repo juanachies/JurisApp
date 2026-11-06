@@ -42,6 +42,10 @@ public class DocumentTests : IClassFixture<JurisAppApiFactory>
         var document = await uploaded.Content.ReadFromJsonAsync<JsonElement>(ApiClient.Json);
         var documentId = document.GetProperty("id").GetGuid();
         Assert.Equal(chatId, document.GetProperty("chatId").GetGuid());
+        Assert.False(document.GetProperty("hasAnalysis").GetBoolean());
+
+        var missing = await client.GetAsync($"/api/documents/{documentId}/analysis");
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
 
         var analyze = await client.PostAsJsonAsync("/api/documents/analyze", new
         {
@@ -62,6 +66,24 @@ public class DocumentTests : IClassFixture<JurisAppApiFactory>
         var updated = await again.Content.ReadFromJsonAsync<JsonElement>(ApiClient.Json);
         Assert.False(string.IsNullOrWhiteSpace(updated.GetProperty("risks").GetString()));
         Assert.False(string.IsNullOrWhiteSpace(updated.GetProperty("summary").GetString()));
+
+        var fetched = await client.GetAsync($"/api/documents/{documentId}/analysis");
+        Assert.Equal(HttpStatusCode.OK, fetched.StatusCode);
+        var persisted = await fetched.Content.ReadFromJsonAsync<JsonElement>(ApiClient.Json);
+        Assert.Equal(updated.GetProperty("summary").GetString(), persisted.GetProperty("summary").GetString());
+        Assert.Equal(updated.GetProperty("risks").GetString(), persisted.GetProperty("risks").GetString());
+
+        var frozen = await client.PostAsJsonAsync("/api/documents/analyze", new { documentId });
+        Assert.Equal(HttpStatusCode.OK, frozen.StatusCode);
+        var unchanged = await frozen.Content.ReadFromJsonAsync<JsonElement>(ApiClient.Json);
+        Assert.Equal(updated.GetProperty("summary").GetString(), unchanged.GetProperty("summary").GetString());
+        Assert.Equal(updated.GetProperty("risks").GetString(), unchanged.GetProperty("risks").GetString());
+        Assert.Equal(updated.GetProperty("recommendations").GetString(), unchanged.GetProperty("recommendations").GetString());
+
+        var listed = await client.GetAsync($"/api/documents/chat/{chatId}");
+        Assert.Equal(HttpStatusCode.OK, listed.StatusCode);
+        var docs = await listed.Content.ReadFromJsonAsync<JsonElement>(ApiClient.Json);
+        Assert.True(docs[0].GetProperty("hasAnalysis").GetBoolean());
     }
 
     [Fact]
