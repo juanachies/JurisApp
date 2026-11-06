@@ -61,7 +61,7 @@ public class ChatDocumentContextService : IChatDocumentContextService
             AddContext(
                 contexts,
                 ref totalChars,
-                $"Contexto del caso: {folder.Name}",
+                $"{ChatDocumentContext.CaseContextPrefix}{folder.Name}",
                 folder.LegalContext);
         }
 
@@ -73,18 +73,20 @@ public class ChatDocumentContextService : IChatDocumentContextService
             string content;
             try
             {
-                content = await BuildDocumentContentAsync(document, cancellationToken);
+                content = await ExtractDocumentTextAsync(document, cancellationToken);
             }
             catch
             {
-                content = $"[No se pudo leer el archivo «{document.Title}».]";
+                content = Unreadable(document.Title);
             }
 
             if (string.IsNullOrWhiteSpace(content))
-                content = $"[El archivo «{document.Title}» no tiene texto extraíble.]";
+                content = EmptyText(document.Title);
 
-            var origin = document.FolderId.HasValue ? "Documento del caso" : "Documento del chat";
-            AddContext(contexts, ref totalChars, $"{origin}: {document.Title}", content);
+            var prefix = document.FolderId.HasValue
+                ? ChatDocumentContext.CaseFilePrefix
+                : ChatDocumentContext.ChatFilePrefix;
+            AddContext(contexts, ref totalChars, $"{prefix}{document.Title}", content);
         }
 
         return contexts;
@@ -105,7 +107,7 @@ public class ChatDocumentContextService : IChatDocumentContextService
             return;
 
         if (content.Length > maxForDoc)
-            content = content[..maxForDoc] + "\n[... contenido truncado ...]";
+            content = MarkPartial(content, maxForDoc);
 
         totalChars += content.Length;
         contexts.Add(new ChatDocumentContext
@@ -115,20 +117,32 @@ public class ChatDocumentContextService : IChatDocumentContextService
         });
     }
 
-    private async Task<string> BuildDocumentContentAsync(
+    private const string PartialNotice =
+        "[Extracción parcial: el texto siguiente es solo un fragmento. No afirmes que algo falta en el resto del documento.]\n";
+
+    private const string TruncationSuffix = "\n[... contenido truncado ...]";
+
+    private static string Unreadable(string title) =>
+        $"[No se pudo leer el archivo «{title}». No hay texto disponible.]";
+
+    private static string EmptyText(string title) =>
+        $"[El archivo «{title}» no tiene texto extraíble. No hay texto disponible.]";
+
+    private static string MarkPartial(string content, int maxForDoc)
+    {
+        var budget = maxForDoc - PartialNotice.Length - TruncationSuffix.Length;
+        if (budget < 1)
+            return PartialNotice;
+
+        return PartialNotice + content[..budget] + TruncationSuffix;
+    }
+
+    private async Task<string> ExtractDocumentTextAsync(
         Document document,
         CancellationToken cancellationToken)
     {
         var extracted = await ExtractFileTextAsync(document, cancellationToken);
-        var analysis = document.Analysis is not null ? FormatAnalysis(document.Analysis) : null;
-
-        if (!string.IsNullOrWhiteSpace(extracted) && !string.IsNullOrWhiteSpace(analysis))
-            return extracted + "\n\n--- Análisis previo del documento ---\n" + analysis;
-
-        if (!string.IsNullOrWhiteSpace(extracted))
-            return extracted;
-
-        return analysis ?? string.Empty;
+        return extracted.Trim();
     }
 
     private async Task<string> ExtractFileTextAsync(
@@ -149,24 +163,5 @@ public class ChatDocumentContextService : IChatDocumentContextService
             return fromUrl;
 
         return document.Title;
-    }
-
-    private static string FormatAnalysis(DocumentAnalysis analysis)
-    {
-        var sections = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(analysis.Summary))
-            sections.Add($"Resumen:\n{analysis.Summary}");
-
-        if (!string.IsNullOrWhiteSpace(analysis.Risks))
-            sections.Add($"Riesgos:\n{analysis.Risks}");
-
-        if (!string.IsNullOrWhiteSpace(analysis.Recommendations))
-            sections.Add($"Recomendaciones:\n{analysis.Recommendations}");
-
-        if (!string.IsNullOrWhiteSpace(analysis.References))
-            sections.Add($"Referencias:\n{analysis.References}");
-
-        return string.Join("\n\n", sections);
     }
 }
