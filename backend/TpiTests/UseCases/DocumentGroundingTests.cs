@@ -88,6 +88,30 @@ public class AssistantPromptTests
     }
 
     [Fact]
+    public void Applied_skill_requires_its_output_format_and_still_loses_to_fidelity()
+    {
+        var skill = new CustomSkill(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Hallazgos",
+            "Al revisar pruebas",
+            "Listá los faltantes.",
+            "",
+            "",
+            "Tabla con columnas Prioridad y Hallazgo");
+
+        var prompt = ArgentineLegalPrompt.BuildChat([skill], [], null);
+        var formatAt = prompt.IndexOf("Tabla con columnas Prioridad y Hallazgo", StringComparison.Ordinal);
+        var fidelityAt = prompt.LastIndexOf("prevalecen la fidelidad al texto disponible", StringComparison.Ordinal);
+
+        Assert.Contains("tenés que usarlas ahora", prompt);
+        Assert.Contains("una fila por línea", prompt);
+        Assert.True(formatAt >= 0);
+        Assert.True(fidelityAt > formatAt);
+        Assert.Contains("No te autoriza a ignorar la skill aplicada", prompt);
+    }
+
+    [Fact]
     public void Analysis_prompt_keeps_the_json_contract_and_the_text_as_data()
     {
         var prompt = ArgentineLegalPrompt.BuildAnalysis(DocumentAnalysisType.Custom, [], null);

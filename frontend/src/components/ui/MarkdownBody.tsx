@@ -1,11 +1,35 @@
+import type { Components } from 'react-markdown'
 import Markdown from 'react-markdown'
-import rehypeSanitize from 'rehype-sanitize'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
+import remarkGfm from 'remark-gfm'
+import { normalizeMarkdownTables } from '@/utils/markdownTables'
 import { cn } from '@/utils/cn'
+
+const tableTags = ['table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td']
+
+const schema = {
+  ...defaultSchema,
+  tagNames: Array.from(new Set([...(defaultSchema.tagNames ?? []), ...tableTags])),
+}
+
+const components: Components = {
+  table: ({ children }) => (
+    <div className="md-table-wrap">
+      <table>{children}</table>
+    </div>
+  ),
+}
 
 export function MarkdownBody({ content, className }: { content: string; className?: string }) {
   return (
     <div className={cn('prose-legal', className)}>
-      <Markdown rehypePlugins={[rehypeSanitize]}>{content}</Markdown>
+      <Markdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[[rehypeSanitize, schema]]}
+        components={components}
+      >
+        {normalizeMarkdownTables(content)}
+      </Markdown>
     </div>
   )
 }

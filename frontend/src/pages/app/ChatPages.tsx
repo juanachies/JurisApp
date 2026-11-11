@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, MessageSquare, MoreHorizontal, Paperclip, PanelRight } from 'lucide-react'
+import { ArrowLeft, MessageSquare, MoreHorizontal, Paperclip, PanelRight, Sparkles, X } from 'lucide-react'
 import {
   chatsApi,
   documentsApi,
@@ -17,7 +17,6 @@ import { DocumentAnalysisCard } from '@/components/documents/DocumentAnalysisCar
 import { UploadDocumentModal } from '@/components/documents/UploadDocumentModal'
 import { TaskPlanCard } from '@/components/tasks/TaskPlanCard'
 import { Alert } from '@/components/ui/Alert'
-import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -26,7 +25,7 @@ import { Skeleton } from '@/components/ui/Loading'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/components/ui/Toast'
 import { QueryError } from '@/components/layout/AppShell'
-import type { MessageDto } from '@/types/api'
+import type { ChatAppliedSkillDto, MessageDto } from '@/types/api'
 import { chatDateGroup, formatDate } from '@/utils/format'
 import { cn } from '@/utils/cn'
 
@@ -149,8 +148,15 @@ export function ChatWorkspacePage() {
   const [uploadOpen, setUploadOpen] = useState(false)
   const [contextOpen, setContextOpen] = useState(false)
   const [pendingUser, setPendingUser] = useState<string | null>(null)
+  const [pendingSkillNames, setPendingSkillNames] = useState<string[]>([])
+  const [optimisticSkills, setOptimisticSkills] = useState<ChatAppliedSkillDto[]>([])
+  const [hiddenSkillIds, setHiddenSkillIds] = useState<string[]>([])
+  const [applyingIds, setApplyingIds] = useState<string[]>([])
   const [sendError, setSendError] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const applyChain = useRef<Promise<boolean>>(Promise.resolve(true))
+  const knownSkillIds = useRef(new Set<string>())
+  const submitLock = useRef(false)
 
   const chatQuery = useQuery({
     queryKey: queryKeys.chat(chatId ?? ''),
@@ -208,10 +214,12 @@ export function ChatWorkspacePage() {
     mutationFn: (content: string) => chatsApi.sendMessage(chatId!, { content }),
     onSuccess: () => {
       setPendingUser(null)
+      setPendingSkillNames([])
       queryClient.invalidateQueries({ queryKey: queryKeys.chat(chatId!) })
     },
     onError: (err) => {
       setPendingUser(null)
+      setPendingSkillNames([])
       setSendError(errorMessage(err, 'No pudimos enviar el mensaje.'))
     },
   })
@@ -246,6 +254,75 @@ export function ChatWorkspacePage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.chat(chatId!) }),
   })
 
+  const visibleSkills = useMemo(() => {
+    const hidden = new Set(hiddenSkillIds)
+    const server = (chat?.appliedSkills ?? []).filter((skill) => !hidden.has(skill.id))
+    return [
+      ...server,
+      ...optimisticSkills.filter((skill) => !server.some((item) => item.id === skill.id) && !hidden.has(skill.id)),
+    ]
+  }, [chat?.appliedSkills, hiddenSkillIds, optimisticSkills])
+  const visibleSkillsRef = useRef(visibleSkills)
+  visibleSkillsRef.current = visibleSkills
+  knownSkillIds.current = new Set(visibleSkills.map((skill) => skill.id))
+
+  useEffect(() => {
+    const ids = new Set((chat?.appliedSkills ?? []).map((skill) => skill.id))
+    setOptimisticSkills((prev) => {
+      const next = prev.filter((skill) => !ids.has(skill.id))
+      return next.length === prev.length ? prev : next
+    })
+    setHiddenSkillIds((prev) => {
+      const next = prev.filter((id) => ids.has(id))
+      return next.length === prev.length ? prev : next
+    })
+  }, [chat?.appliedSkills])
+
+  const pickSkill = (customSkillId: string) => {
+    const skill = (skillsQuery.data ?? []).find((item) => item.id === customSkillId)
+    if (!skill || !chatId) return
+    if (knownSkillIds.current.has(skill.id)) {
+      toast(`«${skill.name}» ya está en uso en este chat.`, 'info')
+      return
+    }
+
+    knownSkillIds.current.add(skill.id)
+    setSendError(null)
+    setOptimisticSkills((prev) => [...prev, { id: skill.id, name: skill.name }])
+    setApplyingIds((prev) => [...prev, skill.id])
+
+    const job = applyChain.current.then(async (previousOk) => {
+      try {
+        await applySkill.mutateAsync(skill.id)
+        toast(`Skill en uso: ${skill.name}`)
+        return previousOk
+      } catch {
+        setOptimisticSkills((prev) => prev.filter((item) => item.id !== skill.id))
+        knownSkillIds.current.delete(skill.id)
+        return false
+      } finally {
+        setApplyingIds((prev) => prev.filter((id) => id !== skill.id))
+      }
+    })
+    applyChain.current = job
+  }
+
+  const dropSkill = (customSkillId: string) => {
+    setOptimisticSkills((prev) => prev.filter((skill) => skill.id !== customSkillId))
+    setHiddenSkillIds((prev) => (prev.includes(customSkillId) ? prev : [...prev, customSkillId]))
+    knownSkillIds.current.delete(customSkillId)
+    const job = applyChain.current.then(async (ok) => {
+      try {
+        await removeSkill.mutateAsync(customSkillId)
+      } catch {
+        setHiddenSkillIds((prev) => prev.filter((id) => id !== customSkillId))
+        queryClient.invalidateQueries({ queryKey: queryKeys.chat(chatId!) })
+      }
+      return ok
+    })
+    applyChain.current = job
+  }
+
   if (chatQuery.isError) {
     const forbidden = chatQuery.error instanceof ApiError && chatQuery.error.status === 403
     return (
@@ -260,18 +337,33 @@ export function ChatWorkspacePage() {
   }
 
   const messages: MessageDto[] = chat?.messages ?? []
+  const availableSkills = (skillsQuery.data ?? []).filter(
+    (skill) => skill.isActive && !visibleSkills.some((applied) => applied.id === skill.id),
+  )
 
-  const submit = () => {
+  const submit = async () => {
     const content = message.trim()
-    if (!content || !chatId || awaitingPlan) return
-    setSendError(null)
-    if (taskMode) {
-      taskMutation.mutate(content)
-      return
+    if (!content || !chatId || awaitingPlan || submitLock.current) return
+    submitLock.current = true
+    try {
+      const skillsReady = await applyChain.current
+      if (!skillsReady) {
+        applyChain.current = Promise.resolve(true)
+        setSendError('No se pudo aplicar la skill. Elegila de nuevo: el mensaje no se envió.')
+        return
+      }
+      setSendError(null)
+      if (taskMode) {
+        taskMutation.mutate(content)
+        return
+      }
+      setPendingSkillNames(visibleSkillsRef.current.map((skill) => skill.name))
+      setPendingUser(content)
+      setMessage('')
+      sendMutation.mutate(content)
+    } finally {
+      submitLock.current = false
     }
-    setPendingUser(content)
-    setMessage('')
-    sendMutation.mutate(content)
   }
 
   const contextPanel = (
@@ -321,20 +413,20 @@ export function ChatWorkspacePage() {
         </Button>
       </div>
       <div>
-        <p className="text-[11px] uppercase tracking-wide text-faint">Skill</p>
-        {(chat?.appliedSkills ?? []).map((skill) => (
-          <div key={skill.id} className="mt-1 flex items-center justify-between">
-            <span>{skill.name}</span>
+        <p className="text-[11px] uppercase tracking-wide text-faint">Skill en uso</p>
+        {visibleSkills.length === 0 ? <p className="mt-1 text-muted">Ninguna</p> : null}
+        {visibleSkills.map((skill) => (
+          <div key={skill.id} className="mt-1 flex items-center justify-between gap-2">
+            <span className="font-medium text-navy-800">{skill.name}</span>
             <button
               type="button"
               className="text-[12px] text-muted hover:text-danger"
-              onClick={() => removeSkill.mutate(skill.id)}
+              onClick={() => dropSkill(skill.id)}
             >
               Quitar
             </button>
           </div>
         ))}
-        {(chat?.appliedSkills ?? []).length === 0 ? <p className="mt-1 text-muted">Ninguna</p> : null}
       </div>
     </div>
   )
@@ -350,7 +442,18 @@ export function ChatWorkspacePage() {
             {chatQuery.isLoading ? <Skeleton className="h-5 w-48" /> : (
               <>
                 <h1 className="truncate text-[17px] font-semibold tracking-[-0.03em]">{chat?.title}</h1>
-                {folder ? <p className="truncate text-[12px] text-muted">Caso: {folder.name}</p> : null}
+                {folder || visibleSkills.length > 0 ? (
+                  <p className="truncate text-[12px] text-muted">
+                    {folder ? <span>Caso: {folder.name}</span> : null}
+                    {folder && visibleSkills.length > 0 ? <span> · </span> : null}
+                    {visibleSkills.length > 0 ? (
+                      <span className="font-semibold text-navy-800">
+                        Skill en uso: {visibleSkills.map((skill) => skill.name).join(', ')}
+                        {applyingIds.length > 0 ? ' · aplicando…' : ''}
+                      </span>
+                    ) : null}
+                  </p>
+                ) : null}
               </>
             )}
           </div>
@@ -410,11 +513,17 @@ export function ChatWorkspacePage() {
                     role: 'User',
                     content: pendingUser,
                     date: new Date().toISOString(),
-                    skillsUsed: [],
+                    skillsUsed: pendingSkillNames,
                   }}
                 />
               ) : null}
-              {sendMutation.isPending ? <p className="text-[13px] text-muted">JurisApp está respondiendo…</p> : null}
+              {sendMutation.isPending ? (
+                <p className="text-[13px] font-medium text-navy-800">
+                  {pendingSkillNames.length > 0
+                    ? `JurisApp está respondiendo con ${skillList(pendingSkillNames)}…`
+                    : 'JurisApp está respondiendo…'}
+                </p>
+              ) : null}
               {taskMutation.isPending ? <p className="text-[13px] text-muted">Generando plan…</p> : null}
 
               {(tasksQuery.data ?? []).map((task) => (
@@ -444,6 +553,14 @@ export function ChatWorkspacePage() {
               </p>
             ) : null}
             <div className="rounded-[20px] border border-border bg-canvas p-3 shadow-sm">
+              {visibleSkills.length > 0 ? (
+                <div className="mb-2">
+                  <SkillInUse skills={visibleSkills} applyingIds={applyingIds} onRemove={dropSkill} announce />
+                  <p className="mt-1.5 text-[12px] text-navy-800">
+                    La próxima respuesta va a usar {visibleSkills.length === 1 ? 'esta skill' : 'estas skills'}.
+                  </p>
+                </div>
+              ) : null}
               <Textarea
                 className="min-h-20 border-0 bg-transparent p-0 focus:border-0"
                 disabled={awaitingPlan}
@@ -467,24 +584,24 @@ export function ChatWorkspacePage() {
                 <Button size="sm" variant="ghost" onClick={() => setUploadOpen(true)} disabled={awaitingPlan}>
                   <Paperclip size={14} /> Documento
                 </Button>
-                {canManageCases && (skillsQuery.data ?? []).filter((s) => s.isActive).length > 0 ? (
+                {canManageCases && (skillsQuery.data ?? []).some((skill) => skill.isActive) ? (
                   <select
-                    className="h-8 rounded-[8px] border border-border bg-surface px-2 text-[12px]"
+                    className="h-8 max-w-full rounded-[8px] border border-navy-700 bg-surface px-2 text-[12px] font-medium text-navy-800"
                     defaultValue=""
-                    disabled={awaitingPlan}
+                    disabled={awaitingPlan || applyingIds.length > 0 || availableSkills.length === 0}
+                    aria-label="Agregar skill al chat"
                     onChange={(e) => {
-                      if (e.target.value) applySkill.mutate(e.target.value)
+                      const customSkillId = e.target.value
                       e.target.value = ''
+                      if (customSkillId) pickSkill(customSkillId)
                     }}
                   >
-                    <option value="">Skill: aplicar…</option>
-                    {(skillsQuery.data ?? [])
-                      .filter((s) => s.isActive)
-                      .map((skill) => (
-                        <option key={skill.id} value={skill.id}>
-                          {skill.name}
-                        </option>
-                      ))}
+                    <option value="">{availableSkills.length === 0 ? 'Skills en uso' : 'Agregar skill…'}</option>
+                    {availableSkills.map((skill) => (
+                      <option key={skill.id} value={skill.id}>
+                        {skill.name}
+                      </option>
+                    ))}
                   </select>
                 ) : null}
                 <button
@@ -539,32 +656,79 @@ export function ChatWorkspacePage() {
   )
 }
 
+function skillList(names: string[]) {
+  return names.length === 1 ? `la skill ${names[0]}` : `las skills ${names.join(', ')}`
+}
+
+function SkillInUse({
+  skills,
+  applyingIds,
+  onRemove,
+  announce = false,
+}: {
+  skills: ChatAppliedSkillDto[]
+  applyingIds: string[]
+  onRemove: (id: string) => void
+  announce?: boolean
+}) {
+  return (
+    <div
+      role={announce ? 'status' : undefined}
+      aria-live={announce ? 'polite' : undefined}
+      className="flex flex-wrap items-center gap-2 rounded-[12px] border border-sky-400 bg-sky-100 px-3 py-2"
+    >
+      <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-navy-800">
+        <Sparkles size={14} />
+        Skill en uso
+      </span>
+      {skills.map((skill) => (
+        <span
+          key={skill.id}
+          className="inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-1 text-[13px] font-semibold text-navy-900 shadow-sm"
+        >
+          {skill.name}
+          {applyingIds.includes(skill.id) ? <span className="font-medium text-muted">aplicando…</span> : null}
+          <button
+            type="button"
+            className="rounded-full p-0.5 text-muted hover:bg-subtle hover:text-danger"
+            aria-label={`Quitar skill ${skill.name}`}
+            onClick={() => onRemove(skill.id)}
+          >
+            <X size={12} />
+          </button>
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function MessageBubble({ message }: { message: MessageDto }) {
   const isUser = message.role === 'User'
+  const skills = message.skillsUsed ?? []
   return (
     <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
           isUser
             ? 'max-w-[80%] rounded-[18px] rounded-br-[6px] bg-navy-900 px-4 py-2.5 text-[14px] text-white'
-            : 'max-w-[min(100%,720px)] rounded-[18px] border border-border bg-surface px-4 py-3 shadow-sm',
+            : 'w-full rounded-[18px] border border-border bg-surface px-4 py-3 shadow-sm',
         )}
       >
+        {skills.length > 0 ? (
+          <p
+            className={cn(
+              'mb-2 flex items-center gap-1.5 text-[12px] font-semibold',
+              isUser ? 'text-sky-100' : 'rounded-[10px] bg-sky-100 px-2.5 py-1.5 text-navy-800',
+            )}
+          >
+            <Sparkles size={14} />
+            {isUser ? `Enviado con ${skillList(skills)}` : `Respondió con ${skillList(skills)}`}
+          </p>
+        ) : null}
         {isUser ? (
           <p className="whitespace-pre-wrap">{message.content}</p>
         ) : (
-          <>
-            <MarkdownBody content={message.content} />
-            {message.skillsUsed?.length ? (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {message.skillsUsed.map((name) => (
-                  <Badge key={name} tone="info">
-                    {name}
-                  </Badge>
-                ))}
-              </div>
-            ) : null}
-          </>
+          <MarkdownBody content={message.content} />
         )}
       </div>
     </div>

@@ -30,14 +30,20 @@ public class AIService : IAIService
     {
         if (!_client.IsLiveMode())
         {
+            var reply = DevFallbackReply;
             if (chatDocuments is { Count: > 0 })
             {
-                return DevFallbackReply +
-                       " Documentos en contexto: " +
-                       string.Join("; ", chatDocuments.Select(d => d.Title));
+                reply += " Documentos en contexto: " +
+                         string.Join("; ", chatDocuments.Select(d => d.Title));
             }
 
-            return DevFallbackReply;
+            if (activeSkills.Count > 0)
+            {
+                reply += " Skills aplicadas: " +
+                         string.Join(", ", activeSkills.Select(s => s.Name)) + ".";
+            }
+
+            return reply;
         }
 
         var systemPrompt = ArgentineLegalPrompt.BuildChat(activeSkills, chatDocuments, userProvince);
@@ -164,8 +170,12 @@ public class AIService : IAIService
         var skills = activeSkills.ToList();
         if (skills.Count > 0)
         {
-            parts.Add("Skills aplicadas (no pueden inventar el contenido de un archivo ni invertir el rol):\n" + string.Join("\n",
-                skills.Select(s => $"- {s.Name}: {s.Instructions}")));
+            parts.Add("Skills aplicadas (no pueden inventar el contenido de un archivo ni invertir el rol). Seguí también el formato de salida:\n" + string.Join("\n",
+                skills.Select(s =>
+                    $"- {s.Name}: {s.Instructions}" +
+                    (string.IsNullOrWhiteSpace(s.OutputFormat)
+                        ? string.Empty
+                        : $" Formato de salida: {s.OutputFormat}"))));
         }
 
         return parts.Count == 0 ? string.Empty : string.Join("\n\n", parts);
