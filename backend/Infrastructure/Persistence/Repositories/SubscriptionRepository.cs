@@ -18,9 +18,10 @@ public class SubscriptionRepository : ISubscriptionRepository
         => await _context.Subscriptions.FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
 
     public async Task<Subscription?> GetActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
-        => await _context.Subscriptions.FirstOrDefaultAsync(
-            s => s.UserId == userId && s.Status == SubscriptionStatus.Active,
-            cancellationToken);
+        => await _context.Subscriptions
+            .Where(s => s.UserId == userId && s.Status == SubscriptionStatus.Active)
+            .OrderByDescending(s => s.StartDate)
+            .FirstOrDefaultAsync(cancellationToken);
 
     public async Task<Subscription?> GetByStripeSubscriptionIdAsync(
         string stripeSubscriptionId,

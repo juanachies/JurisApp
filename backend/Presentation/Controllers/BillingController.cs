@@ -44,6 +44,31 @@ public class BillingController : ControllerBase
         return Ok(new CreateCheckoutSessionResponse { Url = result.Value! });
     }
 
+    [HttpPost("confirm")]
+    [Authorize]
+    public async Task<IActionResult> Confirm(
+        [FromBody] ConfirmCheckoutRequest? request,
+        CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService.UserId!.Value;
+        var found = await _paymentService.FindPaidCheckoutAsync(userId, request?.SessionId, cancellationToken);
+        if (!found.IsSuccess)
+            return found.ToActionResult();
+
+        if (found.Value is null)
+            return NoContent();
+
+        var notification = found.Value;
+        var result = await _planService.ActivatePaidSubscriptionAsync(
+            notification.UserId,
+            notification.PlanId,
+            notification.StripeCustomerId,
+            notification.StripeSubscriptionId,
+            cancellationToken);
+
+        return result.ToActionResult();
+    }
+
     [HttpPost("simulate-purchase")]
     [Authorize]
     public async Task<IActionResult> SimulatePurchase(

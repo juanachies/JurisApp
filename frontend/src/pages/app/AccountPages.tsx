@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -98,6 +98,17 @@ export function SubscriptionPage() {
   const currentQuery = useQuery({ queryKey: queryKeys.currentPlan, queryFn: plansApi.current })
   const plansQuery = useQuery({ queryKey: queryKeys.plans, queryFn: plansApi.list })
   const current = currentQuery.data
+  const syncedPayment = useRef(false)
+
+  useEffect(() => {
+    if (!current || isPaidPlan(current.planType) || syncedPayment.current) return
+    syncedPayment.current = true
+    billingApi.confirmCheckout()
+      .then((subscription) => {
+        if (subscription) queryClient.invalidateQueries({ queryKey: queryKeys.currentPlan })
+      })
+      .catch((err) => setError(errorMessage(err)))
+  }, [current, queryClient])
   const limits = current ? parseLimits(current.limitsJson) : null
 
   const subscribeFree = useMutation({
@@ -365,12 +376,35 @@ export function VerificationPage() {
 }
 
 export function BillingSuccessPage() {
+  const [params] = useSearchParams()
+  const queryClient = useQueryClient()
+  const [detail, setDetail] = useState('Estamos confirmando el pago con Stripe.')
+  const sessionId = params.get('session_id')
+
+  useEffect(() => {
+    let cancelled = false
+    billingApi.confirmCheckout(sessionId)
+      .then((subscription) => {
+        if (cancelled) return
+        if (subscription) {
+          queryClient.invalidateQueries({ queryKey: queryKeys.currentPlan })
+          setDetail('El pago quedó confirmado y tu plan ya está activo.')
+          return
+        }
+        setDetail('No encontramos un pago confirmado para esta cuenta.')
+      })
+      .catch((err) => {
+        if (!cancelled) setDetail(errorMessage(err))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [queryClient, sessionId])
+
   return (
     <AppPage>
       <h1 className="text-[clamp(1.7rem,2.4vw,2.1rem)] font-semibold tracking-[-0.04em]">Pago recibido</h1>
-      <p className="mt-2 text-[14px] text-muted">
-        Si el cobro se confirmó, tu plan debería actualizarse en unos instantes.
-      </p>
+      <p className="mt-2 text-[14px] text-muted">{detail}</p>
       <ButtonLink to="/app/subscription" className="mt-6">
         Ver suscripción
       </ButtonLink>

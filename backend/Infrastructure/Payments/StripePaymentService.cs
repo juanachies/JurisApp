@@ -45,7 +45,7 @@ public class StripePaymentService : IPaymentService
         var sessionOptions = new SessionCreateOptions
         {
             Mode = "subscription",
-            SuccessUrl = _options.SuccessUrl,
+            SuccessUrl = AppendCheckoutSessionId(_options.SuccessUrl!),
             CancelUrl = _options.CancelUrl,
             ClientReferenceId = userId.ToString(),
             LineItems =
@@ -145,5 +145,111 @@ public class StripePaymentService : IPaymentService
         };
 
         return Task.FromResult(Result<CheckoutCompletedNotification?>.Success(notification));
+    }
+
+    public async Task<Result<CheckoutCompletedNotification?>> FindPaidCheckoutAsync(
+        Guid userId,
+        string? sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_options.SecretKey))
+            return Result<CheckoutCompletedNotification?>.Failure(
+                Error.Validation("Stripe:SecretKey is not configured."));
+
+        try
+        {
+            var service = new SessionService();
+            if (!string.IsNullOrWhiteSpace(sessionId))
+            {
+                var session = await service.GetAsync(sessionId, cancellationToken: cancellationToken);
+                return MapPaidSession(session, userId, strict: true);
+            }
+
+            var list = await service.ListAsync(
+                new SessionListOptions { Limit = 100, Status = "complete" },
+                cancellationToken: cancellationToken);
+
+            foreach (var session in list.Data)
+            {
+                if (!BelongsToUser(session, userId))
+                    continue;
+
+                var mapped = MapPaidSession(session, userId, strict: false);
+                if (mapped.IsSuccess && mapped.Value is not null)
+                    return mapped;
+            }
+
+            return Result<CheckoutCompletedNotification?>.Success(null);
+        }
+        catch (StripeException ex)
+        {
+            return Result<CheckoutCompletedNotification?>.Failure(
+                Error.ExternalService($"Stripe error: {ex.Message}"));
+        }
+    }
+
+    internal static string AppendCheckoutSessionId(string successUrl)
+    {
+        if (successUrl.Contains("{CHECKOUT_SESSION_ID}", StringComparison.Ordinal))
+            return successUrl;
+
+        var separator = successUrl.Contains('?') ? "&" : "?";
+        return successUrl + separator + "session_id={CHECKOUT_SESSION_ID}";
+    }
+
+    private static Result<CheckoutCompletedNotification?> MapPaidSession(Session session, Guid userId, bool strict)
+    {
+        if (!BelongsToUser(session, userId))
+            return Result<CheckoutCompletedNotification?>.Failure(
+                Error.Validation("El pago no corresponde a esta cuenta."));
+
+        var completed = string.Equals(session.Status, "complete", StringComparison.OrdinalIgnoreCase);
+        var paid = string.Equals(session.PaymentStatus, "paid", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(session.PaymentStatus, "no_payment_required", StringComparison.OrdinalIgnoreCase);
+
+        if (!completed || !paid)
+        {
+            return strict
+                ? Result<CheckoutCompletedNotification?>.Failure(
+                    Error.Validation("El pago todavía no figura como confirmado."))
+                : Result<CheckoutCompletedNotification?>.Success(null);
+        }
+
+        if (session.Metadata is null
+            || !session.Metadata.TryGetValue("planId", out var planIdStr)
+            || !Guid.TryParse(planIdStr, out var planId))
+        {
+            return strict
+                ? Result<CheckoutCompletedNotification?>.Failure(
+                    Error.Validation("El pago no tiene el plan asociado."))
+                : Result<CheckoutCompletedNotification?>.Success(null);
+        }
+
+        if (string.IsNullOrWhiteSpace(session.CustomerId) || string.IsNullOrWhiteSpace(session.SubscriptionId))
+        {
+            return strict
+                ? Result<CheckoutCompletedNotification?>.Failure(
+                    Error.Validation("El pago no tiene la suscripción de Stripe."))
+                : Result<CheckoutCompletedNotification?>.Success(null);
+        }
+
+        return Result<CheckoutCompletedNotification?>.Success(new CheckoutCompletedNotification
+        {
+            UserId = userId,
+            PlanId = planId,
+            StripeCustomerId = session.CustomerId,
+            StripeSubscriptionId = session.SubscriptionId
+        });
+    }
+
+    private static bool BelongsToUser(Session session, Guid userId)
+    {
+        if (string.Equals(session.ClientReferenceId, userId.ToString(), StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return session.Metadata is not null
+            && session.Metadata.TryGetValue("userId", out var raw)
+            && Guid.TryParse(raw, out var metadataUserId)
+            && metadataUserId == userId;
     }
 }

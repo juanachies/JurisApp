@@ -17,4 +17,10 @@ export const billingApi = {
       method: 'POST',
       json: data,
     }),
+
+  confirmCheckout: (sessionId?: string | null) =>
+    apiClient<SubscriptionDto | undefined>('/api/billing/confirm', {
+      method: 'POST',
+      json: { sessionId: sessionId || undefined },
+    }),
 }

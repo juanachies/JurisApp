@@ -36,4 +36,10 @@ public class MockPaymentService : IPaymentService
         string stripeSignature,
         CancellationToken cancellationToken = default)
         => Task.FromResult(Result<CheckoutCompletedNotification?>.Success(null));
+
+    public Task<Result<CheckoutCompletedNotification?>> FindPaidCheckoutAsync(
+        Guid userId,
+        string? sessionId,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(Result<CheckoutCompletedNotification?>.Success(null));
 }

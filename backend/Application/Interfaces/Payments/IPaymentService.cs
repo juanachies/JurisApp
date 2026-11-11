@@ -14,4 +14,9 @@ public interface IPaymentService
         string json,
         string stripeSignature,
         CancellationToken cancellationToken = default);
+
+    Task<Result<CheckoutCompletedNotification?>> FindPaidCheckoutAsync(
+        Guid userId,
+        string? sessionId,
+        CancellationToken cancellationToken = default);
 }

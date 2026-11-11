@@ -197,11 +197,11 @@ public class PlanService : IPlanService
 
         var existingByStripe = await _subscriptionRepository.GetByStripeSubscriptionIdAsync(
             stripeSubscriptionId, cancellationToken);
-        if (existingByStripe is not null && existingByStripe.IsActive())
+        if (existingByStripe is not null && existingByStripe.IsActive() && existingByStripe.PlanId == planId)
             return Result<SubscriptionDto>.Success(MapToDto(existingByStripe));
 
-        var active = await _subscriptionRepository.GetActiveByUserIdAsync(userId, cancellationToken);
-        if (active is not null)
+        var currentSubscriptions = await _subscriptionRepository.GetByUserIdAsync(userId, cancellationToken);
+        foreach (var active in currentSubscriptions.Where(s => s.IsActive() && s.Id != existingByStripe?.Id))
         {
             active.Cancel();
             _subscriptionRepository.Update(active);
