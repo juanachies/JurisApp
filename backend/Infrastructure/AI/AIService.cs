@@ -47,7 +47,18 @@ public class AIService : IAIService
         }
 
         var systemPrompt = ArgentineLegalPrompt.BuildChat(activeSkills, chatDocuments, userProvince);
-        var messages = BuildMessageHistory(previousMessages, userMessage);
+        var messages = BuildMessageHistory(previousMessages, SkillFormat.AppendReminder(userMessage, activeSkills));
+        var liveReply = await _client.SendAsync(systemPrompt, messages, cancellationToken: cancellationToken);
+
+        if (!SkillFormat.MissesRequiredFormat(activeSkills, liveReply))
+            return liveReply;
+
+        var retryMessage = SkillFormat.AppendReminder(
+            userMessage +
+            "\n\nLa respuesta anterior no respetó el formato de la skill. " +
+            "Reescribila completa, con la estructura pedida y sin conservar los títulos anteriores.",
+            activeSkills);
+        messages = BuildMessageHistory(previousMessages, retryMessage);
         return await _client.SendAsync(systemPrompt, messages, cancellationToken: cancellationToken);
     }
 
